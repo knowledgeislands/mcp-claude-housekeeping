@@ -17,7 +17,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Enable auto-merge for Dependabot PRs
-        uses: peter-evans/enable-pull-request-automerge@v3
-        with:
-          pull-request-number: ${{ github.event.pull_request.number }}
-          merge-method: squash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh pr merge --auto --squash "${{ github.event.pull_request.html_url }}"

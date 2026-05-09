@@ -1,0 +1,82 @@
+{
+  "name": "@knowledgeislands/mcp-local-agent-mode-sessions",
+  "description": "MCP server for auditing the Cowork local-agent-mode-sessions filesystem (sessions, artifacts, memory spaces, plugins) and producing housekeeping reports",
+  "version": "1.0.0",
+  "author": "kris@kris.me.uk",
+  "homepage": "https://github.com/knowledgeislands/mcp-local-agent-mode-sessions#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/knowledgeislands/mcp-local-agent-mode-sessions.git"
+  },
+  "bugs": {
+    "url": "https://github.com/knowledgeislands/mcp-local-agent-mode-sessions/issues"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "claude",
+    "anthropic",
+    "audit",
+    "filesystem",
+    "housekeeping"
+  ],
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.4.14",
+    "@types/node": "^25.6.2",
+    "@vitest/coverage-v8": "^4.1.5",
+    "husky": "^9.1.7",
+    "json5": "^2.2.3",
+    "lint-staged": "^17.0.3",
+    "markdownlint-cli2": "^0.22.1",
+    "prettier": "^3.8.3",
+    "syncpack": "^15.0.0",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.5"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "license": "MIT",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "mcp-local-agent-mode-sessions": "dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "clean": "rm -rf {dist,node_modules}",
+    "dev:mcp": "tsx watch src/index.ts",
+    "format": "npx @biomejs/biome format --write",
+    "inspect": "npx @modelcontextprotocol/inspector tsx src/index.ts",
+    "lint:check": "npx @biomejs/biome check",
+    "lint:deps:missing": "npx depcheck --json | npx node-jq --sort-keys '.' | npx node-jq '.missing | keys | .[]' | xargs npm add -D",
+    "lint:deps:unused": "npx depcheck --json | npx node-jq --sort-keys '.' | npx node-jq '.devDependencies[]' | xargs npm uninstall",
+    "lint:fix": "npx @biomejs/biome check --write --unsafe",
+    "lint:md": "npx prettier --write \"**/*.md\" --ignore-path .gitignore && npx markdownlint-cli2",
+    "lint:package": "npx syncpack format",
+    "prepare": "husky",
+    "prepublishOnly": "npm run build",
+    "prestart:mcp": "npm run build",
+    "start:mcp": "node dist/index.js",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "update:libs": "npx npm-check-updates"
+  },
+  "type": "module",
+  "lint-staged": {
+    "*.{ts,js,json,jsonc}": "npx @biomejs/biome check --write --no-errors-on-unmatched"
+  }
+}

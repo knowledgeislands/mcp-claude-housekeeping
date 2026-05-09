@@ -1,0 +1,2 @@
+ignores: ["json5"]
+ignore-patterns: ["dist", "node_modules"]

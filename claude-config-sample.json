@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "mcp-local-agent-mode-sessions": {
+      "command": "node",
+      "args": ["/path/to/mcp-local-agent-mode-sessions/dist/index.js"],
+      "env": {
+        "ROOT_PATH": "/Users/you/Library/Application Support/Claude/local-agent-mode-sessions/<account-uuid>/<workspace-uuid>",
+        "HOUSEKEEPING_PATH": "/Users/you/Documents/Claude/Projects/Claude Housekeeping"
+      }
+    }
+  }
+}

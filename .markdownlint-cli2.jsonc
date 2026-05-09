@@ -1,0 +1,36 @@
+{
+  // Base: enable all rules, then selectively adjust below.
+  "config": {
+    "default": true,
+
+    // MD013 - line length: disabled. Prettier owns line length via printWidth / proseWrap.
+    "MD013": false,
+
+    // MD024 - duplicate headings: allow in sibling sections only.
+    // Changelog uses repeated section names (Changes Applied, Flagged for Review, …)
+    // across dated entries; these are not siblings so siblings_only keeps them flagged
+    // when they're genuinely duplicated within one section.
+    "MD024": { "siblings_only": true },
+
+    // MD025 - single H1: ignore the frontmatter title field.
+    // All pages have `title:` in YAML frontmatter AND a matching `# H1` in the body -
+    // this is the site's standard pattern. Setting front_matter_title to "" stops
+    // markdownlint counting the frontmatter field as the document's H1.
+    "MD025": { "front_matter_title": "" },
+
+    // MD033 - inline HTML: disabled. <br> is used in table cells and template
+    // placeholders use XML-like tags; both are intentional.
+    "MD033": false,
+
+    // MD036 - bold as heading: disabled. Scenario labels in e2e-scenarios.md and
+    // audit steps in process-audit.md use bold intentionally as visual labels,
+    // not as structural headings.
+    "MD036": false
+  },
+
+  // Globs to lint.
+  "globs": ["src/**/*.md", "docs/**/*.md", "README.md"],
+
+  // Never lint generated output or dependencies.
+  "ignores": ["dist/**", "node_modules/**"]
+}

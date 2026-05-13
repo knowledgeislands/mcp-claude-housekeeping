@@ -2,6 +2,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
 import { VSCODE_WORKSPACE_STORAGE_ROOT_PATH } from '../config.js'
 import { DESTRUCTIVE_ONESHOT, READ_ONLY } from '../shared/annotations.js'
+import { makeRoleGatedRegister } from '../shared/roles.js'
 import { errorResult, jsonResult } from '../shared/utils.js'
 import * as audit from './audit.js'
 
@@ -13,7 +14,9 @@ const sessionArg = z
   .regex(/\.jsonl?$/, 'Session name must end with .json or .jsonl')
 
 export const registerVscodeTools = (server: McpServer): void => {
-  server.registerTool(
+  const register = makeRoleGatedRegister(server)
+
+  register(
     'vscode_auditor_workspaces_list',
     {
       title: 'VSCode Auditor: list chat-session workspaces',
@@ -30,7 +33,7 @@ export const registerVscodeTools = (server: McpServer): void => {
     }
   )
 
-  server.registerTool(
+  register(
     'vscode_auditor_storage_summary',
     {
       title: 'VSCode Auditor: chat-session storage summary',
@@ -52,7 +55,7 @@ export const registerVscodeTools = (server: McpServer): void => {
     }
   )
 
-  server.registerTool(
+  register(
     'vscode_auditor_obsolete_sessions',
     {
       title: 'VSCode Auditor: obsolete chat sessions',
@@ -76,7 +79,7 @@ export const registerVscodeTools = (server: McpServer): void => {
     }
   )
 
-  server.registerTool(
+  register(
     'vscode_auditor_session_read',
     {
       title: 'VSCode Auditor: read chat session (preview)',
@@ -100,7 +103,7 @@ export const registerVscodeTools = (server: McpServer): void => {
     }
   )
 
-  server.registerTool(
+  register(
     'vscode_cleaner_delete_workspace',
     {
       title: 'VSCode Cleaner: delete a workspaceStorage entry',
@@ -122,7 +125,7 @@ export const registerVscodeTools = (server: McpServer): void => {
     }
   )
 
-  server.registerTool(
+  register(
     'vscode_cleaner_prune_sessions',
     {
       title: 'VSCode Cleaner: prune obsolete chat sessions',

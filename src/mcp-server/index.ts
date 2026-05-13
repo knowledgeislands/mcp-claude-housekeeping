@@ -22,11 +22,12 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { registerClaudeCodeTools } from '../claude-code/tools.js'
 import { registerClaudeDesktopTools } from '../claude-desktop/tools.js'
-import { CLAUDE_CODE_ROOT_PATH, CLAUDE_DESKTOP_ROOT_PATH, HOUSEKEEPING_PATH, VSCODE_WORKSPACE_STORAGE_ROOT_PATH } from '../config.js'
+import { CLAUDE_CODE_ROOT_PATH, CLAUDE_DESKTOP_ROOT_PATH, HOUSEKEEPING_PATH, HOUSEKEEPING_ROLES, VSCODE_WORKSPACE_STORAGE_ROOT_PATH } from '../config.js'
 import { discoverWorkspaces } from '../shared/utils.js'
 import { registerVscodeTools } from '../vscode/tools.js'
 
 console.error(`mcp-claude-housekeeping starting...`)
+console.error(`  HOUSEKEEPING_ROLES=${[...HOUSEKEEPING_ROLES].sort().join(',')}`)
 console.error(`  CLAUDE_DESKTOP_ROOT_PATH=${CLAUDE_DESKTOP_ROOT_PATH}`)
 console.error(`  HOUSEKEEPING_PATH=${HOUSEKEEPING_PATH}`)
 console.error(`  CLAUDE_CODE_ROOT_PATH=${CLAUDE_CODE_ROOT_PATH}`)

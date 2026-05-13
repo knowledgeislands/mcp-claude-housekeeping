@@ -39,9 +39,10 @@ Scripts:
 The codebase is TypeScript with ES modules (`"type": "module"` in `package.json`). Source lives under `src/`; compiled JS is emitted to `dist/` by `npm run build`.
 
 - `src/mcp-server/index.ts` - Entry point. Boots the MCP server, runs workspace discovery on each call, registers every tool, and aggregates per-workspace results.
-- `src/config.ts` - Hardcoded paths to `CLAUDE_DESKTOP_ROOT_PATH`, `CLAUDE_CODE_ROOT_PATH`, and `VSCODE_WORKSPACE_STORAGE_ROOT_PATH` under the current user's home dir, plus loads `HOUSEKEEPING_PATH` from the env (the only configurable value).
+- `src/config.ts` - Hardcoded paths to `CLAUDE_DESKTOP_ROOT_PATH`, `CLAUDE_CODE_ROOT_PATH`, and `VSCODE_WORKSPACE_STORAGE_ROOT_PATH` under the current user's home dir, plus loads `HOUSEKEEPING_PATH` and `HOUSEKEEPING_ROLES` from the env.
 - `src/shared/utils.ts` - Path-traversal-safe resolver, `du -sk` wrapper, JSON helpers, `discoverWorkspaces()`.
 - `src/shared/annotations.ts` - MCP tool annotation presets (`READ_ONLY`, `DESTRUCTIVE`, `DESTRUCTIVE_ONESHOT`).
+- `src/shared/roles.ts` - `makeRoleGatedRegister()` wraps `server.registerTool` so registrations are skipped for any role not in `HOUSEKEEPING_ROLES`; the role is inferred from the `_auditor_` / `_cleaner_` segment of the tool name.
 - `src/claude-desktop/{audit,report,memory,tools}.ts` - The Cowork `local-agent-mode-sessions/` checks, report writing, memory-space ops, and the tool registrations exposed under the `claude_desktop_*` prefix.
 - `src/claude-code/{audit,memory,tools}.ts` - The `~/.claude/` checks (projects, sessions, memory, global state, relocate/prune-orphans) and their `claude_code_*` tool registrations.
 - `src/vscode/{audit,tools}.ts` - VSCode `workspaceStorage/<id>/chatSessions/` inspection plus the `vscode_*` tools.
@@ -52,6 +53,8 @@ Tools are grouped first by **state repository** they target, then by **role**:
 
 - **`auditor`** — read-only inventory and inspection.
 - **`cleaner`** — destructive: writes, deletes, prunes, relocates.
+
+Roles are toggled via the `HOUSEKEEPING_ROLES` env var (comma-separated; defaults to `auditor` only when unset). Disabled-role tools are simply not registered. See [Environment Variables](#environment-variables).
 
 State repositories:
 
@@ -130,6 +133,7 @@ State repositories:
 ### Environment Variables
 
 - `HOUSEKEEPING_PATH` (**required**) — directory where audit reports are saved. Created if missing on first write.
+- `HOUSEKEEPING_ROLES` (optional) — comma-separated list of enabled roles. Allowed values: `auditor`, `cleaner`. Defaults to `auditor` only when unset or empty. Tool names contain `_auditor_` or `_cleaner_` and are only registered when the corresponding role is enabled; tools for disabled roles are silently skipped. An unknown value aborts startup with `Invalid HOUSEKEEPING_ROLES entries: ...`.
 
 `CLAUDE_DESKTOP_ROOT_PATH`, `CLAUDE_CODE_ROOT_PATH`, and `VSCODE_WORKSPACE_STORAGE_ROOT_PATH` are hardcoded in [`src/config.ts`](./src/config.ts) to their standard locations under the current user's home dir; they are not user-configurable.
 
@@ -137,7 +141,7 @@ Convention: `src/config.ts` calls `process.loadEnvFile('./.env.${NODE_ENV}')` at
 
 ### Boot-time Checks
 
-- The server logs accessibility for `CLAUDE_DESKTOP_ROOT_PATH`, `CLAUDE_CODE_ROOT_PATH`, and `VSCODE_WORKSPACE_STORAGE_ROOT_PATH` and the count + ids of the workspaces it discovered before connecting the transport. Inaccessible roots are logged as warnings and the server still starts; tools targeting a missing root will return errors.
+- The server logs the enabled `HOUSEKEEPING_ROLES` and accessibility for `CLAUDE_DESKTOP_ROOT_PATH`, `CLAUDE_CODE_ROOT_PATH`, and `VSCODE_WORKSPACE_STORAGE_ROOT_PATH`, plus the count + ids of the workspaces it discovered, before connecting the transport. Inaccessible roots are logged as warnings and the server still starts; tools targeting a missing root will return errors.
 
 ## Common Setup Issues
 

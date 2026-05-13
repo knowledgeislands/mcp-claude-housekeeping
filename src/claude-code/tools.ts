@@ -2,6 +2,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
 import { CLAUDE_CODE_ROOT_PATH } from '../config.js'
 import { DESTRUCTIVE, DESTRUCTIVE_ONESHOT, READ_ONLY } from '../shared/annotations.js'
+import { makeRoleGatedRegister } from '../shared/roles.js'
 import { errorResult, jsonResult } from '../shared/utils.js'
 import * as audit from './audit.js'
 import * as memory from './memory.js'
@@ -10,11 +11,13 @@ const projectArg = z.string().min(1).describe('Project directory name under ~/.c
 const optionalProjectArg = projectArg.optional()
 
 export const registerClaudeCodeTools = (server: McpServer): void => {
+  const register = makeRoleGatedRegister(server)
+
   /* ================================================================ */
   /*  claude_code_auditor_* — read-only                               */
   /* ================================================================ */
 
-  server.registerTool(
+  register(
     'claude_code_auditor_projects_list',
     {
       title: 'Claude Code Auditor: list projects',
@@ -31,7 +34,7 @@ export const registerClaudeCodeTools = (server: McpServer): void => {
     }
   )
 
-  server.registerTool(
+  register(
     'claude_code_auditor_storage_summary',
     {
       title: 'Claude Code Auditor: storage summary',
@@ -54,7 +57,7 @@ export const registerClaudeCodeTools = (server: McpServer): void => {
     }
   )
 
-  server.registerTool(
+  register(
     'claude_code_auditor_obsolete_sessions',
     {
       title: 'Claude Code Auditor: obsolete sessions',
@@ -78,7 +81,7 @@ export const registerClaudeCodeTools = (server: McpServer): void => {
     }
   )
 
-  server.registerTool(
+  register(
     'claude_code_auditor_global_status',
     {
       title: 'Claude Code Auditor: global status',
@@ -95,7 +98,7 @@ export const registerClaudeCodeTools = (server: McpServer): void => {
     }
   )
 
-  server.registerTool(
+  register(
     'claude_code_auditor_session_read',
     {
       title: 'Claude Code Auditor: read session JSONL (preview)',
@@ -122,7 +125,7 @@ export const registerClaudeCodeTools = (server: McpServer): void => {
     }
   )
 
-  server.registerTool(
+  register(
     'claude_code_auditor_memory_list',
     {
       title: 'Claude Code Auditor: list memory files',
@@ -139,7 +142,7 @@ export const registerClaudeCodeTools = (server: McpServer): void => {
     }
   )
 
-  server.registerTool(
+  register(
     'claude_code_auditor_memory_read',
     {
       title: 'Claude Code Auditor: read memory file',
@@ -165,7 +168,7 @@ export const registerClaudeCodeTools = (server: McpServer): void => {
   /*  claude_code_cleaner_* — destructive                             */
   /* ================================================================ */
 
-  server.registerTool(
+  register(
     'claude_code_cleaner_prune_sessions',
     {
       title: 'Claude Code Cleaner: prune obsolete sessions',
@@ -188,7 +191,7 @@ export const registerClaudeCodeTools = (server: McpServer): void => {
     }
   )
 
-  server.registerTool(
+  register(
     'claude_code_cleaner_relocate_project',
     {
       title: 'Claude Code Cleaner: relocate project subdir',
@@ -211,7 +214,7 @@ export const registerClaudeCodeTools = (server: McpServer): void => {
     }
   )
 
-  server.registerTool(
+  register(
     'claude_code_cleaner_prune_orphan_projects',
     {
       title: 'Claude Code Cleaner: prune orphan project subdirs',
@@ -233,7 +236,7 @@ export const registerClaudeCodeTools = (server: McpServer): void => {
     }
   )
 
-  server.registerTool(
+  register(
     'claude_code_cleaner_write_memory',
     {
       title: 'Claude Code Cleaner: write/update memory file',
@@ -256,7 +259,7 @@ export const registerClaudeCodeTools = (server: McpServer): void => {
     }
   )
 
-  server.registerTool(
+  register(
     'claude_code_cleaner_delete_memory',
     {
       title: 'Claude Code Cleaner: retire memory file',
@@ -278,7 +281,7 @@ export const registerClaudeCodeTools = (server: McpServer): void => {
     }
   )
 
-  server.registerTool(
+  register(
     'claude_code_cleaner_write_memory_index',
     {
       title: 'Claude Code Cleaner: replace MEMORY.md',

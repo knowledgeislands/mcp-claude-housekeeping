@@ -16,6 +16,25 @@ assert(process.env.HOUSEKEEPING_PATH, 'HOUSEKEEPING_PATH environment variable mu
 
 export const HOUSEKEEPING_PATH: string = path.resolve(expandHome(process.env.HOUSEKEEPING_PATH))
 
+export type Role = 'auditor' | 'cleaner'
+export const ALL_ROLES: readonly Role[] = ['auditor', 'cleaner'] as const
+
+const parseRoles = (raw: string | undefined): Set<Role> => {
+  if (raw === undefined || raw.trim() === '') return new Set(['auditor'])
+  const requested = raw
+    .split(',')
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0)
+  if (requested.length === 0) return new Set(['auditor'])
+  const invalid = requested.filter((r): r is string => !(ALL_ROLES as readonly string[]).includes(r))
+  if (invalid.length > 0) {
+    throw new Error(`Invalid HOUSEKEEPING_ROLES entries: ${invalid.join(', ')}. Allowed: ${ALL_ROLES.join(', ')}`)
+  }
+  return new Set(requested as Role[])
+}
+
+export const HOUSEKEEPING_ROLES: ReadonlySet<Role> = parseRoles(process.env.HOUSEKEEPING_ROLES)
+
 // Cowork sessions, Claude Code state, and VSCode chat sessions all live in
 // known locations under the current user's home directory; they are not
 // user-configurable.

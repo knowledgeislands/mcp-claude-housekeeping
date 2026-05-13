@@ -2,6 +2,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
 import { CLAUDE_DESKTOP_ROOT_PATH } from '../config.js'
 import { DESTRUCTIVE, DESTRUCTIVE_ONESHOT, READ_ONLY } from '../shared/annotations.js'
+import { makeRoleGatedRegister } from '../shared/roles.js'
 import { discoverWorkspaces, errorResult, jsonResult, type Workspace } from '../shared/utils.js'
 import * as audit from './audit.js'
 import * as memory from './memory.js'
@@ -52,11 +53,13 @@ const aggregate = async <T>(workspaceFilter: string | undefined, fn: (root: stri
 const workspaceArg = z.string().optional().describe('Filter to a single workspace by id ("<account>/<workspace>"); omit to run across all.')
 
 export const registerClaudeDesktopTools = (server: McpServer): void => {
+  const register = makeRoleGatedRegister(server)
+
   /* ================================================================ */
   /*  claude_desktop_auditor_* — read-only checks                     */
   /* ================================================================ */
 
-  server.registerTool(
+  register(
     'claude_desktop_auditor_storage_summary',
     {
       title: 'Claude Desktop Auditor: session storage summary',
@@ -79,7 +82,7 @@ export const registerClaudeDesktopTools = (server: McpServer): void => {
     }
   )
 
-  server.registerTool(
+  register(
     'claude_desktop_auditor_obsolete_sessions',
     {
       title: 'Claude Desktop Auditor: obsolete sessions',
@@ -103,7 +106,7 @@ export const registerClaudeDesktopTools = (server: McpServer): void => {
     }
   )
 
-  server.registerTool(
+  register(
     'claude_desktop_auditor_artifact_health',
     {
       title: 'Claude Desktop Auditor: artifact health',
@@ -127,7 +130,7 @@ export const registerClaudeDesktopTools = (server: McpServer): void => {
     }
   )
 
-  server.registerTool(
+  register(
     'claude_desktop_auditor_obsolete_outputs',
     {
       title: 'Claude Desktop Auditor: obsolete outputs/uploads',
@@ -149,7 +152,7 @@ export const registerClaudeDesktopTools = (server: McpServer): void => {
     }
   )
 
-  server.registerTool(
+  register(
     'claude_desktop_auditor_backup_summary',
     {
       title: 'Claude Desktop Auditor: backup file accumulation',
@@ -172,7 +175,7 @@ export const registerClaudeDesktopTools = (server: McpServer): void => {
     }
   )
 
-  server.registerTool(
+  register(
     'claude_desktop_auditor_memory_spaces_summary',
     {
       title: 'Claude Desktop Auditor: memory spaces summary',
@@ -194,7 +197,7 @@ export const registerClaudeDesktopTools = (server: McpServer): void => {
     }
   )
 
-  server.registerTool(
+  register(
     'claude_desktop_auditor_plugins_inventory',
     {
       title: 'Claude Desktop Auditor: plugin inventory',
@@ -211,7 +214,7 @@ export const registerClaudeDesktopTools = (server: McpServer): void => {
     }
   )
 
-  server.registerTool(
+  register(
     'claude_desktop_auditor_project_cache_status',
     {
       title: 'Claude Desktop Auditor: project cache status',
@@ -233,7 +236,7 @@ export const registerClaudeDesktopTools = (server: McpServer): void => {
     }
   )
 
-  server.registerTool(
+  register(
     'claude_desktop_auditor_debug_info',
     {
       title: 'Claude Desktop Auditor: stale debug data',
@@ -256,7 +259,7 @@ export const registerClaudeDesktopTools = (server: McpServer): void => {
     }
   )
 
-  server.registerTool(
+  register(
     'claude_desktop_auditor_workspaces_list',
     {
       title: 'Claude Desktop Auditor: list discovered workspaces',
@@ -274,7 +277,7 @@ export const registerClaudeDesktopTools = (server: McpServer): void => {
     }
   )
 
-  server.registerTool(
+  register(
     'claude_desktop_auditor_memory_list',
     {
       title: 'Claude Desktop Auditor: list memory files in a space',
@@ -297,7 +300,7 @@ export const registerClaudeDesktopTools = (server: McpServer): void => {
     }
   )
 
-  server.registerTool(
+  register(
     'claude_desktop_auditor_memory_read',
     {
       title: 'Claude Desktop Auditor: read a memory file',
@@ -321,7 +324,7 @@ export const registerClaudeDesktopTools = (server: McpServer): void => {
     }
   )
 
-  server.registerTool(
+  register(
     'claude_desktop_auditor_reports_list',
     {
       title: 'Claude Desktop Auditor: list existing audit reports',
@@ -342,7 +345,7 @@ export const registerClaudeDesktopTools = (server: McpServer): void => {
   /*  claude_desktop_cleaner_* — destructive operations                */
   /* ================================================================ */
 
-  server.registerTool(
+  register(
     'claude_desktop_cleaner_prune_artifacts',
     {
       title: 'Claude Desktop Cleaner: prune unstarred artifacts',
@@ -366,7 +369,7 @@ export const registerClaudeDesktopTools = (server: McpServer): void => {
     }
   )
 
-  server.registerTool(
+  register(
     'claude_desktop_cleaner_clear_reports',
     {
       title: 'Claude Desktop Cleaner: delete prior audit reports',
@@ -383,7 +386,7 @@ export const registerClaudeDesktopTools = (server: McpServer): void => {
     }
   )
 
-  server.registerTool(
+  register(
     'claude_desktop_cleaner_write_report',
     {
       title: "Claude Desktop Cleaner: write today's audit report",
@@ -409,7 +412,7 @@ export const registerClaudeDesktopTools = (server: McpServer): void => {
     }
   )
 
-  server.registerTool(
+  register(
     'claude_desktop_cleaner_write_memory',
     {
       title: 'Claude Desktop Cleaner: write/update a memory file',
@@ -434,7 +437,7 @@ export const registerClaudeDesktopTools = (server: McpServer): void => {
     }
   )
 
-  server.registerTool(
+  register(
     'claude_desktop_cleaner_delete_memory',
     {
       title: 'Claude Desktop Cleaner: retire a memory file',
@@ -458,7 +461,7 @@ export const registerClaudeDesktopTools = (server: McpServer): void => {
     }
   )
 
-  server.registerTool(
+  register(
     'claude_desktop_cleaner_write_memory_index',
     {
       title: 'Claude Desktop Cleaner: replace MEMORY.md index',

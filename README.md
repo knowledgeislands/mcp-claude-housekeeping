@@ -7,7 +7,7 @@ An MCP (Model Context Protocol) server that codifies the daily Cowork local-agen
 ## Features
 
 - **Codified audit** — 10 read-only checks plus a memory-consolidation pass, matching the existing `cowork-filesystem-audit` scheduled task one-for-one.
-- **Two clear groups** — `claude_desktop_auditor_*` are read-only; `claude_desktop_cleaner_*` are destructive (pruning, writing, deleting).
+- **Role-gated tools** — every tool belongs to either the `auditor` role (read-only) or the `cleaner` role (destructive). Set `HOUSEKEEPING_ROLES` to opt into the roles you want; defaults to `auditor` only.
 - **Workspace auto-discovery** — walks `~/Library/Application Support/Claude/local-agent-mode-sessions/<account>/<workspace>/` and aggregates results across every discovered workspace.
 - **Path-safe** — every path is validated against the discovered workspace root; memory operations are also confined to `spaces/<space_id>/memory/`.
 - **No network, no auth** — pure local filesystem over MCP stdio.
@@ -83,6 +83,7 @@ npm install
 | Name | Required | Description |
 | --- | --- | --- |
 | `HOUSEKEEPING_PATH` | yes | Absolute path or `~/...` to the directory where audit reports are written. |
+| `HOUSEKEEPING_ROLES` | no | Comma-separated list of enabled roles. Allowed: `auditor`, `cleaner`. Defaults to `auditor` only when unset or empty. Tools whose name contains `_auditor_` / `_cleaner_` are only registered when the matching role is enabled; an unknown role aborts startup. |
 | `NODE_ENV` | no | Dev convention. `dev:mcp`/`inspect` set this to `development`, which makes [`src/config.ts`](./src/config.ts) load `.env.development` from the CWD. Unset under Claude Desktop, so `.env*` files are ignored in production. |
 
 The sessions root (`~/Library/Application Support/Claude/local-agent-mode-sessions`), Claude Code root (`~/.claude`), and VSCode workspaceStorage (`~/Library/Application Support/Code/User/workspaceStorage`) are hardcoded in [`src/config.ts`](./src/config.ts) and are not user-configurable.

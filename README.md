@@ -16,32 +16,32 @@ An MCP (Model Context Protocol) server that codifies the daily Cowork local-agen
 
 ### `claude_desktop_auditor_*` — read-only checks
 
-| Tool | Purpose |
-| --- | --- |
-| `claude_desktop_auditor_storage_summary` | Counts, total disk usage, JSON total, top 5 largest dirs, oldest/newest, flags. |
-| `claude_desktop_auditor_obsolete_sessions` | Sessions older than N days; oldest 10 with combined size, flags. |
-| `claude_desktop_auditor_artifact_health` | Per-artifact metadata + flags (high churn, stale, unstarred + idle). |
-| `claude_desktop_auditor_obsolete_outputs` | Non-empty `outputs/`/`uploads/` in sessions older than N days. |
-| `claude_desktop_auditor_backup_summary` | `.claude.json.backup.*` count, size, dates with thresholds. |
-| `claude_desktop_auditor_memory_spaces_summary` | Per-space memory file counts + first 10 lines of `MEMORY.md`. |
-| `claude_desktop_auditor_plugins_inventory` | Knowledge-work + rpm plugins with versions/dates. |
-| `claude_desktop_auditor_project_cache_status` | `.project-cache/` entries with last-sync dates. |
-| `claude_desktop_auditor_debug_info` | `debug/` size, entry count, oldest entry age. |
-| `claude_desktop_auditor_memory_list` | List `.md` files + `MEMORY.md` content for one space. |
-| `claude_desktop_auditor_memory_read` | Read one memory file. |
-| `claude_desktop_auditor_reports_list` | List existing `cowork-audit-*.md` reports in `HOUSEKEEPING_PATH`. |
-| `claude_desktop_auditor_workspaces_list` | List discovered `<account>/<workspace>` workspace ids. |
+| Tool                                           | Purpose                                                                         |
+| ---------------------------------------------- | ------------------------------------------------------------------------------- |
+| `claude_desktop_auditor_storage_summary`       | Counts, total disk usage, JSON total, top 5 largest dirs, oldest/newest, flags. |
+| `claude_desktop_auditor_obsolete_sessions`     | Sessions older than N days; oldest 10 with combined size, flags.                |
+| `claude_desktop_auditor_artifact_health`       | Per-artifact metadata + flags (high churn, stale, unstarred + idle).            |
+| `claude_desktop_auditor_obsolete_outputs`      | Non-empty `outputs/`/`uploads/` in sessions older than N days.                  |
+| `claude_desktop_auditor_backup_summary`        | `.claude.json.backup.*` count, size, dates with thresholds.                     |
+| `claude_desktop_auditor_memory_spaces_summary` | Per-space memory file counts + first 10 lines of `MEMORY.md`.                   |
+| `claude_desktop_auditor_plugins_inventory`     | Knowledge-work + rpm plugins with versions/dates.                               |
+| `claude_desktop_auditor_project_cache_status`  | `.project-cache/` entries with last-sync dates.                                 |
+| `claude_desktop_auditor_debug_info`            | `debug/` size, entry count, oldest entry age.                                   |
+| `claude_desktop_auditor_memory_list`           | List `.md` files + `MEMORY.md` content for one space.                           |
+| `claude_desktop_auditor_memory_read`           | Read one memory file.                                                           |
+| `claude_desktop_auditor_reports_list`          | List existing `cowork-audit-*.md` reports in `HOUSEKEEPING_PATH`.               |
+| `claude_desktop_auditor_workspaces_list`       | List discovered `<account>/<workspace>` workspace ids.                          |
 
 ### `claude_desktop_cleaner_*` — destructive
 
-| Tool | Purpose |
-| --- | --- |
-| `claude_desktop_cleaner_prune_artifacts` | Delete unstarred artifacts beyond top N (default 5) by `lastUpdated`. |
-| `claude_desktop_cleaner_clear_reports` | Delete every `cowork-audit-*.md` from `HOUSEKEEPING_PATH`. |
-| `claude_desktop_cleaner_write_report` | Save `cowork-audit-YYYY-MM-DD.md` to `HOUSEKEEPING_PATH`. |
-| `claude_desktop_cleaner_write_memory` | Create/overwrite a memory file in `spaces/<space_id>/memory/<name>.md`. |
-| `claude_desktop_cleaner_delete_memory` | Retire a memory file (cannot delete `MEMORY.md`). |
-| `claude_desktop_cleaner_write_memory_index` | Replace `MEMORY.md` for a space. |
+| Tool                                        | Purpose                                                                 |
+| ------------------------------------------- | ----------------------------------------------------------------------- |
+| `claude_desktop_cleaner_prune_artifacts`    | Delete unstarred artifacts beyond top N (default 5) by `lastUpdated`.   |
+| `claude_desktop_cleaner_clear_reports`      | Delete every `cowork-audit-*.md` from `HOUSEKEEPING_PATH`.              |
+| `claude_desktop_cleaner_write_report`       | Save `cowork-audit-YYYY-MM-DD.md` to `HOUSEKEEPING_PATH`.               |
+| `claude_desktop_cleaner_write_memory`       | Create/overwrite a memory file in `spaces/<space_id>/memory/<name>.md`. |
+| `claude_desktop_cleaner_delete_memory`      | Retire a memory file (cannot delete `MEMORY.md`).                       |
+| `claude_desktop_cleaner_write_memory_index` | Replace `MEMORY.md` for a space.                                        |
 
 ### Daily Audit — Tool Choreography
 

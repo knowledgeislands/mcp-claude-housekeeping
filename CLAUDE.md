@@ -63,56 +63,56 @@ State repositories:
 
 #### `claude_desktop_*` — Cowork sessions
 
-| Tool                                          | Purpose                                                        |
-| --------------------------------------------- | -------------------------------------------------------------- |
-| `claude_desktop_auditor_storage_summary`      | Check 1 — counts, total size, top 5 dirs, oldest/newest, flags |
-| `claude_desktop_auditor_obsolete_sessions`    | Check 2 — sessions older than N days                           |
-| `claude_desktop_auditor_artifact_health`      | Check 3 — artifacts.json per-entry with churn/stale/idle flags |
-| `claude_desktop_auditor_obsolete_outputs`     | Check 5 — non-empty outputs/uploads in old sessions            |
-| `claude_desktop_auditor_backup_summary`       | Check 6 — `.claude.json.backup.*` count/size                   |
-| `claude_desktop_auditor_memory_spaces_summary`| Check 7 — per-space memory file counts + index hooks           |
-| `claude_desktop_auditor_plugins_inventory`    | Check 8 — knowledge-work + rpm plugins with versions           |
-| `claude_desktop_auditor_project_cache_status` | Check 9 — `.project-cache/` last-sync dates                    |
-| `claude_desktop_auditor_debug_info`           | Check 10 — `debug/` size + age                                 |
-| `claude_desktop_auditor_memory_list`          | Memory consolidation phase 1 — list a space's memory files     |
-| `claude_desktop_auditor_memory_read`          | Read a single memory file                                      |
-| `claude_desktop_auditor_reports_list`         | List existing audit reports in `HOUSEKEEPING_PATH`             |
-| `claude_desktop_auditor_workspaces_list`      | List discovered `<account>/<workspace>` workspace ids          |
-| `claude_desktop_cleaner_prune_artifacts`      | Check 4 — delete unstarred artifacts beyond top N              |
-| `claude_desktop_cleaner_clear_reports`        | Delete prior `cowork-audit-*.md` files                         |
-| `claude_desktop_cleaner_write_report`         | Write today's `cowork-audit-YYYY-MM-DD.md`                     |
-| `claude_desktop_cleaner_write_memory`         | Create/overwrite a memory file                                 |
-| `claude_desktop_cleaner_delete_memory`        | Retire a memory file (not MEMORY.md)                           |
-| `claude_desktop_cleaner_write_memory_index`   | Replace `MEMORY.md`                                            |
+| Tool                                           | Purpose                                                        |
+| ---------------------------------------------- | -------------------------------------------------------------- |
+| `claude_desktop_auditor_storage_summary`       | Check 1 — counts, total size, top 5 dirs, oldest/newest, flags |
+| `claude_desktop_auditor_obsolete_sessions`     | Check 2 — sessions older than N days                           |
+| `claude_desktop_auditor_artifact_health`       | Check 3 — artifacts.json per-entry with churn/stale/idle flags |
+| `claude_desktop_auditor_obsolete_outputs`      | Check 5 — non-empty outputs/uploads in old sessions            |
+| `claude_desktop_auditor_backup_summary`        | Check 6 — `.claude.json.backup.*` count/size                   |
+| `claude_desktop_auditor_memory_spaces_summary` | Check 7 — per-space memory file counts + index hooks           |
+| `claude_desktop_auditor_plugins_inventory`     | Check 8 — knowledge-work + rpm plugins with versions           |
+| `claude_desktop_auditor_project_cache_status`  | Check 9 — `.project-cache/` last-sync dates                    |
+| `claude_desktop_auditor_debug_info`            | Check 10 — `debug/` size + age                                 |
+| `claude_desktop_auditor_memory_list`           | Memory consolidation phase 1 — list a space's memory files     |
+| `claude_desktop_auditor_memory_read`           | Read a single memory file                                      |
+| `claude_desktop_auditor_reports_list`          | List existing audit reports in `HOUSEKEEPING_PATH`             |
+| `claude_desktop_auditor_workspaces_list`       | List discovered `<account>/<workspace>` workspace ids          |
+| `claude_desktop_cleaner_prune_artifacts`       | Check 4 — delete unstarred artifacts beyond top N              |
+| `claude_desktop_cleaner_clear_reports`         | Delete prior `cowork-audit-*.md` files                         |
+| `claude_desktop_cleaner_write_report`          | Write today's `cowork-audit-YYYY-MM-DD.md`                     |
+| `claude_desktop_cleaner_write_memory`          | Create/overwrite a memory file                                 |
+| `claude_desktop_cleaner_delete_memory`         | Retire a memory file (not MEMORY.md)                           |
+| `claude_desktop_cleaner_write_memory_index`    | Replace `MEMORY.md`                                            |
 
 #### `claude_code_*` — `~/.claude/`
 
-| Tool                                        | Purpose                                                                                            |
-| ------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| `claude_code_auditor_projects_list`         | List projects with session counts, bytes, decoded source path, orphan flag                         |
-| `claude_code_auditor_storage_summary`       | Aggregate counts + flags; surfaces orphan-project totals                                           |
-| `claude_code_auditor_obsolete_sessions`     | Sessions older than N days (with sidecar dir bytes)                                                |
-| `claude_code_auditor_global_status`         | `history.jsonl`, `settings.cleanupPeriodDays`, `.last-cleanup`, top-level dirs, freshness signal   |
-| `claude_code_auditor_session_read`          | Preview head/tail of a session JSONL                                                               |
-| `claude_code_auditor_memory_list`           | List memory files in `<project>/memory/`                                                           |
-| `claude_code_auditor_memory_read`           | Read one memory file                                                                               |
-| `claude_code_cleaner_prune_sessions`        | Delete sessions older than N days (+ sidecar dirs), with dry_run                                   |
-| `claude_code_cleaner_relocate_project`      | Rename a project subdir to match a new source path (fixes `/resume` after a folder rename)         |
-| `claude_code_cleaner_prune_orphan_projects` | Delete project subdirs whose decoded source path no longer exists                                  |
-| `claude_code_cleaner_write_memory`          | Create/overwrite a memory file                                                                     |
-| `claude_code_cleaner_delete_memory`         | Retire a memory file                                                                               |
-| `claude_code_cleaner_write_memory_index`    | Replace `MEMORY.md`                                                                                |
+| Tool | Purpose |
+| --- | --- |
+| `claude_code_auditor_projects_list` | List projects with session counts, bytes, decoded source path, orphan flag |
+| `claude_code_auditor_storage_summary` | Aggregate counts + flags; surfaces orphan-project totals |
+| `claude_code_auditor_obsolete_sessions` | Sessions older than N days (with sidecar dir bytes) |
+| `claude_code_auditor_global_status` | `history.jsonl`, `settings.cleanupPeriodDays`, `.last-cleanup`, top-level dirs, freshness signal |
+| `claude_code_auditor_session_read` | Preview head/tail of a session JSONL |
+| `claude_code_auditor_memory_list` | List memory files in `<project>/memory/` |
+| `claude_code_auditor_memory_read` | Read one memory file |
+| `claude_code_cleaner_prune_sessions` | Delete sessions older than N days (+ sidecar dirs), with dry_run |
+| `claude_code_cleaner_relocate_project` | Rename a project subdir to match a new source path (fixes `/resume` after a folder rename) |
+| `claude_code_cleaner_prune_orphan_projects` | Delete project subdirs whose decoded source path no longer exists |
+| `claude_code_cleaner_write_memory` | Create/overwrite a memory file |
+| `claude_code_cleaner_delete_memory` | Retire a memory file |
+| `claude_code_cleaner_write_memory_index` | Replace `MEMORY.md` |
 
 #### `vscode_*` — VSCode chat sessions
 
-| Tool                                | Purpose                                                            |
-| ----------------------------------- | ------------------------------------------------------------------ |
-| `vscode_auditor_workspaces_list`    | List workspaceStorage entries with chat-session counts and URIs    |
-| `vscode_auditor_storage_summary`    | Aggregate workspace/session counts + size flags                    |
-| `vscode_auditor_obsolete_sessions`  | Chat sessions older than N days                                    |
-| `vscode_auditor_session_read`       | Preview head/tail of a `.json`/`.jsonl` chat session               |
-| `vscode_cleaner_delete_workspace`   | Delete an entire `workspaceStorage/<id>/` subtree                  |
-| `vscode_cleaner_prune_sessions`     | Delete chat sessions older than N days                             |
+| Tool                               | Purpose                                                         |
+| ---------------------------------- | --------------------------------------------------------------- |
+| `vscode_auditor_workspaces_list`   | List workspaceStorage entries with chat-session counts and URIs |
+| `vscode_auditor_storage_summary`   | Aggregate workspace/session counts + size flags                 |
+| `vscode_auditor_obsolete_sessions` | Chat sessions older than N days                                 |
+| `vscode_auditor_session_read`      | Preview head/tail of a `.json`/`.jsonl` chat session            |
+| `vscode_cleaner_delete_workspace`  | Delete an entire `workspaceStorage/<id>/` subtree               |
+| `vscode_cleaner_prune_sessions`    | Delete chat sessions older than N days                          |
 
 ### Roadmap
 

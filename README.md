@@ -12,6 +12,8 @@ An MCP (Model Context Protocol) server that codifies the daily Cowork local-agen
 - **Path-safe** — every path is validated against the discovered workspace root; memory operations are also confined to `spaces/<space_id>/memory/`.
 - **No network, no auth** — pure local filesystem over MCP stdio.
 
+**Quality:** 229 tests; 100% line and function coverage (statement/branch hover ~99.8% as the suite evolves).
+
 ## Available Tools
 
 ### `claude_desktop_auditor_*` — read-only checks
@@ -61,6 +63,34 @@ A typical `cowork-filesystem-audit` run uses the tools in this order:
 2. **Build**: `npm run build`.
 3. **Configure Claude Desktop** with `dist/mcp-server/index.js` and `HOUSEKEEPING_PATH` (see [Configuration](#configuration)). The sessions root, Claude Code state, and VSCode chat storage are all read from their standard macOS locations under your home dir — no configuration needed.
 4. **Restart Claude Desktop** — the `claude_desktop_auditor_*` and `claude_desktop_cleaner_*` tools should appear.
+
+## Example Conversations
+
+Concrete asks you might make of Claude with this server connected.
+
+**Run today's audit:**
+
+> "Run the daily cowork filesystem audit and write today's report."
+
+Claude clears yesterday's report via `claude_desktop_cleaner_clear_reports`, runs every read-only check in parallel (storage summary, obsolete sessions, artifact health, backups, memory spaces, plugins, cache, debug info), then writes `cowork-audit-YYYY-MM-DD.md` to `HOUSEKEEPING_PATH` via `claude_desktop_cleaner_write_report`. See the full ordering under [Daily Audit — Tool Choreography](#daily-audit--tool-choreography).
+
+**Audit before cleaning:**
+
+> "Show me sessions older than 30 days and tell me which ones still have non-empty outputs or uploads."
+
+Claude calls `claude_desktop_auditor_obsolete_sessions` followed by `claude_desktop_auditor_obsolete_outputs` — both read-only — so you see the picture before any destructive action. No data is modified.
+
+**Consolidate a memory space:**
+
+> "Pick the memory space with the most files and show me its MEMORY.md plus the first few memory files before we consolidate."
+
+Claude uses `claude_desktop_auditor_memory_spaces_summary` to find the candidate, then `claude_desktop_auditor_memory_list` + `claude_desktop_auditor_memory_read` to surface the actual content for review. Writes (`write_memory`, `delete_memory`, `write_memory_index`) only happen after you approve the plan.
+
+**Prune accumulated artifacts:**
+
+> "Free some disk — drop unstarred artifacts beyond the top 5 most recently updated."
+
+Claude calls `claude_desktop_cleaner_prune_artifacts` (destructive; requires the `cleaner` role). Starred artifacts are always preserved and the top N most recent are kept regardless of star status.
 
 ## Installation
 

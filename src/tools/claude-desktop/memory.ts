@@ -1,7 +1,7 @@
 import type { Dirent } from 'node:fs'
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
-import { isNodeError, resolveWithinRoot } from '../../shared/utils.js'
+import { assertRealPathWithinRoot, isNodeError, resolveWithinRoot } from '../../shared/utils.js'
 
 const memoryDir = (workspaceRoot: string, spaceId: string): string => {
   return resolveWithinRoot(path.join(workspaceRoot, 'spaces'), path.join(spaceId, 'memory'))
@@ -14,6 +14,7 @@ const memoryFilePath = (workspaceRoot: string, spaceId: string, name: string): s
 
 export const memoryList = async (workspaceRoot: string, args: { space_id: string }) => {
   const dir = memoryDir(workspaceRoot, args.space_id)
+  await assertRealPathWithinRoot(workspaceRoot, dir)
   let entries: Dirent[]
   try {
     entries = (await fs.readdir(dir, { withFileTypes: true })) as Dirent[]
@@ -46,6 +47,7 @@ export const memoryList = async (workspaceRoot: string, args: { space_id: string
 
 export const memoryRead = async (workspaceRoot: string, args: { space_id: string; name: string }) => {
   const p = memoryFilePath(workspaceRoot, args.space_id, args.name)
+  await assertRealPathWithinRoot(workspaceRoot, p)
   try {
     const content = await fs.readFile(p, 'utf-8')
     return { space_id: args.space_id, name: args.name, content }
@@ -59,6 +61,7 @@ export const memoryRead = async (workspaceRoot: string, args: { space_id: string
 
 export const memoryWrite = async (workspaceRoot: string, args: { space_id: string; name: string; content: string }) => {
   const p = memoryFilePath(workspaceRoot, args.space_id, args.name)
+  await assertRealPathWithinRoot(workspaceRoot, p)
   await fs.mkdir(path.dirname(p), { recursive: true })
   await fs.writeFile(p, args.content, 'utf-8')
   return {
@@ -73,6 +76,7 @@ export const memoryDelete = async (workspaceRoot: string, args: { space_id: stri
     throw new Error('Cannot delete MEMORY.md via memory_delete; use memory_index_write to replace its contents.')
   }
   const p = memoryFilePath(workspaceRoot, args.space_id, args.name)
+  await assertRealPathWithinRoot(workspaceRoot, p)
   try {
     await fs.unlink(p)
     return { space_id: args.space_id, name: args.name, deleted: true }
@@ -86,6 +90,7 @@ export const memoryDelete = async (workspaceRoot: string, args: { space_id: stri
 
 export const memoryIndexWrite = async (workspaceRoot: string, args: { space_id: string; content: string }) => {
   const p = memoryFilePath(workspaceRoot, args.space_id, 'MEMORY.md')
+  await assertRealPathWithinRoot(workspaceRoot, p)
   await fs.mkdir(path.dirname(p), { recursive: true })
   await fs.writeFile(p, args.content, 'utf-8')
   return {

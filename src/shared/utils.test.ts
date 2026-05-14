@@ -2,7 +2,20 @@ import * as fs from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { daysAgo, discoverWorkspaces, duBytes, duEntries, errorResult, formatBytes, isNodeError, jsonResult, pathExists, readJsonIfExists, resolveWithinRoot } from './utils.js'
+import {
+  assertRealPathWithinRoot,
+  daysAgo,
+  discoverWorkspaces,
+  duBytes,
+  duEntries,
+  errorResult,
+  formatBytes,
+  isNodeError,
+  jsonResult,
+  pathExists,
+  readJsonIfExists,
+  resolveWithinRoot
+} from './utils.js'
 
 describe('resolveWithinRoot', () => {
   const root = '/tmp/local-root'
@@ -21,6 +34,46 @@ describe('resolveWithinRoot', () => {
 
   it('handles a root that already ends with /', () => {
     expect(resolveWithinRoot('/tmp/local-root/', 'a.json')).toBe('/tmp/local-root/a.json')
+  })
+})
+
+describe('assertRealPathWithinRoot', () => {
+  const tmpRoot = path.join(os.tmpdir(), 'housekeeping-utils-tests', `run-${process.pid}`)
+
+  beforeAll(async () => {
+    await fs.mkdir(tmpRoot, { recursive: true })
+    await fs.mkdir(path.join(tmpRoot, 'inner'), { recursive: true })
+    await fs.writeFile(path.join(tmpRoot, 'inner', 'leaf.md'), 'x', 'utf-8')
+    await fs.mkdir(path.join(tmpRoot, '..', 'outside'), { recursive: true })
+    await fs.writeFile(path.join(tmpRoot, '..', 'outside', 'secret.md'), 's', 'utf-8')
+    try {
+      await fs.symlink(path.join(tmpRoot, '..', 'outside'), path.join(tmpRoot, 'link-outside'))
+    } catch {
+      // already exists from a previous run
+    }
+  })
+
+  afterAll(async () => {
+    await fs.rm(path.join(tmpRoot, '..', 'outside'), { recursive: true, force: true })
+    await fs.rm(tmpRoot, { recursive: true, force: true })
+  })
+
+  it('accepts a path inside the root', async () => {
+    await expect(assertRealPathWithinRoot(tmpRoot, path.join(tmpRoot, 'inner', 'leaf.md'))).resolves.toBeUndefined()
+  })
+
+  it('walks up to find the nearest existing ancestor for a yet-to-exist path', async () => {
+    const futurePath = path.join(tmpRoot, 'inner', 'does-not-exist-yet', 'sub', 'new.md')
+    await expect(assertRealPathWithinRoot(tmpRoot, futurePath)).resolves.toBeUndefined()
+  })
+
+  it('rejects a symlink that escapes the root', async () => {
+    const escapingPath = path.join(tmpRoot, 'link-outside', 'secret.md')
+    await expect(assertRealPathWithinRoot(tmpRoot, escapingPath)).rejects.toThrow(/Path escapes root/)
+  })
+
+  it('accepts the root itself', async () => {
+    await expect(assertRealPathWithinRoot(tmpRoot, tmpRoot)).resolves.toBeUndefined()
   })
 })
 

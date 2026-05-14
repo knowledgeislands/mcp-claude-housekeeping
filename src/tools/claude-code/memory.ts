@@ -1,7 +1,7 @@
 import type { Dirent } from 'node:fs'
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
-import { isNodeError, resolveWithinRoot } from '../../shared/utils.js'
+import { assertRealPathWithinRoot, isNodeError, resolveWithinRoot } from '../../shared/utils.js'
 
 const projectMemoryDir = (claudeRoot: string, project: string): string => {
   return resolveWithinRoot(path.join(claudeRoot, 'projects'), path.join(project, 'memory'))
@@ -14,6 +14,7 @@ const memoryFilePath = (claudeRoot: string, project: string, name: string): stri
 
 export const memoryList = async (claudeRoot: string, args: { project: string }) => {
   const dir = projectMemoryDir(claudeRoot, args.project)
+  await assertRealPathWithinRoot(claudeRoot, dir)
   let entries: Dirent[]
   try {
     entries = (await fs.readdir(dir, { withFileTypes: true })) as Dirent[]
@@ -48,6 +49,7 @@ export const memoryList = async (claudeRoot: string, args: { project: string }) 
 
 export const memoryRead = async (claudeRoot: string, args: { project: string; name: string }) => {
   const p = memoryFilePath(claudeRoot, args.project, args.name)
+  await assertRealPathWithinRoot(claudeRoot, p)
   try {
     const content = await fs.readFile(p, 'utf-8')
     return { project: args.project, name: args.name, content }
@@ -61,6 +63,7 @@ export const memoryRead = async (claudeRoot: string, args: { project: string; na
 
 export const memoryWrite = async (claudeRoot: string, args: { project: string; name: string; content: string }) => {
   const p = memoryFilePath(claudeRoot, args.project, args.name)
+  await assertRealPathWithinRoot(claudeRoot, p)
   await fs.mkdir(path.dirname(p), { recursive: true })
   await fs.writeFile(p, args.content, 'utf-8')
   return { project: args.project, name: args.name, bytes: Buffer.byteLength(args.content, 'utf-8') }
@@ -71,6 +74,7 @@ export const memoryDelete = async (claudeRoot: string, args: { project: string; 
     throw new Error('Cannot delete MEMORY.md via memory_delete; use write_memory_index to replace its contents.')
   }
   const p = memoryFilePath(claudeRoot, args.project, args.name)
+  await assertRealPathWithinRoot(claudeRoot, p)
   try {
     await fs.unlink(p)
     return { project: args.project, name: args.name, deleted: true }
@@ -84,6 +88,7 @@ export const memoryDelete = async (claudeRoot: string, args: { project: string; 
 
 export const memoryIndexWrite = async (claudeRoot: string, args: { project: string; content: string }) => {
   const p = memoryFilePath(claudeRoot, args.project, 'MEMORY.md')
+  await assertRealPathWithinRoot(claudeRoot, p)
   await fs.mkdir(path.dirname(p), { recursive: true })
   await fs.writeFile(p, args.content, 'utf-8')
   return { project: args.project, bytes: Buffer.byteLength(args.content, 'utf-8') }

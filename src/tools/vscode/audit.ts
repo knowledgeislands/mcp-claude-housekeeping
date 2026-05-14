@@ -1,7 +1,7 @@
 import type { Dirent } from 'node:fs'
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
-import { daysAgo, duBytes, isNodeError, pathExists, readJsonIfExists, resolveWithinRoot } from '../../shared/utils.js'
+import { assertRealPathWithinRoot, daysAgo, duBytes, isNodeError, pathExists, readJsonIfExists, resolveWithinRoot } from '../../shared/utils.js'
 
 const DAY_MS = 1000 * 60 * 60 * 24
 
@@ -172,6 +172,7 @@ export const sessionRead = async (storageRoot: string, args: { workspace: string
   }
   const workspaceDir = resolveWithinRoot(storageRoot, args.workspace)
   const file = resolveWithinRoot(workspaceDir, path.join('chatSessions', args.session))
+  await assertRealPathWithinRoot(storageRoot, file)
   const stat = await fs.stat(file)
   const raw = await fs.readFile(file, 'utf-8')
 
@@ -213,6 +214,7 @@ export const sessionRead = async (storageRoot: string, args: { workspace: string
  */
 export const workspaceDelete = async (storageRoot: string, args: { workspace: string; dry_run: boolean }) => {
   const dir = resolveWithinRoot(storageRoot, args.workspace)
+  await assertRealPathWithinRoot(storageRoot, dir)
   if (!(await pathExists(dir))) {
     throw new Error(`Workspace not found: "${args.workspace}"`)
   }

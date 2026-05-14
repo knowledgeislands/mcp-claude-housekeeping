@@ -41,3 +41,6 @@ export const HOUSEKEEPING_ROLES: ReadonlySet<Role> = parseRoles(process.env.MCP_
 export const CLAUDE_DESKTOP_ROOT_PATH: string = path.join(os.homedir(), 'Library', 'Application Support', 'Claude', 'local-agent-mode-sessions')
 export const CLAUDE_CODE_ROOT_PATH: string = path.join(os.homedir(), '.claude')
 export const VSCODE_WORKSPACE_STORAGE_ROOT_PATH: string = path.join(os.homedir(), 'Library', 'Application Support', 'Code', 'User', 'workspaceStorage')
+
+export const AUDIT_LOG_PATH: string = path.resolve(expandHome(process.env.MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_PATH ?? path.join(HOUSEKEEPING_PATH, 'audit', 'audit.jsonl')))
+export const AUDIT_LOG_ALL: boolean = process.env.MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_ALL === '1'

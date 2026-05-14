@@ -43,4 +43,19 @@ export const CLAUDE_CODE_ROOT_PATH: string = path.join(os.homedir(), '.claude')
 export const VSCODE_WORKSPACE_STORAGE_ROOT_PATH: string = path.join(os.homedir(), 'Library', 'Application Support', 'Code', 'User', 'workspaceStorage')
 
 export const AUDIT_LOG_PATH: string = path.resolve(expandHome(process.env.MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_PATH ?? path.join(HOUSEKEEPING_PATH, 'audit', 'audit.jsonl')))
-export const AUDIT_LOG_ALL: boolean = process.env.MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_ALL === '1'
+
+/**
+ * Scope of tool invocations to record. Default `writes` logs `_cleaner_` tools
+ * only; `all` adds `_auditor_` reads; `off` disables logging entirely (the
+ * audit-log wrapper short-circuits and never opens the file).
+ */
+export type AuditLogMode = 'off' | 'writes' | 'all'
+
+const parseAuditLogMode = (raw: string | undefined): AuditLogMode => {
+  const v = raw?.trim().toLowerCase()
+  if (v === undefined || v === '') return 'writes'
+  if (v === 'off' || v === 'writes' || v === 'all') return v
+  throw new Error(`Invalid MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG="${raw}" — expected one of: off, writes, all.`)
+}
+
+export const AUDIT_LOG_MODE: AuditLogMode = parseAuditLogMode(process.env.MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG)

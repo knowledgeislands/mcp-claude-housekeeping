@@ -20,7 +20,7 @@
 import * as fs from 'node:fs/promises'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
-import { AUDIT_LOG_ALL, AUDIT_LOG_PATH, CLAUDE_CODE_ROOT_PATH, CLAUDE_DESKTOP_ROOT_PATH, HOUSEKEEPING_PATH, HOUSEKEEPING_ROLES, VSCODE_WORKSPACE_STORAGE_ROOT_PATH } from '../config.js'
+import { AUDIT_LOG_MODE, AUDIT_LOG_PATH, CLAUDE_CODE_ROOT_PATH, CLAUDE_DESKTOP_ROOT_PATH, HOUSEKEEPING_PATH, HOUSEKEEPING_ROLES, VSCODE_WORKSPACE_STORAGE_ROOT_PATH } from '../config.js'
 import { discoverWorkspaces } from '../shared/utils.js'
 import { registerClaudeCodeTools, registerClaudeDesktopTools, registerVscodeTools } from '../tools/index.js'
 
@@ -30,7 +30,7 @@ console.error(`  CLAUDE_DESKTOP_ROOT_PATH=${CLAUDE_DESKTOP_ROOT_PATH}`)
 console.error(`  MCP_CLAUDE_HOUSEKEEPING_PATH=${HOUSEKEEPING_PATH}`)
 console.error(`  CLAUDE_CODE_ROOT_PATH=${CLAUDE_CODE_ROOT_PATH}`)
 console.error(`  VSCODE_WORKSPACE_STORAGE_ROOT_PATH=${VSCODE_WORKSPACE_STORAGE_ROOT_PATH}`)
-console.error(`  MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_PATH=${AUDIT_LOG_PATH}${AUDIT_LOG_ALL ? ' (logging all roles)' : ' (cleaner only)'}`)
+console.error(`  MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG=${AUDIT_LOG_MODE}${AUDIT_LOG_MODE === 'off' ? '' : ` (path: ${AUDIT_LOG_PATH})`}`)
 
 const server = new McpServer({
   name: 'mcp-claude-housekeeping',

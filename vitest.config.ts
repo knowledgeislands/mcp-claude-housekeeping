@@ -11,7 +11,7 @@ export default defineConfig({
     include: ['src/**/*.test.ts'],
     fileParallelism: false,
     env: {
-      HOUSEKEEPING_PATH: TEST_HOUSEKEEPING
+      MCP_CLAUDE_HOUSEKEEPING_PATH: TEST_HOUSEKEEPING
     },
     coverage: {
       provider: 'v8',

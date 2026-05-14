@@ -39,10 +39,10 @@ Scripts:
 The codebase is TypeScript with ES modules (`"type": "module"` in `package.json`). Source lives under `src/`; compiled JS is emitted to `dist/` by `npm run build`.
 
 - `src/mcp-server/index.ts` - Entry point. Boots the MCP server, runs workspace discovery on each call, registers every tool, and aggregates per-workspace results.
-- `src/config.ts` - Hardcoded paths to `CLAUDE_DESKTOP_ROOT_PATH`, `CLAUDE_CODE_ROOT_PATH`, and `VSCODE_WORKSPACE_STORAGE_ROOT_PATH` under the current user's home dir, plus loads `HOUSEKEEPING_PATH` and `HOUSEKEEPING_ROLES` from the env.
+- `src/config.ts` - Hardcoded paths to `CLAUDE_DESKTOP_ROOT_PATH`, `CLAUDE_CODE_ROOT_PATH`, and `VSCODE_WORKSPACE_STORAGE_ROOT_PATH` under the current user's home dir, plus loads `MCP_CLAUDE_HOUSEKEEPING_PATH` and `MCP_CLAUDE_HOUSEKEEPING_ROLES` from the env.
 - `src/shared/utils.ts` - Path-traversal-safe resolver, `du -sk` wrapper, JSON helpers, `discoverWorkspaces()`.
 - `src/shared/annotations.ts` - MCP tool annotation presets (`READ_ONLY`, `DESTRUCTIVE`, `DESTRUCTIVE_ONESHOT`).
-- `src/shared/roles.ts` - `makeRoleGatedRegister()` wraps `server.registerTool` so registrations are skipped for any role not in `HOUSEKEEPING_ROLES`; the role is inferred from the `_auditor_` / `_cleaner_` segment of the tool name.
+- `src/shared/roles.ts` - `makeRoleGatedRegister()` wraps `server.registerTool` so registrations are skipped for any role not in `MCP_CLAUDE_HOUSEKEEPING_ROLES`; the role is inferred from the `_auditor_` / `_cleaner_` segment of the tool name.
 - `src/claude-desktop/{audit,report,memory,tools}.ts` - The Cowork `local-agent-mode-sessions/` checks, report writing, memory-space ops, and the tool registrations exposed under the `claude_desktop_*` prefix.
 - `src/claude-code/{audit,memory,tools}.ts` - The `~/.claude/` checks (projects, sessions, memory, global state, relocate/prune-orphans) and their `claude_code_*` tool registrations.
 - `src/vscode/{audit,tools}.ts` - VSCode `workspaceStorage/<id>/chatSessions/` inspection plus the `vscode_*` tools.
@@ -54,7 +54,7 @@ Tools are grouped first by **state repository** they target, then by **role**:
 - **`auditor`** — read-only inventory and inspection.
 - **`cleaner`** — destructive: writes, deletes, prunes, relocates.
 
-Roles are toggled via the `HOUSEKEEPING_ROLES` env var (comma-separated; defaults to `auditor` only when unset). Disabled-role tools are simply not registered. See [Environment Variables](#environment-variables).
+Roles are toggled via the `MCP_CLAUDE_HOUSEKEEPING_ROLES` env var (comma-separated; defaults to `auditor` only when unset). Disabled-role tools are simply not registered. See [Environment Variables](#environment-variables).
 
 State repositories:
 
@@ -79,7 +79,7 @@ State repositories:
 | `claude_desktop_auditor_debug_info`            | Check 10 — `debug/` size + age                                 |
 | `claude_desktop_auditor_memory_list`           | Memory consolidation phase 1 — list a space's memory files     |
 | `claude_desktop_auditor_memory_read`           | Read a single memory file                                      |
-| `claude_desktop_auditor_reports_list`          | List existing audit reports in `HOUSEKEEPING_PATH`             |
+| `claude_desktop_auditor_reports_list`          | List existing audit reports in `MCP_CLAUDE_HOUSEKEEPING_PATH`             |
 | `claude_desktop_auditor_workspaces_list`       | List discovered `<account>/<workspace>` workspace ids          |
 | `claude_desktop_cleaner_prune_artifacts`       | Check 4 — delete unstarred artifacts beyond top N              |
 | `claude_desktop_cleaner_clear_reports`         | Delete prior `cowork-audit-*.md` files                         |
@@ -119,7 +119,7 @@ State repositories:
 
 ### Roadmap
 
-- **`*_backup_*` group per state repo** — `backup_create` (snapshot to `<HOUSEKEEPING_PATH>/backups/<repo>/<ts>/`), `backup_list`, `backup_delete`, and a destructive `cleaner_backup_restore`. Motivated by the recovery scenario where the entire `~/.claude/` tree was wiped without warning — once `claude_code_auditor_global_status.freshness.looks_freshly_initialized` flags a wipe, a recent backup is the only path to recovery.
+- **`*_backup_*` group per state repo** — `backup_create` (snapshot to `<MCP_CLAUDE_HOUSEKEEPING_PATH>/backups/<repo>/<ts>/`), `backup_list`, `backup_delete`, and a destructive `cleaner_backup_restore`. Motivated by the recovery scenario where the entire `~/.claude/` tree was wiped without warning — once `claude_code_auditor_global_status.freshness.looks_freshly_initialized` flags a wipe, a recent backup is the only path to recovery.
 
 ### Key Components
 
@@ -132,16 +132,31 @@ State repositories:
 
 ### Environment Variables
 
-- `HOUSEKEEPING_PATH` (**required**) — directory where audit reports are saved. Created if missing on first write.
-- `HOUSEKEEPING_ROLES` (optional) — comma-separated list of enabled roles. Allowed values: `auditor`, `cleaner`. Defaults to `auditor` only when unset or empty. Tool names contain `_auditor_` or `_cleaner_` and are only registered when the corresponding role is enabled; tools for disabled roles are silently skipped. An unknown value aborts startup with `Invalid HOUSEKEEPING_ROLES entries: ...`.
+- `MCP_CLAUDE_HOUSEKEEPING_PATH` (**required**) — directory where audit reports are saved. Created if missing on first write.
+- `MCP_CLAUDE_HOUSEKEEPING_ROLES` (optional) — comma-separated list of enabled roles. Allowed values: `auditor`, `cleaner`. Defaults to `auditor` only when unset or empty. Tool names contain `_auditor_` or `_cleaner_` and are only registered when the corresponding role is enabled; tools for disabled roles are silently skipped. An unknown value aborts startup with `Invalid MCP_CLAUDE_HOUSEKEEPING_ROLES entries: ...`.
 
 `CLAUDE_DESKTOP_ROOT_PATH`, `CLAUDE_CODE_ROOT_PATH`, and `VSCODE_WORKSPACE_STORAGE_ROOT_PATH` are hardcoded in [`src/config.ts`](./src/config.ts) to their standard locations under the current user's home dir; they are not user-configurable.
 
-Convention: `src/config.ts` calls `process.loadEnvFile('./.env.${NODE_ENV}')` at startup (try/caught so a missing file is harmless). The `dev:mcp` and `inspect` npm scripts set `NODE_ENV=development`, so they pick up `.env.development` from the CWD. Claude Desktop does not set `NODE_ENV`, so the load attempts `./.env.undefined`, which doesn't exist and is silently ignored — `HOUSEKEEPING_PATH` comes from the Claude Desktop config `env` block in production.
+Convention: `src/config.ts` calls `process.loadEnvFile('./.env.${NODE_ENV}')` at startup (try/caught so a missing file is harmless). The `dev:mcp` and `inspect` npm scripts set `NODE_ENV=development`, so they pick up `.env.development` from the CWD. Claude Desktop does not set `NODE_ENV`, so the load attempts `./.env.undefined`, which doesn't exist and is silently ignored — `MCP_CLAUDE_HOUSEKEEPING_PATH` comes from the Claude Desktop config `env` block in production.
 
 ### Boot-time Checks
 
-- The server logs the enabled `HOUSEKEEPING_ROLES` and accessibility for `CLAUDE_DESKTOP_ROOT_PATH`, `CLAUDE_CODE_ROOT_PATH`, and `VSCODE_WORKSPACE_STORAGE_ROOT_PATH`, plus the count + ids of the workspaces it discovered, before connecting the transport. Inaccessible roots are logged as warnings and the server still starts; tools targeting a missing root will return errors.
+- The server logs the enabled `MCP_CLAUDE_HOUSEKEEPING_ROLES` and accessibility for `CLAUDE_DESKTOP_ROOT_PATH`, `CLAUDE_CODE_ROOT_PATH`, and `VSCODE_WORKSPACE_STORAGE_ROOT_PATH`, plus the count + ids of the workspaces it discovered, before connecting the transport. Inaccessible roots are logged as warnings and the server still starts; tools targeting a missing root will return errors.
+
+## Security Requirements
+
+This server has both an `auditor` (read-only) and `cleaner` (destructive) role, with tools that delete files anywhere under four configured roots. New tools and changes to existing tools must preserve every invariant below.
+
+1. **Path containment at every `path.join(<root>, <user-input>)` site.** Wrap with `resolveWithinRoot()` from [src/shared/utils.ts](./src/shared/utils.ts). The lexical guard rejects `..` traversal and neutralizes absolute-style inputs. This applies to `args.workspace`, `args.project`, `args.session`, memory `args.name`, and any new identifier that becomes a path segment. Audited call sites that already enforce this: `vscode.workspaceDelete`, `vscode.sessionRead`, `claudeCode.sessionRead`, `claudeCode.relocateProject`, plus all memory ops via `memoryFilePath()`.
+2. **Tighten input schemas, not just call sites.** All identifier inputs that become path segments must have a regex constraint that excludes `/`, `\`, and `..`. Existing patterns: `workspaceArg` (hex), `projectArg` (alphanumeric/`._-`), `sessionArg` (alphanumeric/`._-` + `.json[l]` suffix), memory `name` (must end `.md`). New identifier args must follow this pattern; bare `z.string().min(1)` is not acceptable for path-segment inputs.
+3. **Destructive tools require `dry_run` default `true`.** Every cleaner_* tool that deletes or renames files must expose `dry_run: boolean`, default to preview, and only mutate the filesystem when explicitly disabled. The `DESTRUCTIVE_ONESHOT` annotation is required on tools whose effect depends on current FS contents (prune, relocate, delete).
+4. **Batch deletes are scoped by filename pattern, never wildcard.** Report cleanup matches `cowork-audit-*.md` specifically; session pruning matches `*.jsonl` (Claude Code) or `*.json[l]` (VSCode). New batch-delete tools must declare and test their pattern — never `fs.rm` arbitrary entries the user named.
+5. **Role gate is the registration boundary.** `makeRoleGatedRegister()` ([src/shared/roles.ts](./src/shared/roles.ts)) decides at startup whether a tool is registered, based on the `_auditor_` / `_cleaner_` segment in the tool name. New tools must include the correct segment; do not bypass the proxy.
+6. **No shell-string interpolation.** `du` is invoked via `spawn('du', ['-sk', target])` — argv form. New tools that shell out must use `execFile` or `spawn` with an argv array.
+7. **Zod schemas are `.strict()`.** Already true everywhere; new schemas must continue this.
+8. **Known gap (defense in depth):** containment is lexical only (`resolveWithinRoot`). A realpath layer (à la kb's `assertRealPathWithinRoot`) is not yet implemented, so symlink-based escapes inside a discovered workspace tree are not blocked beyond what the lexical layer covers. Follow-up: add a shared `assertRealPathWithinRoot` to [src/shared/utils.ts](./src/shared/utils.ts) and call it alongside `resolveWithinRoot` in every FS-touching handler.
+
+Tests covering traversal rejection live in [src/vscode/audit.test.ts](./src/vscode/audit.test.ts) (`rejects path-traversal attempts in the workspace id`). Parallel coverage for `claudeCode.sessionRead` / `relocateProject` is a follow-up.
 
 ## Common Setup Issues
 

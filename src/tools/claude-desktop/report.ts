@@ -1,7 +1,7 @@
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
-import { HOUSEKEEPING_PATH } from '../config.js'
-import { isNodeError } from '../shared/utils.js'
+import { HOUSEKEEPING_PATH } from '../../config.js'
+import { isNodeError } from '../../shared/utils.js'
 
 const REPORT_PATTERN = /^cowork-audit-.*\.md$/
 

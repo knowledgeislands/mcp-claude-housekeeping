@@ -1,7 +1,7 @@
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
-import { VSCODE_WORKSPACE_STORAGE_ROOT_PATH } from '../config.js'
+import { VSCODE_WORKSPACE_STORAGE_ROOT_PATH } from '../../config.js'
 import { discoverWorkspaces, obsoleteSessions, sessionRead, sessionsPrune, storageSummary, workspaceDelete, workspacesList } from './audit.js'
 
 const DAY_MS = 24 * 60 * 60 * 1000
@@ -290,6 +290,16 @@ describe('workspaceDelete', () => {
 
   it('throws when the workspace does not exist', async () => {
     await expect(workspaceDelete(VSCODE_WORKSPACE_STORAGE_ROOT_PATH, { workspace: 'nope', dry_run: false })).rejects.toThrow(/not found/)
+  })
+
+  it('rejects path-traversal attempts in the workspace id', async () => {
+    // `..` segments resolve outside the root and are rejected with a Path-escape error.
+    await expect(workspaceDelete(VSCODE_WORKSPACE_STORAGE_ROOT_PATH, { workspace: '../escape', dry_run: false })).rejects.toThrow(/Path escapes root/)
+    await expect(workspaceDelete(VSCODE_WORKSPACE_STORAGE_ROOT_PATH, { workspace: '../../etc', dry_run: true })).rejects.toThrow(/Path escapes root/)
+    // Absolute-style input is neutralized (leading "/" stripped → treated as relative-to-root),
+    // so it lands inside the root and falls through to the not-found branch. Still safe — it
+    // cannot delete files outside the storage root.
+    await expect(workspaceDelete(VSCODE_WORKSPACE_STORAGE_ROOT_PATH, { workspace: '/etc/passwd', dry_run: true })).rejects.toThrow(/not found/)
   })
 })
 

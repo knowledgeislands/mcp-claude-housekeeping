@@ -1,13 +1,20 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
-import { CLAUDE_CODE_ROOT_PATH } from '../config.js'
-import { DESTRUCTIVE, DESTRUCTIVE_ONESHOT, READ_ONLY } from '../shared/annotations.js'
-import { makeRoleGatedRegister } from '../shared/roles.js'
-import { errorResult, jsonResult } from '../shared/utils.js'
+import { CLAUDE_CODE_ROOT_PATH } from '../../config.js'
+import { DESTRUCTIVE, DESTRUCTIVE_ONESHOT, READ_ONLY } from '../../shared/annotations.js'
+import { makeRoleGatedRegister } from '../../shared/roles.js'
+import { errorResult, jsonResult } from '../../shared/utils.js'
 import * as audit from './audit.js'
 import * as memory from './memory.js'
 
-const projectArg = z.string().min(1).describe('Project directory name under ~/.claude/projects/ (the encoded path).')
+// Claude Code encodes project source paths with `/` → `-` and `.` → `-`, so the
+// subdir name is dash-delimited alphanumeric. Reject anything else before any
+// path.join — defense in depth alongside resolveWithinRoot at the call sites.
+const projectArg = z
+  .string()
+  .min(1)
+  .regex(/^[A-Za-z0-9._-]+$/, 'Project name must be alphanumeric/._- (no path separators or traversal).')
+  .describe('Project directory name under ~/.claude/projects/ (the encoded path).')
 const optionalProjectArg = projectArg.optional()
 
 export const registerClaudeCodeTools = (server: McpServer): void => {

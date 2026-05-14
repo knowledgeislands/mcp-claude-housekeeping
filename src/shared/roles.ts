@@ -11,7 +11,7 @@ type RegisterTool = McpServer['registerTool']
 
 /**
  * Wraps `server.registerTool` so only tools whose inferred role
- * (`_auditor_` / `_cleaner_` in the name) is enabled in HOUSEKEEPING_ROLES
+ * (`_auditor_` / `_cleaner_` in the name) is enabled in MCP_CLAUDE_HOUSEKEEPING_ROLES
  * are actually registered. Disabled tools are silently skipped.
  */
 export const makeRoleGatedRegister = (server: McpServer): RegisterTool => {

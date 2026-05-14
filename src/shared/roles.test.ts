@@ -4,34 +4,34 @@ let savedPath: string | undefined
 let savedRoles: string | undefined
 
 beforeEach(() => {
-  savedPath = process.env.HOUSEKEEPING_PATH
-  savedRoles = process.env.HOUSEKEEPING_ROLES
-  process.env.HOUSEKEEPING_PATH = '/tmp/housekeeping'
+  savedPath = process.env.MCP_CLAUDE_HOUSEKEEPING_PATH
+  savedRoles = process.env.MCP_CLAUDE_HOUSEKEEPING_ROLES
+  process.env.MCP_CLAUDE_HOUSEKEEPING_PATH = '/tmp/housekeeping'
   vi.resetModules()
 })
 
 afterEach(() => {
-  if (savedPath === undefined) delete process.env.HOUSEKEEPING_PATH
-  else process.env.HOUSEKEEPING_PATH = savedPath
-  if (savedRoles === undefined) delete process.env.HOUSEKEEPING_ROLES
-  else process.env.HOUSEKEEPING_ROLES = savedRoles
+  if (savedPath === undefined) delete process.env.MCP_CLAUDE_HOUSEKEEPING_PATH
+  else process.env.MCP_CLAUDE_HOUSEKEEPING_PATH = savedPath
+  if (savedRoles === undefined) delete process.env.MCP_CLAUDE_HOUSEKEEPING_ROLES
+  else process.env.MCP_CLAUDE_HOUSEKEEPING_ROLES = savedRoles
 })
 
 describe('roleFromToolName', () => {
   it('extracts auditor from a name containing _auditor_', async () => {
-    delete process.env.HOUSEKEEPING_ROLES
+    delete process.env.MCP_CLAUDE_HOUSEKEEPING_ROLES
     const { roleFromToolName } = await import('./roles.js')
     expect(roleFromToolName('claude_desktop_auditor_storage_summary')).toBe('auditor')
   })
 
   it('extracts cleaner from a name containing _cleaner_', async () => {
-    delete process.env.HOUSEKEEPING_ROLES
+    delete process.env.MCP_CLAUDE_HOUSEKEEPING_ROLES
     const { roleFromToolName } = await import('./roles.js')
     expect(roleFromToolName('claude_code_cleaner_prune_sessions')).toBe('cleaner')
   })
 
   it('throws when no role segment is present', async () => {
-    delete process.env.HOUSEKEEPING_ROLES
+    delete process.env.MCP_CLAUDE_HOUSEKEEPING_ROLES
     const { roleFromToolName } = await import('./roles.js')
     expect(() => roleFromToolName('something_else')).toThrow(/Cannot determine role from tool name/)
   })
@@ -47,7 +47,7 @@ describe('makeRoleGatedRegister', () => {
   }
 
   it('registers tools whose role is enabled', async () => {
-    process.env.HOUSEKEEPING_ROLES = 'auditor'
+    process.env.MCP_CLAUDE_HOUSEKEEPING_ROLES = 'auditor'
     const { makeRoleGatedRegister } = await import('./roles.js')
     const { server, registered } = fakeServer()
     const register = makeRoleGatedRegister(server as unknown as Parameters<typeof makeRoleGatedRegister>[0])
@@ -56,7 +56,7 @@ describe('makeRoleGatedRegister', () => {
   })
 
   it('skips tools whose role is disabled', async () => {
-    process.env.HOUSEKEEPING_ROLES = 'auditor'
+    process.env.MCP_CLAUDE_HOUSEKEEPING_ROLES = 'auditor'
     const { makeRoleGatedRegister } = await import('./roles.js')
     const { server, registered } = fakeServer()
     const register = makeRoleGatedRegister(server as unknown as Parameters<typeof makeRoleGatedRegister>[0])
@@ -66,7 +66,7 @@ describe('makeRoleGatedRegister', () => {
   })
 
   it('registers both roles when both are enabled', async () => {
-    process.env.HOUSEKEEPING_ROLES = 'auditor,cleaner'
+    process.env.MCP_CLAUDE_HOUSEKEEPING_ROLES = 'auditor,cleaner'
     const { makeRoleGatedRegister } = await import('./roles.js')
     const { server, registered } = fakeServer()
     const register = makeRoleGatedRegister(server as unknown as Parameters<typeof makeRoleGatedRegister>[0])

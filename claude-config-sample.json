@@ -4,7 +4,7 @@
       "command": "node",
       "args": ["/path/to/mcp-claude-housekeeping/dist/mcp-server/index.js"],
       "env": {
-        "HOUSEKEEPING_PATH": "/Users/you/Documents/Claude/Projects/Claude Housekeeping"
+        "MCP_CLAUDE_HOUSEKEEPING_PATH": "/Users/you/Documents/Claude/Projects/Claude Housekeeping"
       }
     }
   }

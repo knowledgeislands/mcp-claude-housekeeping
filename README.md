@@ -7,7 +7,7 @@ An MCP (Model Context Protocol) server that codifies the daily Cowork local-agen
 ## Features
 
 - **Codified audit** — 10 read-only checks plus a memory-consolidation pass, matching the existing `cowork-filesystem-audit` scheduled task one-for-one.
-- **Role-gated tools** — every tool belongs to either the `auditor` role (read-only) or the `cleaner` role (destructive). Set `HOUSEKEEPING_ROLES` to opt into the roles you want; defaults to `auditor` only.
+- **Role-gated tools** — every tool belongs to either the `auditor` role (read-only) or the `cleaner` role (destructive). Set `MCP_CLAUDE_HOUSEKEEPING_ROLES` to opt into the roles you want; defaults to `auditor` only.
 - **Workspace auto-discovery** — walks `~/Library/Application Support/Claude/local-agent-mode-sessions/<account>/<workspace>/` and aggregates results across every discovered workspace.
 - **Path-safe** — every path is validated against the discovered workspace root; memory operations are also confined to `spaces/<space_id>/memory/`.
 - **No network, no auth** — pure local filesystem over MCP stdio.
@@ -31,7 +31,7 @@ An MCP (Model Context Protocol) server that codifies the daily Cowork local-agen
 | `claude_desktop_auditor_debug_info`            | `debug/` size, entry count, oldest entry age.                                   |
 | `claude_desktop_auditor_memory_list`           | List `.md` files + `MEMORY.md` content for one space.                           |
 | `claude_desktop_auditor_memory_read`           | Read one memory file.                                                           |
-| `claude_desktop_auditor_reports_list`          | List existing `cowork-audit-*.md` reports in `HOUSEKEEPING_PATH`.               |
+| `claude_desktop_auditor_reports_list`          | List existing `cowork-audit-*.md` reports in `MCP_CLAUDE_HOUSEKEEPING_PATH`.               |
 | `claude_desktop_auditor_workspaces_list`       | List discovered `<account>/<workspace>` workspace ids.                          |
 
 ### `claude_desktop_cleaner_*` — destructive
@@ -39,8 +39,8 @@ An MCP (Model Context Protocol) server that codifies the daily Cowork local-agen
 | Tool                                        | Purpose                                                                 |
 | ------------------------------------------- | ----------------------------------------------------------------------- |
 | `claude_desktop_cleaner_prune_artifacts`    | Delete unstarred artifacts beyond top N (default 5) by `lastUpdated`.   |
-| `claude_desktop_cleaner_clear_reports`      | Delete every `cowork-audit-*.md` from `HOUSEKEEPING_PATH`.              |
-| `claude_desktop_cleaner_write_report`       | Save `cowork-audit-YYYY-MM-DD.md` to `HOUSEKEEPING_PATH`.               |
+| `claude_desktop_cleaner_clear_reports`      | Delete every `cowork-audit-*.md` from `MCP_CLAUDE_HOUSEKEEPING_PATH`.              |
+| `claude_desktop_cleaner_write_report`       | Save `cowork-audit-YYYY-MM-DD.md` to `MCP_CLAUDE_HOUSEKEEPING_PATH`.               |
 | `claude_desktop_cleaner_write_memory`       | Create/overwrite a memory file in `spaces/<space_id>/memory/<name>.md`. |
 | `claude_desktop_cleaner_delete_memory`      | Retire a memory file (cannot delete `MEMORY.md`).                       |
 | `claude_desktop_cleaner_write_memory_index` | Replace `MEMORY.md` for a space.                                        |
@@ -61,7 +61,7 @@ A typical `cowork-filesystem-audit` run uses the tools in this order:
 
 1. **Install dependencies**: `npm install`.
 2. **Build**: `npm run build`.
-3. **Configure Claude Desktop** with `dist/mcp-server/index.js` and `HOUSEKEEPING_PATH` (see [Configuration](#configuration)). The sessions root, Claude Code state, and VSCode chat storage are all read from their standard macOS locations under your home dir — no configuration needed.
+3. **Configure Claude Desktop** with `dist/mcp-server/index.js` and `MCP_CLAUDE_HOUSEKEEPING_PATH` (see [Configuration](#configuration)). The sessions root, Claude Code state, and VSCode chat storage are all read from their standard macOS locations under your home dir — no configuration needed.
 4. **Restart Claude Desktop** — the `claude_desktop_auditor_*` and `claude_desktop_cleaner_*` tools should appear.
 
 ## Example Conversations
@@ -72,7 +72,7 @@ Concrete asks you might make of Claude with this server connected.
 
 > "Run the daily cowork filesystem audit and write today's report."
 
-Claude clears yesterday's report via `claude_desktop_cleaner_clear_reports`, runs every read-only check in parallel (storage summary, obsolete sessions, artifact health, backups, memory spaces, plugins, cache, debug info), then writes `cowork-audit-YYYY-MM-DD.md` to `HOUSEKEEPING_PATH` via `claude_desktop_cleaner_write_report`. See the full ordering under [Daily Audit — Tool Choreography](#daily-audit--tool-choreography).
+Claude clears yesterday's report via `claude_desktop_cleaner_clear_reports`, runs every read-only check in parallel (storage summary, obsolete sessions, artifact health, backups, memory spaces, plugins, cache, debug info), then writes `cowork-audit-YYYY-MM-DD.md` to `MCP_CLAUDE_HOUSEKEEPING_PATH` via `claude_desktop_cleaner_write_report`. See the full ordering under [Daily Audit — Tool Choreography](#daily-audit--tool-choreography).
 
 **Audit before cleaning:**
 
@@ -112,8 +112,8 @@ npm install
 
 | Name | Required | Description |
 | --- | --- | --- |
-| `HOUSEKEEPING_PATH` | yes | Absolute path or `~/...` to the directory where audit reports are written. |
-| `HOUSEKEEPING_ROLES` | no | Comma-separated list of enabled roles. Allowed: `auditor`, `cleaner`. Defaults to `auditor` only when unset or empty. Tools whose name contains `_auditor_` / `_cleaner_` are only registered when the matching role is enabled; an unknown role aborts startup. |
+| `MCP_CLAUDE_HOUSEKEEPING_PATH` | yes | Absolute path or `~/...` to the directory where audit reports are written. |
+| `MCP_CLAUDE_HOUSEKEEPING_ROLES` | no | Comma-separated list of enabled roles. Allowed: `auditor`, `cleaner`. Defaults to `auditor` only when unset or empty. Tools whose name contains `_auditor_` / `_cleaner_` are only registered when the matching role is enabled; an unknown role aborts startup. |
 | `NODE_ENV` | no | Dev convention. `dev:mcp`/`inspect` set this to `development`, which makes [`src/config.ts`](./src/config.ts) load `.env.development` from the CWD. Unset under Claude Desktop, so `.env*` files are ignored in production. |
 
 The sessions root (`~/Library/Application Support/Claude/local-agent-mode-sessions`), Claude Code root (`~/.claude`), and VSCode workspaceStorage (`~/Library/Application Support/Code/User/workspaceStorage`) are hardcoded in [`src/config.ts`](./src/config.ts) and are not user-configurable.
@@ -129,7 +129,7 @@ Run `npm run build` first so `dist/mcp-server/index.js` exists, then add to your
       "command": "node",
       "args": ["/path/to/mcp-claude-housekeeping/dist/mcp-server/index.js"],
       "env": {
-        "HOUSEKEEPING_PATH": "/Users/you/Documents/Claude/Projects/Claude Housekeeping"
+        "MCP_CLAUDE_HOUSEKEEPING_PATH": "/Users/you/Documents/Claude/Projects/Claude Housekeeping"
       }
     }
   }
@@ -140,7 +140,7 @@ A starter is in [`claude-config-sample.json`](./claude-config-sample.json).
 
 ### Running From Source (Dev)
 
-Copy [`.env.example`](./.env.example) to `.env.development` and fill in `HOUSEKEEPING_PATH`. The `dev:mcp` and `inspect` npm scripts run with `NODE_ENV=development`, and [`src/config.ts`](./src/config.ts) calls `process.loadEnvFile('./.env.${NODE_ENV}')` at startup — so it picks up `.env.development` from the CWD automatically. Claude Desktop does not set `NODE_ENV`, so the file is ignored in production; `HOUSEKEEPING_PATH` must come from the Claude Desktop config `env` block.
+Copy [`.env.example`](./.env.example) to `.env.development` and fill in `MCP_CLAUDE_HOUSEKEEPING_PATH`. The `dev:mcp` and `inspect` npm scripts run with `NODE_ENV=development`, and [`src/config.ts`](./src/config.ts) calls `process.loadEnvFile('./.env.${NODE_ENV}')` at startup — so it picks up `.env.development` from the CWD automatically. Claude Desktop does not set `NODE_ENV`, so the file is ignored in production; `MCP_CLAUDE_HOUSEKEEPING_PATH` must come from the Claude Desktop config `env` block.
 
 ```bash
 cp .env.example .env.development
@@ -151,7 +151,7 @@ npm run dev:mcp
 You can also pass the vars inline if you'd rather skip `.env.development`:
 
 ```bash
-HOUSEKEEPING_PATH=~/Documents/Claude/Projects/Claude\ Housekeeping \
+MCP_CLAUDE_HOUSEKEEPING_PATH=~/Documents/Claude/Projects/Claude\ Housekeeping \
   npm run dev:mcp
 ```
 
@@ -187,7 +187,7 @@ npm run lint:md        # prettier + markdownlint for *.md
 ├── package.json
 ├── tsconfig.json               # Base TS config
 ├── tsconfig.build.json         # Build config (emits to dist/)
-├── .env.example                # Template for HOUSEKEEPING_PATH (copy to .env.development)
+├── .env.example                # Template for MCP_CLAUDE_HOUSEKEEPING_PATH (copy to .env.development)
 ├── src/
 │   ├── mcp-server/index.ts     # MCP server entry — registers every tool
 │   ├── config.ts               # Env var loading
@@ -201,7 +201,7 @@ npm run lint:md        # prettier + markdownlint for *.md
 
 ## Troubleshooting
 
-**`HOUSEKEEPING_PATH environment variable must be set`**
+**`MCP_CLAUDE_HOUSEKEEPING_PATH environment variable must be set`**
 
 Set it in the Claude Desktop config `env` block, or as a shell variable for `dev:mcp`. This is the only required env var; all target roots are hardcoded to their standard macOS locations.
 

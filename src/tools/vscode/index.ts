@@ -1,17 +1,23 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
-import { VSCODE_WORKSPACE_STORAGE_ROOT_PATH } from '../config.js'
-import { DESTRUCTIVE_ONESHOT, READ_ONLY } from '../shared/annotations.js'
-import { makeRoleGatedRegister } from '../shared/roles.js'
-import { errorResult, jsonResult } from '../shared/utils.js'
+import { VSCODE_WORKSPACE_STORAGE_ROOT_PATH } from '../../config.js'
+import { DESTRUCTIVE_ONESHOT, READ_ONLY } from '../../shared/annotations.js'
+import { makeRoleGatedRegister } from '../../shared/roles.js'
+import { errorResult, jsonResult } from '../../shared/utils.js'
 import * as audit from './audit.js'
 
-const workspaceArg = z.string().min(1).describe('VSCode workspaceStorage subdir id (hex).')
+// Hex-only — rejects "..", "/", and other traversal characters before any
+// path.join. Defense in depth alongside resolveWithinRoot at the call sites.
+const workspaceArg = z
+  .string()
+  .min(1)
+  .regex(/^[0-9a-f]+$/i, 'Workspace id must be hex (no path separators or traversal).')
+  .describe('VSCode workspaceStorage subdir id (hex).')
 const optionalWorkspaceArg = workspaceArg.optional()
 const sessionArg = z
   .string()
   .min(1)
-  .regex(/\.jsonl?$/, 'Session name must end with .json or .jsonl')
+  .regex(/^[A-Za-z0-9._-]+\.jsonl?$/, 'Session name must be alphanumeric/._- and end with .json or .jsonl')
 
 export const registerVscodeTools = (server: McpServer): void => {
   const register = makeRoleGatedRegister(server)

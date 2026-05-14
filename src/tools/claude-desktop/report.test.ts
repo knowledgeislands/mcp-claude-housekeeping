@@ -3,7 +3,7 @@ import * as path from 'node:path'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { reportClean, reportList, reportWrite } from './report.js'
 
-const HOUSEKEEPING_PATH = process.env.HOUSEKEEPING_PATH as string
+const HOUSEKEEPING_PATH = process.env.MCP_CLAUDE_HOUSEKEEPING_PATH as string
 
 beforeAll(async () => {
   await fs.mkdir(HOUSEKEEPING_PATH, { recursive: true })

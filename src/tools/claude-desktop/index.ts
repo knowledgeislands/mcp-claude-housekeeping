@@ -1,9 +1,9 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
-import { CLAUDE_DESKTOP_ROOT_PATH } from '../config.js'
-import { DESTRUCTIVE, DESTRUCTIVE_ONESHOT, READ_ONLY } from '../shared/annotations.js'
-import { makeRoleGatedRegister } from '../shared/roles.js'
-import { discoverWorkspaces, errorResult, jsonResult, type Workspace } from '../shared/utils.js'
+import { CLAUDE_DESKTOP_ROOT_PATH } from '../../config.js'
+import { DESTRUCTIVE, DESTRUCTIVE_ONESHOT, READ_ONLY } from '../../shared/annotations.js'
+import { makeRoleGatedRegister } from '../../shared/roles.js'
+import { discoverWorkspaces, errorResult, jsonResult, type Workspace } from '../../shared/utils.js'
 import * as audit from './audit.js'
 import * as memory from './memory.js'
 import * as report from './report.js'
@@ -328,7 +328,7 @@ export const registerClaudeDesktopTools = (server: McpServer): void => {
     'claude_desktop_auditor_reports_list',
     {
       title: 'Claude Desktop Auditor: list existing audit reports',
-      description: `List cowork-audit-*.md files currently in HOUSEKEEPING_PATH with size and modified date, sorted newest first. Useful for confirming yesterday's report exists before cleaning, or showing a history.`,
+      description: `List cowork-audit-*.md files currently in MCP_CLAUDE_HOUSEKEEPING_PATH with size and modified date, sorted newest first. Useful for confirming yesterday's report exists before cleaning, or showing a history.`,
       inputSchema: z.object({}).strict(),
       annotations: READ_ONLY
     },
@@ -373,7 +373,7 @@ export const registerClaudeDesktopTools = (server: McpServer): void => {
     'claude_desktop_cleaner_clear_reports',
     {
       title: 'Claude Desktop Cleaner: delete prior audit reports',
-      description: `Step 0 of the daily audit. Delete every cowork-audit-*.md file in HOUSEKEEPING_PATH so only today's report is retained. Returns the list of deleted filenames.`,
+      description: `Step 0 of the daily audit. Delete every cowork-audit-*.md file in MCP_CLAUDE_HOUSEKEEPING_PATH so only today's report is retained. Returns the list of deleted filenames.`,
       inputSchema: z.object({}).strict(),
       annotations: DESTRUCTIVE
     },
@@ -390,7 +390,7 @@ export const registerClaudeDesktopTools = (server: McpServer): void => {
     'claude_desktop_cleaner_write_report',
     {
       title: "Claude Desktop Cleaner: write today's audit report",
-      description: `Save the completed audit markdown to HOUSEKEEPING_PATH/cowork-audit-YYYY-MM-DD.md. The date defaults to today (UTC). Creates the housekeeping directory if it does not exist. Returns the absolute path written.`,
+      description: `Save the completed audit markdown to MCP_CLAUDE_HOUSEKEEPING_PATH/cowork-audit-YYYY-MM-DD.md. The date defaults to today (UTC). Creates the housekeeping directory if it does not exist. Returns the absolute path written.`,
       inputSchema: z
         .object({
           content: z.string().describe('Full markdown content of the audit report.'),

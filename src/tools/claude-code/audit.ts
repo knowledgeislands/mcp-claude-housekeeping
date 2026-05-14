@@ -1,7 +1,7 @@
 import type { Dirent } from 'node:fs'
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
-import { daysAgo, duBytes, isNodeError, pathExists, readJsonIfExists } from '../shared/utils.js'
+import { daysAgo, duBytes, isNodeError, pathExists, readJsonIfExists, resolveWithinRoot } from '../../shared/utils.js'
 
 const DAY_MS = 1000 * 60 * 60 * 24
 
@@ -283,7 +283,8 @@ export const sessionRead = async (claudeRoot: string, args: { project: string; s
   if (!/^[0-9a-f-]{36}\.jsonl$/i.test(args.session)) {
     throw new Error(`Session name must be "<uuid>.jsonl"`)
   }
-  const file = path.join(claudeRoot, 'projects', args.project, args.session)
+  const projectDir = resolveWithinRoot(path.join(claudeRoot, 'projects'), args.project)
+  const file = resolveWithinRoot(projectDir, args.session)
   const stat = await fs.stat(file)
   const raw = await fs.readFile(file, 'utf-8')
   const lines = raw.split('\n').filter((l) => l.length > 0)
@@ -351,7 +352,7 @@ export const sessionsPrune = async (claudeRoot: string, args: { older_than_days:
  */
 export const relocateProject = async (claudeRoot: string, args: { project: string; new_path: string; dry_run: boolean }) => {
   const projectsDir = path.join(claudeRoot, 'projects')
-  const fromDir = path.join(projectsDir, args.project)
+  const fromDir = resolveWithinRoot(projectsDir, args.project)
   if (!(await pathExists(fromDir))) {
     throw new Error(`Project dir not found: "${args.project}"`)
   }

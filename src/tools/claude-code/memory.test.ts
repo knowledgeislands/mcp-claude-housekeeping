@@ -1,7 +1,7 @@
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
-import { CLAUDE_CODE_ROOT_PATH } from '../config.js'
+import { CLAUDE_CODE_ROOT_PATH } from '../../config.js'
 import { memoryDelete, memoryIndexWrite, memoryList, memoryRead, memoryWrite } from './memory.js'
 
 const PROJECT = '-Users-foo-mem'

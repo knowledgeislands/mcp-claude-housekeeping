@@ -1,7 +1,7 @@
 import type { Dirent } from 'node:fs'
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
-import { daysAgo, duBytes, isNodeError, pathExists, readJsonIfExists } from '../shared/utils.js'
+import { daysAgo, duBytes, isNodeError, pathExists, readJsonIfExists, resolveWithinRoot } from '../../shared/utils.js'
 
 const DAY_MS = 1000 * 60 * 60 * 24
 
@@ -170,7 +170,8 @@ export const sessionRead = async (storageRoot: string, args: { workspace: string
   if (!isSessionFile(args.session)) {
     throw new Error(`Session name must end with .json or .jsonl`)
   }
-  const file = path.join(storageRoot, args.workspace, 'chatSessions', args.session)
+  const workspaceDir = resolveWithinRoot(storageRoot, args.workspace)
+  const file = resolveWithinRoot(workspaceDir, path.join('chatSessions', args.session))
   const stat = await fs.stat(file)
   const raw = await fs.readFile(file, 'utf-8')
 
@@ -211,7 +212,7 @@ export const sessionRead = async (storageRoot: string, args: { workspace: string
  * does not infer orphan status — call from a caller that has confirmed it.
  */
 export const workspaceDelete = async (storageRoot: string, args: { workspace: string; dry_run: boolean }) => {
-  const dir = path.join(storageRoot, args.workspace)
+  const dir = resolveWithinRoot(storageRoot, args.workspace)
   if (!(await pathExists(dir))) {
     throw new Error(`Workspace not found: "${args.workspace}"`)
   }

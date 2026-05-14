@@ -16,7 +16,7 @@ You should expect an acknowledgement within 72 hours. We aim to triage, investig
 
 ## Scope
 
-`mcp-claude-housekeeping` is a stdio MCP server that exposes read-only audit checks and destructive housekeeping over a local Claude `local-agent-mode-sessions/` directory tree. It runs locally with the privileges of the user who launched it, and the security boundary is the discovered workspace root under the hardcoded `CLAUDE_DESKTOP_ROOT_PATH` (plus `CLAUDE_CODE_ROOT_PATH`, `VSCODE_WORKSPACE_STORAGE_ROOT_PATH`, and `HOUSEKEEPING_PATH` for their respective tool groups and report writes).
+`mcp-claude-housekeeping` is a stdio MCP server that exposes read-only audit checks and destructive housekeeping over a local Claude `local-agent-mode-sessions/` directory tree. It runs locally with the privileges of the user who launched it, and the security boundary is the discovered workspace root under the hardcoded `CLAUDE_DESKTOP_ROOT_PATH` (plus `CLAUDE_CODE_ROOT_PATH`, `VSCODE_WORKSPACE_STORAGE_ROOT_PATH`, and `MCP_CLAUDE_HOUSEKEEPING_PATH` for their respective tool groups and report writes).
 
 In scope:
 
@@ -30,7 +30,7 @@ Out of scope:
 - Issues only reproducible against a forked or modified version.
 - Vulnerabilities in upstream dependencies (please report those upstream; open an issue here only if this package exposes the flaw in a way the upstream project does not).
 - Issues that require local OS-level access already higher-privileged than the user running the MCP server (e.g. an attacker who can already write files inside `CLAUDE_DESKTOP_ROOT_PATH` or replace the binary).
-- Misconfiguration of `HOUSEKEEPING_PATH` to a directory the user did not intend to expose.
+- Misconfiguration of `MCP_CLAUDE_HOUSEKEEPING_PATH` to a directory the user did not intend to expose.
 
 ## Supported Versions
 

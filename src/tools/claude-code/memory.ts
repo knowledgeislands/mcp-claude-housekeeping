@@ -1,7 +1,7 @@
 import type { Dirent } from 'node:fs'
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
-import { isNodeError, resolveWithinRoot } from '../shared/utils.js'
+import { isNodeError, resolveWithinRoot } from '../../shared/utils.js'
 
 const projectMemoryDir = (claudeRoot: string, project: string): string => {
   return resolveWithinRoot(path.join(claudeRoot, 'projects'), path.join(project, 'memory'))

@@ -1,7 +1,7 @@
 import type { Dirent } from 'node:fs'
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
-import { assertRealPathWithinRoot, isNodeError, resolveWithinRoot } from '../../shared/utils.js'
+import { assertRealPathWithinRoot, isNodeError, resolveWithinRoot } from '../../utils/utils.js'
 
 const memoryDir = (workspaceRoot: string, spaceId: string): string => {
   return resolveWithinRoot(path.join(workspaceRoot, 'spaces'), path.join(spaceId, 'memory'))

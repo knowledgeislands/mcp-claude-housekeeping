@@ -1,9 +1,9 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
 import { CLAUDE_CODE_ROOT_PATH } from '../../config.js'
-import { DESTRUCTIVE, DESTRUCTIVE_ONESHOT, READ_ONLY } from '../../shared/annotations.js'
-import { makeRoleGatedRegister } from '../../shared/roles.js'
-import { errorResult, jsonResult } from '../../shared/utils.js'
+import { DESTRUCTIVE, DESTRUCTIVE_ONESHOT, READ_ONLY } from '../../utils/annotations.js'
+import { makeRoleGatedRegister } from '../../utils/roles.js'
+import { errorResult, jsonResult } from '../../utils/utils.js'
 import * as audit from './audit.js'
 import * as memory from './memory.js'
 

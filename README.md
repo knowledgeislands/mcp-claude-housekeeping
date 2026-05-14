@@ -31,7 +31,7 @@ An MCP (Model Context Protocol) server that codifies the daily Cowork local-agen
 | `claude_desktop_auditor_debug_info`            | `debug/` size, entry count, oldest entry age.                                   |
 | `claude_desktop_auditor_memory_list`           | List `.md` files + `MEMORY.md` content for one space.                           |
 | `claude_desktop_auditor_memory_read`           | Read one memory file.                                                           |
-| `claude_desktop_auditor_reports_list`          | List existing `cowork-audit-*.md` reports in `MCP_CLAUDE_HOUSEKEEPING_PATH`.               |
+| `claude_desktop_auditor_reports_list`          | List existing `cowork-audit-*.md` reports in `MCP_CLAUDE_HOUSEKEEPING_PATH`.    |
 | `claude_desktop_auditor_workspaces_list`       | List discovered `<account>/<workspace>` workspace ids.                          |
 
 ### `claude_desktop_cleaner_*` — destructive
@@ -39,8 +39,8 @@ An MCP (Model Context Protocol) server that codifies the daily Cowork local-agen
 | Tool                                        | Purpose                                                                 |
 | ------------------------------------------- | ----------------------------------------------------------------------- |
 | `claude_desktop_cleaner_prune_artifacts`    | Delete unstarred artifacts beyond top N (default 5) by `lastUpdated`.   |
-| `claude_desktop_cleaner_clear_reports`      | Delete every `cowork-audit-*.md` from `MCP_CLAUDE_HOUSEKEEPING_PATH`.              |
-| `claude_desktop_cleaner_write_report`       | Save `cowork-audit-YYYY-MM-DD.md` to `MCP_CLAUDE_HOUSEKEEPING_PATH`.               |
+| `claude_desktop_cleaner_clear_reports`      | Delete every `cowork-audit-*.md` from `MCP_CLAUDE_HOUSEKEEPING_PATH`.   |
+| `claude_desktop_cleaner_write_report`       | Save `cowork-audit-YYYY-MM-DD.md` to `MCP_CLAUDE_HOUSEKEEPING_PATH`.    |
 | `claude_desktop_cleaner_write_memory`       | Create/overwrite a memory file in `spaces/<space_id>/memory/<name>.md`. |
 | `claude_desktop_cleaner_delete_memory`      | Retire a memory file (cannot delete `MEMORY.md`).                       |
 | `claude_desktop_cleaner_write_memory_index` | Replace `MEMORY.md` for a space.                                        |

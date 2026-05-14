@@ -59,3 +59,20 @@ const parseAuditLogMode = (raw: string | undefined): AuditLogMode => {
 }
 
 export const AUDIT_LOG_MODE: AuditLogMode = parseAuditLogMode(process.env.MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG)
+
+/**
+ * Size-based rotation for the audit log. After each append, if `audit.jsonl`
+ * exceeds `AUDIT_LOG_MAX_BYTES`, it's renamed to `audit.jsonl.1` and older
+ * rotations shift up. The oldest beyond `AUDIT_LOG_KEEP` is dropped. Set
+ * `AUDIT_LOG_MAX_BYTES=0` to disable rotation entirely (file grows forever).
+ */
+const parseNonNegativeInt = (raw: string | undefined, fallback: number, varName: string): number => {
+  if (raw === undefined || raw.trim() === '') return fallback
+  const n = Number.parseInt(raw, 10)
+  if (!Number.isFinite(n) || n < 0) {
+    throw new Error(`Invalid ${varName}="${raw}" — expected a non-negative integer.`)
+  }
+  return n
+}
+export const AUDIT_LOG_MAX_BYTES: number = parseNonNegativeInt(process.env.MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_MAX_BYTES, 10 * 1024 * 1024, 'MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_MAX_BYTES')
+export const AUDIT_LOG_KEEP: number = parseNonNegativeInt(process.env.MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_KEEP, 5, 'MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_KEEP')

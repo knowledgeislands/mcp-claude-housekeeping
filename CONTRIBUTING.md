@@ -32,7 +32,7 @@ npm run lint:md           # prettier + markdownlint for *.md
 
 - **TypeScript ES modules** — `"type": "module"`, internal imports use `.js` extensions (e.g. `from './audit.js'`) so `tsc` emits valid JS.
 - **Arrow functions** for top-level declarations (`export const foo = () => …`).
-- **Strict path safety**: any tool input that touches the filesystem must go through `resolveWithinRoot(<root>, …)` from `src/shared/utils.ts` (where `<root>` is the relevant configured root — `CLAUDE_DESKTOP_ROOT_PATH`, `CLAUDE_CODE_ROOT_PATH`, or `VSCODE_WORKSPACE_STORAGE_ROOT_PATH`). Inputs that resolve outside that root throw `Path escapes root`.
+- **Strict path safety**: any tool input that touches the filesystem must go through `resolveWithinRoot(<root>, …)` from `src/utils/utils.ts` (where `<root>` is the relevant configured root — `CLAUDE_DESKTOP_ROOT_PATH`, `CLAUDE_CODE_ROOT_PATH`, or `VSCODE_WORKSPACE_STORAGE_ROOT_PATH`). Inputs that resolve outside that root throw `Path escapes root`.
 - **Errors**: tools return MCP errors via `errorResult(...)`; structured results via `jsonResult(...)`.
 - **Annotations**: be honest with `readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint` on every tool registration.
 

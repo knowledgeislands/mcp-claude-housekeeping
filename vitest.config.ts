@@ -26,7 +26,7 @@ export default defineConfig({
         'src/claude-code/tools.ts',
         'src/claude-desktop/tools.ts',
         'src/vscode/tools.ts',
-        'src/shared/annotations.ts'
+        'src/utils/annotations.ts'
       ],
       thresholds: {
         lines: 100,

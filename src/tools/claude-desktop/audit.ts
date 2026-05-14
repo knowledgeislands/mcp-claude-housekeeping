@@ -1,7 +1,7 @@
 import type { Dirent } from 'node:fs'
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
-import { daysAgo, duBytes, isNodeError, pathExists, readJsonIfExists } from '../../shared/utils.js'
+import { daysAgo, duBytes, isNodeError, pathExists, readJsonIfExists } from '../../utils/utils.js'
 
 const DAY_MS = 1000 * 60 * 60 * 24
 

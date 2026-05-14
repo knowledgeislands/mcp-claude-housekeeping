@@ -6,12 +6,18 @@
  * Path is configurable via MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_PATH; defaults to
  * `<MCP_CLAUDE_HOUSEKEEPING_PATH>/audit/audit.jsonl`.
  *
+ * The log rotates on size: after each append, if the file exceeds
+ * MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_MAX_BYTES (default 10 MiB), it's renamed
+ * to `audit.jsonl.1` and prior rotations shift up. MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_KEEP
+ * (default 5) controls how many rotated files survive; the oldest beyond that
+ * is dropped. Set MAX_BYTES=0 to disable rotation.
+ *
  * Failures to write the audit line are swallowed (stderr only) — a broken log
  * must never prevent a tool call from completing.
  */
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
-import { AUDIT_LOG_MODE, AUDIT_LOG_PATH } from '../config.js'
+import { AUDIT_LOG_KEEP, AUDIT_LOG_MAX_BYTES, AUDIT_LOG_MODE, AUDIT_LOG_PATH } from '../config.js'
 
 export interface AuditEvent {
   ts: string
@@ -51,6 +57,45 @@ const sanitizeArgs = (args: unknown): unknown => {
 // keep 0o644). `appendFile`'s `mode` option only applies on creation.
 let chmodEnsured = false
 
+/**
+ * If the live log is over the size cap, shift `.1` → `.2` → … → `.N` (dropping
+ * the oldest) and rename the live file to `.1`. Mode `0o600` is preserved by
+ * `fs.rename`. Best-effort: any failure logs to stderr and leaves the file in
+ * place so the next append still succeeds.
+ */
+const rotateIfNeeded = async (): Promise<void> => {
+  if (AUDIT_LOG_MAX_BYTES === 0) return
+  let size: number
+  try {
+    size = (await fs.stat(AUDIT_LOG_PATH)).size
+  } catch {
+    return
+  }
+  if (size <= AUDIT_LOG_MAX_BYTES) return
+  try {
+    // Drop the file at slot `keep + 1` (anything older than what we keep).
+    if (AUDIT_LOG_KEEP > 0) {
+      await fs.rm(`${AUDIT_LOG_PATH}.${AUDIT_LOG_KEEP}`, { force: true })
+      // Shift .keep-1 → .keep, …, .1 → .2. Highest-index first so we don't clobber.
+      for (let i = AUDIT_LOG_KEEP - 1; i >= 1; i--) {
+        const from = `${AUDIT_LOG_PATH}.${i}`
+        const to = `${AUDIT_LOG_PATH}.${i + 1}`
+        try {
+          await fs.rename(from, to)
+        } catch {
+          // missing slot — fine, rotation history may not be full yet
+        }
+      }
+      await fs.rename(AUDIT_LOG_PATH, `${AUDIT_LOG_PATH}.1`)
+    } else {
+      // KEEP=0: truncate without preserving history.
+      await fs.rm(AUDIT_LOG_PATH, { force: true })
+    }
+  } catch (err) {
+    console.error(`[audit-log] rotation failed: ${err instanceof Error ? err.message : String(err)}`)
+  }
+}
+
 export const appendAuditEvent = async (event: AuditEvent): Promise<void> => {
   try {
     await fs.mkdir(path.dirname(AUDIT_LOG_PATH), { recursive: true })
@@ -63,6 +108,7 @@ export const appendAuditEvent = async (event: AuditEvent): Promise<void> => {
       }
       chmodEnsured = true
     }
+    await rotateIfNeeded()
   } catch (err) {
     console.error(`[audit-log] failed to write: ${err instanceof Error ? err.message : String(err)}`)
   }

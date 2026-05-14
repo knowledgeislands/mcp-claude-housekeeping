@@ -1,9 +1,9 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
 import { VSCODE_WORKSPACE_STORAGE_ROOT_PATH } from '../../config.js'
-import { DESTRUCTIVE_ONESHOT, READ_ONLY } from '../../shared/annotations.js'
-import { makeRoleGatedRegister } from '../../shared/roles.js'
-import { errorResult, jsonResult } from '../../shared/utils.js'
+import { DESTRUCTIVE_ONESHOT, READ_ONLY } from '../../utils/annotations.js'
+import { makeRoleGatedRegister } from '../../utils/roles.js'
+import { errorResult, jsonResult } from '../../utils/utils.js'
 import * as audit from './audit.js'
 
 // Hex-only — rejects "..", "/", and other traversal characters before any

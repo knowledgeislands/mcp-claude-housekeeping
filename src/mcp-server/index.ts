@@ -21,8 +21,8 @@ import * as fs from 'node:fs/promises'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { AUDIT_LOG_MODE, AUDIT_LOG_PATH, CLAUDE_CODE_ROOT_PATH, CLAUDE_DESKTOP_ROOT_PATH, HOUSEKEEPING_PATH, HOUSEKEEPING_ROLES, VSCODE_WORKSPACE_STORAGE_ROOT_PATH } from '../config.js'
-import { discoverWorkspaces } from '../shared/utils.js'
 import { registerClaudeCodeTools, registerClaudeDesktopTools, registerVscodeTools } from '../tools/index.js'
+import { discoverWorkspaces } from '../utils/utils.js'
 
 console.error(`mcp-claude-housekeeping starting...`)
 console.error(`  MCP_CLAUDE_HOUSEKEEPING_ROLES=${[...HOUSEKEEPING_ROLES].sort().join(',')}`)

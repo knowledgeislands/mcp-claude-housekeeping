@@ -87,7 +87,7 @@ describe('errorResult / jsonResult', () => {
 
   it('jsonResult serialises a payload', () => {
     const r = jsonResult({ x: 1 })
-    expect(JSON.parse(r.content[0].text)).toEqual({ x: 1 })
+    expect(JSON.parse(r.content[0]?.text ?? '')).toEqual({ x: 1 })
   })
 })
 
@@ -259,8 +259,8 @@ describe('discoverWorkspaces', () => {
       await fs.writeFile(path.join(single, '.claude.json'), '{}')
       const ws = await discoverWorkspaces(single)
       expect(ws).toHaveLength(1)
-      expect(ws[0].id).toBe('.')
-      expect(ws[0].root).toBe(single)
+      expect(ws[0]?.id).toBe('.')
+      expect(ws[0]?.root).toBe(single)
     } finally {
       await fs.rm(single, { recursive: true, force: true })
     }
@@ -293,7 +293,7 @@ describe('discoverWorkspaces', () => {
 
     const ws = await discoverWorkspaces(root)
     expect(ws.map((w) => w.id)).toEqual(['account-a/ws-1', 'account-a/ws-2', 'account-b/ws-3'])
-    expect(ws[0].root).toBe(workspaceA1)
+    expect(ws[0]?.root).toBe(workspaceA1)
   })
 })
 

@@ -60,15 +60,15 @@ describe('discoverWorkspaces (vscode)', () => {
 
     const r = await discoverWorkspaces(VSCODE_WORKSPACE_STORAGE_ROOT_PATH)
     expect(r.map((w) => w.id)).toEqual(['hex-1', 'hex-2'])
-    expect(r[0].workspace_uri).toBe('file:///Users/foo/proj-1')
-    expect(r[0].session_files).toHaveLength(2)
+    expect(r[0]?.workspace_uri).toBe('file:///Users/foo/proj-1')
+    expect(r[0]?.session_files).toHaveLength(2)
   })
 
   it('ignores non-.json(l) files in chatSessions', async () => {
     await writeChatSession('hex-x', 'a.json', '{}', new Date())
     await fs.writeFile(path.join(VSCODE_WORKSPACE_STORAGE_ROOT_PATH, 'hex-x', 'chatSessions', 'notes.txt'), 'x')
     const r = await discoverWorkspaces(VSCODE_WORKSPACE_STORAGE_ROOT_PATH)
-    expect(r[0].session_files).toEqual(['a.json'])
+    expect(r[0]?.session_files).toEqual(['a.json'])
   })
 
   it('falls back to workspace.json `folder` when `workspace` is absent', async () => {
@@ -78,7 +78,7 @@ describe('discoverWorkspaces (vscode)', () => {
     await fs.writeFile(path.join(chatDir, 'a.jsonl'), '{}\n')
     await fs.writeFile(path.join(wsDir, 'workspace.json'), JSON.stringify({ folder: 'file:///Users/foo/single-folder' }))
     const r = await discoverWorkspaces(VSCODE_WORKSPACE_STORAGE_ROOT_PATH)
-    expect(r[0].workspace_uri).toBe('file:///Users/foo/single-folder')
+    expect(r[0]?.workspace_uri).toBe('file:///Users/foo/single-folder')
   })
 
   it('reports workspace_uri=null when workspace.json has neither workspace nor folder', async () => {
@@ -88,7 +88,7 @@ describe('discoverWorkspaces (vscode)', () => {
     await fs.writeFile(path.join(chatDir, 'a.jsonl'), '{}\n')
     await fs.writeFile(path.join(wsDir, 'workspace.json'), JSON.stringify({ something: 'else' }))
     const r = await discoverWorkspaces(VSCODE_WORKSPACE_STORAGE_ROOT_PATH)
-    expect(r[0].workspace_uri).toBeNull()
+    expect(r[0]?.workspace_uri).toBeNull()
   })
 })
 
@@ -97,7 +97,7 @@ describe('workspacesList (vscode)', () => {
     await writeChatSession('small', 'a.json', '{}', new Date())
     await writeChatSession('big', 'a.jsonl', 'x'.repeat(8192), new Date())
     const r = await workspacesList(VSCODE_WORKSPACE_STORAGE_ROOT_PATH)
-    expect(r.workspaces[0].id).toBe('big')
+    expect(r.workspaces[0]?.id).toBe('big')
   })
 })
 
@@ -172,8 +172,8 @@ describe('obsoleteSessions (vscode) sort callback', () => {
     await writeChatSession('hex-1', 'older.jsonl', '{}\n', older)
     await writeChatSession('hex-1', 'newer.jsonl', '{}\n', newer)
     const r = await obsoleteSessions(VSCODE_WORKSPACE_STORAGE_ROOT_PATH, { older_than_days: 60, flag_count: 999, flag_size_mb: 999 })
-    expect(r.top_10_oldest[0].session).toBe('older.jsonl')
-    expect(r.top_10_oldest[1].session).toBe('newer.jsonl')
+    expect(r.top_10_oldest[0]?.session).toBe('older.jsonl')
+    expect(r.top_10_oldest[1]?.session).toBe('newer.jsonl')
   })
 })
 
@@ -185,7 +185,7 @@ describe('obsoleteSessions (vscode)', () => {
     await writeChatSession('hex-1', 'new.jsonl', '{}\n', recent)
     const r = await obsoleteSessions(VSCODE_WORKSPACE_STORAGE_ROOT_PATH, { older_than_days: 30, flag_count: 100, flag_size_mb: 100 })
     expect(r.obsolete_count).toBe(1)
-    expect(r.top_10_oldest[0].session).toBe('old.jsonl')
+    expect(r.top_10_oldest[0]?.session).toBe('old.jsonl')
   })
 
   it('honours the workspace filter', async () => {
@@ -264,7 +264,7 @@ describe('sessionsPrune (vscode)', () => {
     await writeChatSession('hex-target', 'b.jsonl', '{}\n', oldDate)
     const r = await sessionsPrune(VSCODE_WORKSPACE_STORAGE_ROOT_PATH, { older_than_days: 60, workspace: 'hex-target', dry_run: false })
     expect(r.deleted_count).toBe(1)
-    expect(r.deleted[0].workspace).toBe('hex-target')
+    expect(r.deleted[0]?.workspace).toBe('hex-target')
     // Other workspace's session is still on disk.
     const kept = await fs.stat(path.join(VSCODE_WORKSPACE_STORAGE_ROOT_PATH, 'hex-keep', 'chatSessions', 'a.jsonl'))
     expect(kept.isFile()).toBe(true)

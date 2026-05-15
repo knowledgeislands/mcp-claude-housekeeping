@@ -4,29 +4,31 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Development Commands
 
+This project uses [Bun](https://bun.sh) (≥ 1.3) for dependency install and dev scripts. The published `dist/` bundle still runs under Node.js (≥ 22) — that's what Claude Desktop launches.
+
 Two ways to run the server:
 
-- **From source (fast iteration, tsx watch)**: `dev:mcp`
-- **From compiled `dist/` (what Claude Desktop runs)**: `start:mcp` (auto-rebuilds via `prestart:mcp`)
+- **From source (fast iteration, `bun --watch`)**: `bun run dev:mcp`
+- **From compiled `dist/` (what Claude Desktop runs, under node)**: `bun run start:mcp` (auto-rebuilds via `prestart:mcp`)
 
 Scripts:
 
-- `npm install` - **ALWAYS run first** to install dependencies
-- `npm run dev:mcp` - Run the MCP server from TS source in tsx watch mode
-- `npm run start:mcp` - Build and run the MCP server from compiled `dist/`
-- `npm run build` - Compile TS to JS in `dist/` (uses `tsconfig.build.json`, excludes tests)
-- `npm run typecheck` - Type-check without emitting (`tsc --noEmit`)
-- `npm run inspect` - Use MCP Inspector to test the server interactively (runs TS via tsx)
-- `npm test` - Run vitest tests (use `npm run test:watch` for watch mode)
-- `npm run lint:check` - Lint and format-check TS/JS/JSON with Biome
-- `npm run lint:fix` - Auto-fix Biome lint findings (with `--unsafe`) and apply formatting
-- `npm run format` - Apply Biome formatting only (no lint)
-- `npm run lint:md` - Format and lint markdown files (prettier + markdownlint; Biome doesn't format markdown yet)
-- `npm run lint:package` - Format `package.json` with syncpack
-- `npm run lint:deps:missing` - Add missing dependencies detected by depcheck
-- `npm run lint:deps:unused` - Remove unused devDependencies detected by depcheck
-- `npm run update:libs` - Check for outdated packages with npm-check-updates
-- `npm run clean` - Remove `dist/` and `node_modules/`
+- `bun install` - **ALWAYS run first** to install dependencies
+- `bun run dev:mcp` - Run the MCP server from TS source under `bun --watch`
+- `bun run start:mcp` - Build and run the MCP server from compiled `dist/` under node
+- `bun run build` - Compile TS to JS in `dist/` via `tsc` (uses `tsconfig.build.json`, excludes tests)
+- `bun run typecheck` - Type-check without emitting (`tsc --noEmit`)
+- `bun run inspect` - Use MCP Inspector to test the server interactively (runs TS via bun)
+- `bun run test` - Run vitest tests (note: `bun run test`, not `bun test` — `bun test` invokes Bun's own runner). Use `bun run test:watch` for watch mode
+- `bun run lint:check` - Lint and format-check TS/JS/JSON with Biome
+- `bun run lint:fix` - Auto-fix Biome lint findings (with `--unsafe`) and apply formatting
+- `bun run format` - Apply Biome formatting only (no lint)
+- `bun run lint:md` - Format and lint markdown files (prettier + markdownlint; Biome doesn't format markdown yet)
+- `bun run lint:package` - Format `package.json` with syncpack
+- `bun run lint:deps:missing` - Add missing dependencies detected by depcheck
+- `bun run lint:deps:unused` - Remove unused devDependencies detected by depcheck
+- `bun run update:libs` - Show outdated packages via `bun outdated`
+- `bun run clean` - Remove `dist/` and `node_modules/`
 
 ## Architecture Overview
 
@@ -36,7 +38,7 @@ Scripts:
 
 ### Source Layout
 
-The codebase is TypeScript with ES modules (`"type": "module"` in `package.json`). Source lives under `src/`; compiled JS is emitted to `dist/` by `npm run build`.
+The codebase is TypeScript with ES modules (`"type": "module"` in `package.json`). Source lives under `src/`; compiled JS is emitted to `dist/` by `bun run build` (which delegates to `tsc -p tsconfig.build.json`).
 
 - `src/mcp-server/index.ts` - Entry point. Boots the MCP server, runs workspace discovery on each call, registers every tool, and aggregates per-workspace results.
 - `src/config.ts` - Hardcoded paths to `CLAUDE_DESKTOP_ROOT_PATH`, `CLAUDE_CODE_ROOT_PATH`, and `VSCODE_WORKSPACE_STORAGE_ROOT_PATH` under the current user's home dir, plus loads `MCP_CLAUDE_HOUSEKEEPING_PATH` and `MCP_CLAUDE_HOUSEKEEPING_ROLES` from the env.
@@ -141,7 +143,7 @@ State repositories:
 
 `CLAUDE_DESKTOP_ROOT_PATH`, `CLAUDE_CODE_ROOT_PATH`, and `VSCODE_WORKSPACE_STORAGE_ROOT_PATH` are hardcoded in [`src/config.ts`](./src/config.ts) to their standard locations under the current user's home dir; they are not user-configurable.
 
-Convention: `src/config.ts` calls `process.loadEnvFile('./.env.${NODE_ENV}')` at startup (try/caught so a missing file is harmless). The `dev:mcp` and `inspect` npm scripts set `NODE_ENV=development`, so they pick up `.env.development` from the CWD. Claude Desktop does not set `NODE_ENV`, so the load attempts `./.env.undefined`, which doesn't exist and is silently ignored — `MCP_CLAUDE_HOUSEKEEPING_PATH` comes from the Claude Desktop config `env` block in production.
+Convention: `src/config.ts` calls `process.loadEnvFile('./.env.${NODE_ENV}')` at startup (try/caught so a missing file is harmless — and harmless under Bun too, where `process.loadEnvFile` is undefined: the catch swallows the `TypeError` and Bun has already auto-loaded `.env.${NODE_ENV}` itself). The `dev:mcp` and `inspect` scripts set `NODE_ENV=development`, so `.env.development` is picked up from the CWD. Claude Desktop does not set `NODE_ENV`, so no `.env.*` file is loaded — `MCP_CLAUDE_HOUSEKEEPING_PATH` comes from the Claude Desktop config `env` block in production.
 
 ### Boot-time Checks
 
@@ -163,7 +165,7 @@ Tests covering traversal rejection live in [src/vscode/audit.test.ts](./src/vsco
 
 ## Common Setup Issues
 
-1. **Missing dependencies**: Run `npm install` first.
+1. **Missing dependencies**: Run `bun install` first.
 2. **No workspaces discovered**: At boot the server logs `discovered N sessions workspace(s)`; if it shows `0`, `~/Library/Application Support/Claude/local-agent-mode-sessions` doesn't exist or has no `<account>/<workspace>/` children with marker files. Use `claude_desktop_auditor_workspaces_list` to inspect what was found.
 
 ## Error Handling

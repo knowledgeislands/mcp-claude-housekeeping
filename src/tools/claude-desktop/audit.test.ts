@@ -69,7 +69,7 @@ describe('listObsolete', () => {
 
     const result = await listObsolete(CLAUDE_DESKTOP_ROOT_PATH, { older_than_days: 30, flag_count: 999, flag_size_mb: 999 })
     expect(result.obsolete_count).toBe(1)
-    expect(result.top_10_oldest[0].name).toBe('local_old')
+    expect(result.top_10_oldest[0]?.name).toBe('local_old')
     expect(result.flags).toEqual([])
   })
 
@@ -137,8 +137,8 @@ describe('artifactPrune', () => {
 
     const result = await artifactPrune(CLAUDE_DESKTOP_ROOT_PATH, { keep: 2, dry_run: false })
     expect(result.deleted_count).toBe(1)
-    expect(result.deleted[0].id).toBe('c')
-    expect(result.deleted[0].cache_file_deleted).toBe(true)
+    expect(result.deleted[0]?.id).toBe('c')
+    expect(result.deleted[0]?.cache_file_deleted).toBe(true)
 
     const remaining = JSON.parse(await fs.readFile(path.join(CLAUDE_DESKTOP_ROOT_PATH, 'artifacts.json'), 'utf-8'))
     expect(remaining.map((a: { id: string }) => a.id).sort()).toEqual(['a', 'b', 'starred'])
@@ -165,7 +165,7 @@ describe('artifactPrune', () => {
     await fs.mkdir(path.join(CLAUDE_DESKTOP_ROOT_PATH, 'artifacts'), { recursive: true })
     const result = await artifactPrune(CLAUDE_DESKTOP_ROOT_PATH, { keep: 0, dry_run: false })
     expect(result.deleted_count).toBe(1)
-    expect(result.deleted[0].cache_file_deleted).toBe(false)
+    expect(result.deleted[0]?.cache_file_deleted).toBe(false)
   })
 
   it('rethrows non-ENOENT unlink errors (EACCES when artifacts/ is chmod 0)', async () => {
@@ -192,8 +192,8 @@ describe('obsoleteOutputs', () => {
 
     const result = await obsoleteOutputs(CLAUDE_DESKTOP_ROOT_PATH, { older_than_days: 14 })
     expect(result.sessions_with_artifacts).toBe(1)
-    expect(result.findings[0].outputs.map((f) => f.name)).toEqual(['a.csv'])
-    expect(result.findings[0].obsolete).toBe(true)
+    expect(result.findings[0]?.outputs.map((f) => f.name)).toEqual(['a.csv'])
+    expect(result.findings[0]?.obsolete).toBe(true)
   })
 
   it('falls back to session dir mtime when the <name>.json sidecar is missing', async () => {
@@ -296,8 +296,8 @@ describe('memorySpacesSummary', () => {
     const result = await memorySpacesSummary(CLAUDE_DESKTOP_ROOT_PATH, { flag_files: 20 })
     expect(result.spaces_dir_exists).toBe(true)
     expect(result.spaces).toHaveLength(1)
-    expect(result.spaces[0].memory_file_count).toBe(2)
-    expect(result.spaces[0].index_hook).toContain('entry one')
+    expect(result.spaces[0]?.memory_file_count).toBe(2)
+    expect(result.spaces[0]?.index_hook).toContain('entry one')
   })
 
   it('reports spaces_dir_exists=false when there are no spaces', async () => {
@@ -439,8 +439,8 @@ describe('extra branch coverage for desktop audit', () => {
     await setMtime(b, new Date(Date.now() - 45 * DAY_MS))
     const result = await listObsolete(CLAUDE_DESKTOP_ROOT_PATH, { older_than_days: 30, flag_count: 999, flag_size_mb: 999 })
     expect(result.obsolete_count).toBe(2)
-    expect(result.top_10_oldest[0].name).toBe('local_older')
-    expect(result.top_10_oldest[1].name).toBe('local_newer')
+    expect(result.top_10_oldest[0]?.name).toBe('local_older')
+    expect(result.top_10_oldest[1]?.name).toBe('local_newer')
   })
 
   it('listObsolete flags obsolete_size_exceeds when bytes are over the mb threshold', async () => {
@@ -500,7 +500,7 @@ describe('extra branch coverage for desktop audit', () => {
     await fs.writeFile(path.join(CLAUDE_DESKTOP_ROOT_PATH, 'artifacts.json'), JSON.stringify([{ id: 'no-ts', name: 'NT', isStarred: false }]))
     await fs.mkdir(path.join(CLAUDE_DESKTOP_ROOT_PATH, 'artifacts'), { recursive: true })
     const result = await artifactPrune(CLAUDE_DESKTOP_ROOT_PATH, { keep: 0, dry_run: false })
-    expect(result.deleted[0].last_updated).toBeNull()
+    expect(result.deleted[0]?.last_updated).toBeNull()
   })
 
   it('artifactPrune handles a missing artifacts.json (?? [] fallback)', async () => {
@@ -560,8 +560,8 @@ describe('extra branch coverage for desktop audit', () => {
       await setMtime(jsonPath, mtime)
     }
     const result = await obsoleteOutputs(CLAUDE_DESKTOP_ROOT_PATH, { older_than_days: 14 })
-    expect(result.findings[0].session).toBe('local_old')
-    expect(result.findings[1].session).toBe('local_middle')
+    expect(result.findings[0]?.session).toBe('local_old')
+    expect(result.findings[1]?.session).toBe('local_middle')
   })
 
   it('listFilesWithSize skips subdirectories within outputs/', async () => {

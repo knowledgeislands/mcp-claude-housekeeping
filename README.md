@@ -59,8 +59,8 @@ A typical `cowork-filesystem-audit` run uses the tools in this order:
 
 ## Quick Start
 
-1. **Install dependencies**: `npm install`.
-2. **Build**: `npm run build`.
+1. **Install dependencies**: `bun install`.
+2. **Build**: `bun run build`.
 3. **Configure Claude Desktop** with `dist/mcp-server/index.js` and `MCP_CLAUDE_HOUSEKEEPING_PATH` (see [Configuration](#configuration)). The sessions root, Claude Code state, and VSCode chat storage are all read from their standard macOS locations under your home dir — no configuration needed.
 4. **Restart Claude Desktop** — the `claude_desktop_auditor_*` and `claude_desktop_cleaner_*` tools should appear.
 
@@ -96,14 +96,14 @@ Claude calls `claude_desktop_cleaner_prune_artifacts` (destructive; requires the
 
 ### Prerequisites
 
-- Node.js 22.0.0 or higher (see `.node-version`)
-- npm
+- [Bun](https://bun.sh) 1.3 or higher — used for dependency install and dev scripts
+- Node.js 22.0.0 or higher (see `.node-version`) — used to run the compiled `dist/` output under Claude Desktop
 - `du` (BSD/GNU) — used for fast disk-usage measurement; standard on macOS/Linux
 
 ### Install Dependencies
 
 ```bash
-npm install
+bun install
 ```
 
 ## Configuration
@@ -120,7 +120,7 @@ The sessions root (`~/Library/Application Support/Claude/local-agent-mode-sessio
 
 ### Claude Desktop Configuration
 
-Run `npm run build` first so `dist/mcp-server/index.js` exists, then add to your Claude Desktop config:
+Run `bun run build` first so `dist/mcp-server/index.js` exists, then add to your Claude Desktop config:
 
 ```json
 {
@@ -140,19 +140,19 @@ A starter is in [`claude-config-sample.json`](./claude-config-sample.json).
 
 ### Running From Source (Dev)
 
-Copy [`.env.example`](./.env.example) to `.env.development` and fill in `MCP_CLAUDE_HOUSEKEEPING_PATH`. The `dev:mcp` and `inspect` npm scripts run with `NODE_ENV=development`, and [`src/config.ts`](./src/config.ts) calls `process.loadEnvFile('./.env.${NODE_ENV}')` at startup — so it picks up `.env.development` from the CWD automatically. Claude Desktop does not set `NODE_ENV`, so the file is ignored in production; `MCP_CLAUDE_HOUSEKEEPING_PATH` must come from the Claude Desktop config `env` block.
+Copy [`.env.example`](./.env.example) to `.env.development` and fill in `MCP_CLAUDE_HOUSEKEEPING_PATH`. The `dev:mcp` and `inspect` scripts run with `NODE_ENV=development`, which causes Bun to auto-load `.env.development` from the CWD (and is also picked up by [`src/config.ts`](./src/config.ts)'s `process.loadEnvFile` call when run under Node). Claude Desktop does not set `NODE_ENV`, so the file is ignored in production; `MCP_CLAUDE_HOUSEKEEPING_PATH` must come from the Claude Desktop config `env` block.
 
 ```bash
 cp .env.example .env.development
 # edit .env.development, then:
-npm run dev:mcp
+bun run dev:mcp
 ```
 
 You can also pass the vars inline if you'd rather skip `.env.development`:
 
 ```bash
 MCP_CLAUDE_HOUSEKEEPING_PATH=~/Documents/Claude/Projects/Claude\ Housekeeping \
-  npm run dev:mcp
+  bun run dev:mcp
 ```
 
 ### Workspaces
@@ -164,14 +164,14 @@ Use `claude_desktop_auditor_workspaces_list` to see the discovered ids. If the s
 ## Development
 
 ```bash
-npm run dev:mcp        # tsx watch mode (NODE_ENV=development)
-npm run start:mcp      # build then run from dist/
-npm run inspect        # MCP Inspector against TS source (NODE_ENV=development)
-npm test               # vitest
-npm run typecheck      # tsc --noEmit
-npm run lint:check     # Biome lint + format check
-npm run lint:fix       # Biome auto-fix (uses --unsafe)
-npm run lint:md        # prettier + markdownlint for *.md
+bun run dev:mcp        # bun --watch (NODE_ENV=development)
+bun run start:mcp      # build then run from dist/ under node
+bun run inspect        # MCP Inspector against TS source (NODE_ENV=development)
+bun run test           # vitest (use `bun run`, not `bun test`, since `bun test` invokes Bun's own runner)
+bun run typecheck      # tsc --noEmit
+bun run lint:check     # Biome lint + format check
+bun run lint:fix       # Biome auto-fix (uses --unsafe)
+bun run lint:md        # prettier + markdownlint for *.md
 ```
 
 ## Security Model
@@ -195,7 +195,7 @@ npm run lint:md        # prettier + markdownlint for *.md
 │   ├── audit.ts                # 10 read-only checks + artifactPrune
 │   ├── report.ts               # Report list/clean/write
 │   └── memory.ts               # Memory list/read/write/delete/index_write
-└── dist/                       # Build output (gitignored, created by `npm run build`)
+└── dist/                       # Build output (gitignored, created by `bun run build`)
     └── mcp-server/index.js     # Compiled entry point used by Claude Desktop
 ```
 

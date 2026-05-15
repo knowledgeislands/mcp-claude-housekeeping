@@ -15,7 +15,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.15",
-    "@types/node": "^25.7.0",
+    "@types/node": "^25.8.0",
     "@vitest/coverage-v8": "^4.1.6",
     "husky": "^9.1.7",
     "json5": "^2.2.3",
@@ -23,7 +23,6 @@
     "markdownlint-cli2": "^0.22.1",
     "prettier": "^3.8.3",
     "syncpack": "^15.1.2",
-    "tsx": "^4.21.0",
     "typescript": "^6.0.3",
     "vitest": "^4.1.6"
   },
@@ -45,9 +44,10 @@
   ],
   "license": "MIT",
   "lint-staged": {
-    "*.{ts,js,json,jsonc}": "npx @biomejs/biome check --write --no-errors-on-unmatched"
+    "*.{ts,js,json,jsonc}": "biome check --write --no-errors-on-unmatched"
   },
   "main": "dist/mcp-server/index.js",
+  "packageManager": "bun@1.3.14",
   "publishConfig": {
     "access": "public"
   },
@@ -58,24 +58,22 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "clean": "rm -rf {dist,node_modules}",
-    "dev:mcp": "NODE_ENV=development tsx watch src/mcp-server/index.ts",
-    "format": "npx @biomejs/biome format --write",
-    "inspect": "NODE_ENV=development npx @modelcontextprotocol/inspector tsx src/mcp-server/index.ts",
-    "lint:check": "npx @biomejs/biome check",
-    "lint:deps:missing": "npx depcheck --json | npx node-jq --sort-keys '.' | npx node-jq '.missing | keys | .[]' | xargs npm add -D",
-    "lint:deps:unused": "npx depcheck --json | npx node-jq --sort-keys '.' | npx node-jq '.devDependencies[]' | xargs npm uninstall",
-    "lint:fix": "npx @biomejs/biome check --write --unsafe",
-    "lint:md": "npx prettier --write \"**/*.md\" --ignore-path .gitignore && npx markdownlint-cli2",
-    "lint:package": "npx syncpack format",
+    "dev:mcp": "NODE_ENV=development bun --watch src/mcp-server/index.ts",
+    "inspect": "NODE_ENV=development bunx @modelcontextprotocol/inspector bun src/mcp-server/index.ts",
+    "lint:deps:missing": "bunx depcheck --json | bunx node-jq --sort-keys '.' | bunx node-jq '.missing | keys | .[]' | xargs bun add -D",
+    "lint:deps:unused": "bunx depcheck --json | bunx node-jq --sort-keys '.' | bunx node-jq '.devDependencies[]' | xargs bun remove",
+    "lint:fix": "bunx --bun @biomejs/biome format",
+    "lint:md": "bunx prettier --write \"**/*.md\" --ignore-path .gitignore && bunx markdownlint-cli2",
+    "lint:package": "bunx syncpack format",
     "prepare": "husky",
-    "prepublishOnly": "npm run build",
-    "prestart:mcp": "npm run build",
+    "prepublishOnly": "bun run build",
+    "prestart:mcp": "bun run build",
     "start:mcp": "node dist/mcp-server/index.js",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
-    "update:libs": "npx npm-check-updates"
+    "update:libs": "bun update"
   },
   "type": "module",
   "types": "dist/mcp-server/index.d.ts"

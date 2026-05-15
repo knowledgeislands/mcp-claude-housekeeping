@@ -113,9 +113,9 @@ describe('discoverProjects', () => {
 
     const r = await discoverProjects(CLAUDE_CODE_ROOT_PATH)
     expect(r.map((p) => p.id)).toEqual(['-Users-foo-a', '-Users-foo-b'])
-    expect(r[0].session_files).toHaveLength(2)
-    expect(r[0].has_memory).toBe(true)
-    expect(r[1].has_memory).toBe(false)
+    expect(r[0]?.session_files).toHaveLength(2)
+    expect(r[0]?.has_memory).toBe(true)
+    expect(r[1]?.has_memory).toBe(false)
   })
 
   it('ignores non-jsonl files in a project dir', async () => {
@@ -126,7 +126,7 @@ describe('discoverProjects', () => {
     await writeSession('-Users-foo-c', '44444444-4444-4444-4444-444444444444', new Date())
 
     const r = await discoverProjects(CLAUDE_CODE_ROOT_PATH)
-    expect(r[0].session_files).toEqual(['44444444-4444-4444-4444-444444444444.jsonl'])
+    expect(r[0]?.session_files).toEqual(['44444444-4444-4444-4444-444444444444.jsonl'])
   })
 })
 
@@ -137,7 +137,7 @@ describe('projectsList', () => {
     const r = await projectsList(CLAUDE_CODE_ROOT_PATH)
     expect(r.project_count).toBe(2)
     // Larger project first
-    expect(r.projects[0].id).toBe('-B')
+    expect(r.projects[0]?.id).toBe('-B')
   })
 })
 
@@ -175,7 +175,7 @@ describe('obsoleteSessions', () => {
 
     const r = await obsoleteSessions(CLAUDE_CODE_ROOT_PATH, { older_than_days: 30, flag_count: 100, flag_size_mb: 100 })
     expect(r.obsolete_count).toBe(1)
-    expect(r.top_10_oldest[0].session).toBe('11111111-1111-1111-1111-111111111111.jsonl')
+    expect(r.top_10_oldest[0]?.session).toBe('11111111-1111-1111-1111-111111111111.jsonl')
   })
 
   it('includes sidecar dir bytes when present', async () => {
@@ -187,7 +187,7 @@ describe('obsoleteSessions', () => {
     await fs.writeFile(path.join(sidecar, 'output.bin'), 'x'.repeat(2048))
 
     const r = await obsoleteSessions(CLAUDE_CODE_ROOT_PATH, { older_than_days: 30, flag_count: 100, flag_size_mb: 100 })
-    expect(r.top_10_oldest[0].bytes).toBeGreaterThan(2048)
+    expect(r.top_10_oldest[0]?.bytes).toBeGreaterThan(2048)
   })
 
   it('sorts multiple obsolete sessions by mtime ascending', async () => {
@@ -197,8 +197,8 @@ describe('obsoleteSessions', () => {
     await writeSession('-A', '22222222-2222-2222-2222-222222222222', older)
     const r = await obsoleteSessions(CLAUDE_CODE_ROOT_PATH, { older_than_days: 30, flag_count: 100, flag_size_mb: 100 })
     expect(r.obsolete_count).toBe(2)
-    expect(r.top_10_oldest[0].session).toBe('22222222-2222-2222-2222-222222222222.jsonl')
-    expect(r.top_10_oldest[1].session).toBe('11111111-1111-1111-1111-111111111111.jsonl')
+    expect(r.top_10_oldest[0]?.session).toBe('22222222-2222-2222-2222-222222222222.jsonl')
+    expect(r.top_10_oldest[1]?.session).toBe('11111111-1111-1111-1111-111111111111.jsonl')
   })
 
   it('flags when obsolete count and total bytes exceed their thresholds', async () => {
@@ -313,7 +313,7 @@ describe('sessionsPrune', () => {
 
     const r = await sessionsPrune(CLAUDE_CODE_ROOT_PATH, { older_than_days: 60, dry_run: false })
     expect(r.deleted_count).toBe(1)
-    expect(r.deleted[0].sidecar_deleted).toBe(true)
+    expect(r.deleted[0]?.sidecar_deleted).toBe(true)
     await expect(fs.access(path.join(CLAUDE_CODE_ROOT_PATH, 'projects', '-A', `${uuid}.jsonl`))).rejects.toThrow()
     await expect(fs.access(sidecar)).rejects.toThrow()
   })
@@ -332,7 +332,7 @@ describe('sessionsPrune', () => {
     // No sidecar created — exercises the `sidecarExists ? ... : 0` falsy branch.
     const r = await sessionsPrune(CLAUDE_CODE_ROOT_PATH, { older_than_days: 60, dry_run: false })
     expect(r.deleted_count).toBe(1)
-    expect(r.deleted[0].sidecar_deleted).toBe(false)
+    expect(r.deleted[0]?.sidecar_deleted).toBe(false)
   })
 
   it('honours the project filter', async () => {
@@ -341,7 +341,7 @@ describe('sessionsPrune', () => {
     await writeSession('-B', '22222222-2222-2222-2222-222222222222', oldDate)
     const r = await sessionsPrune(CLAUDE_CODE_ROOT_PATH, { older_than_days: 60, project: '-B', dry_run: false })
     expect(r.deleted_count).toBe(1)
-    expect(r.deleted[0].project).toBe('-B')
+    expect(r.deleted[0]?.project).toBe('-B')
     // -A session still on disk.
     const kept = await fs.stat(path.join(CLAUDE_CODE_ROOT_PATH, 'projects', '-A', '11111111-1111-1111-1111-111111111111.jsonl'))
     expect(kept.isFile()).toBe(true)
@@ -483,7 +483,7 @@ describe('pruneOrphanProjects', () => {
 
     const r = await pruneOrphanProjects(CLAUDE_CODE_ROOT_PATH, { dry_run: false, include_with_memory: false })
     expect(r.deleted_count).toBe(1)
-    expect(r.deleted[0].id).toBe('-Users-ghost-project-aaaaaaaa')
+    expect(r.deleted[0]?.id).toBe('-Users-ghost-project-aaaaaaaa')
 
     // Live project untouched.
     const stillThere = await fs.stat(path.join(CLAUDE_CODE_ROOT_PATH, 'projects', '-tmp'))
@@ -505,7 +505,7 @@ describe('pruneOrphanProjects', () => {
     const r = await pruneOrphanProjects(CLAUDE_CODE_ROOT_PATH, { dry_run: false, include_with_memory: false })
     expect(r.deleted_count).toBe(0)
     expect(r.skipped).toHaveLength(1)
-    expect(r.skipped[0].reason).toBe('has_memory')
+    expect(r.skipped[0]?.reason).toBe('has_memory')
   })
 
   it('deletes orphans with memory when include_with_memory is true', async () => {

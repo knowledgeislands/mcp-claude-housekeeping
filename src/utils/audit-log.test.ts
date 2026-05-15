@@ -184,4 +184,196 @@ describe('appendAuditEvent / withAuditLog', () => {
     process.env.MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_MAX_BYTES = '-5'
     await expect(import('./audit-log.js')).rejects.toThrow(/MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_MAX_BYTES.*non-negative/)
   })
+
+  it('truncates the serialized args when they exceed the size cap but `content` is not a string', async () => {
+    // The `copy.content = '[redacted ...B]'` redaction in sanitizeArgs only
+    // fires when `content` is a string. For any other oversized field we fall
+    // through to the JSON.stringify length check and return a `_truncated`
+    // preview — that's the path this test pins down.
+    const { withAuditLog } = await import('./audit-log.js')
+    const wrapped = withAuditLog('claude_code_cleaner_test', 'cleaner', async () => ({ content: [{ type: 'text', text: '{}' }] }))
+    await wrapped({ payload: 'x'.repeat(5000) })
+    await new Promise((r) => setTimeout(r, 20))
+    const event = JSON.parse((await fs.readFile(logPath, 'utf-8')).trim())
+    expect(event.args._truncated).toBe(true)
+    expect(typeof event.args.preview).toBe('string')
+    expect(event.args.preview.length).toBeLessThanOrEqual(4096)
+  })
+
+  it('skips rotation silently when stat fails (eg the log was removed mid-flight)', async () => {
+    // Covers the inner `try { fs.stat(...) } catch { return }` in rotateIfNeeded.
+    // stat is otherwise unreachable from a failing path because appendFile would
+    // already have errored before rotation runs — so we substitute a one-shot
+    // ENOENT for the dynamically-imported audit-log only. ESM namespaces are
+    // frozen, so `vi.doMock` (which intercepts the loader) is required;
+    // `vi.spyOn(fs, 'stat')` would throw "namespace is not configurable".
+    process.env.MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_MAX_BYTES = '1'
+    let statCalls = 0
+    vi.doMock('node:fs/promises', async () => {
+      const actual = await vi.importActual<typeof import('node:fs/promises')>('node:fs/promises')
+      return {
+        ...actual,
+        stat: async (...args: Parameters<typeof actual.stat>) => {
+          statCalls++
+          if (statCalls === 1) throw new Error('ENOENT (simulated)')
+          return actual.stat(...args)
+        }
+      }
+    })
+
+    const { withAuditLog } = await import('./audit-log.js')
+    const wrapped = withAuditLog('claude_code_cleaner_test', 'cleaner', async () => ({ content: [{ type: 'text', text: '{}' }] }))
+    await wrapped({ note: 'a' })
+    await new Promise((r) => setTimeout(r, 30))
+
+    expect(statCalls).toBeGreaterThanOrEqual(1)
+    // No rotation files exist — the stat catch returned before any rename/rm.
+    await expect(fs.access(`${logPath}.1`)).rejects.toThrow()
+    vi.doUnmock('node:fs/promises')
+  })
+
+  it('reports a rotation failure to stderr without crashing (eg a slot path is a directory)', async () => {
+    // Force the `rm(<keep>+1, { force: true })` call to throw EISDIR by
+    // placing a directory at that slot — `force` only suppresses ENOENT, not
+    // EISDIR. This exercises the outer `catch` around the rotation block.
+    process.env.MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_MAX_BYTES = '200'
+    process.env.MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_KEEP = '2'
+    await fs.mkdir(path.dirname(logPath), { recursive: true })
+    await fs.mkdir(`${logPath}.2`, { recursive: true })
+
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    const { withAuditLog } = await import('./audit-log.js')
+    const wrapped = withAuditLog('claude_code_cleaner_test', 'cleaner', async () => ({ content: [{ type: 'text', text: '{}' }] }))
+    await wrapped({ note: 'forces-rotation', padding: 'x'.repeat(300) })
+    await new Promise((r) => setTimeout(r, 30))
+
+    expect(errSpy.mock.calls.some(([msg]) => typeof msg === 'string' && msg.includes('rotation failed'))).toBe(true)
+    errSpy.mockRestore()
+  })
+
+  it('handles non-object args (eg an array or primitive) without copying or redacting', async () => {
+    // Covers the `args && typeof args === 'object' && !Array.isArray(args)` false
+    // branch in sanitizeArgs. Two cases pinned in a single test: an array
+    // (truthy + object but Array.isArray → true) and a primitive string
+    // (truthy but typeof !== 'object').
+    const { withAuditLog } = await import('./audit-log.js')
+    const wrapped = withAuditLog('claude_code_cleaner_test', 'cleaner', async () => ({ content: [{ type: 'text', text: '{}' }] }))
+    // appendAuditEvent fires via void so we need a settle delay between calls
+    // to keep the JSONL order deterministic.
+    await wrapped(['x', 'y'])
+    await new Promise((r) => setTimeout(r, 20))
+    await wrapped('a-primitive-string')
+    await new Promise((r) => setTimeout(r, 20))
+    const [first, second] = (await fs.readFile(logPath, 'utf-8')).trim().split('\n')
+    expect(JSON.parse(first ?? '').args).toEqual(['x', 'y'])
+    expect(JSON.parse(second ?? '').args).toBe('a-primitive-string')
+  })
+
+  it('coerces a non-Error throw value to a string when recording the failure', async () => {
+    // Covers the `err instanceof Error ? err.message : String(err)` false branch
+    // in withAuditLog's catch. Handlers can throw anything (string, object, …);
+    // the audit row must still capture a textual `error` field.
+    const { withAuditLog } = await import('./audit-log.js')
+    const wrapped = withAuditLog('claude_code_cleaner_test', 'cleaner', async () => {
+      throw 'plain-string-failure'
+    })
+    await expect(wrapped({})).rejects.toBe('plain-string-failure')
+    await new Promise((r) => setTimeout(r, 20))
+    const event = JSON.parse((await fs.readFile(logPath, 'utf-8')).trim())
+    expect(event.ok).toBe(false)
+    expect(event.error).toBe('plain-string-failure')
+  })
+
+  it('records ok:false with no error text when an isError result has no content array', async () => {
+    // Covers the `!Array.isArray(content)` true branch in extractErrorText.
+    const { withAuditLog } = await import('./audit-log.js')
+    const wrapped = withAuditLog('claude_code_cleaner_test', 'cleaner', async () => ({ isError: true }))
+    await wrapped({})
+    await new Promise((r) => setTimeout(r, 20))
+    const event = JSON.parse((await fs.readFile(logPath, 'utf-8')).trim())
+    expect(event.ok).toBe(false)
+    expect(event.error).toBeUndefined()
+  })
+
+  it('coerces a non-Error rejection from fs to a string when logging the rotation failure', async () => {
+    // The `err instanceof Error ? err.message : String(err)` false branch inside
+    // rotateIfNeeded's catch can't fire in production because fs always rejects
+    // with an Error subclass — we substitute a non-Error rejection to pin it
+    // down so branch coverage hits 100%.
+    process.env.MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_MAX_BYTES = '200'
+    process.env.MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_KEEP = '2'
+    vi.doMock('node:fs/promises', async () => {
+      const actual = await vi.importActual<typeof import('node:fs/promises')>('node:fs/promises')
+      return {
+        ...actual,
+        rm: async (...args: Parameters<typeof actual.rm>) => {
+          const [target] = args
+          // Only the rotation's `rm(.${KEEP+1})` call should be redirected to
+          // the non-Error rejection — leave unrelated rm calls untouched.
+          if (typeof target === 'string' && target.endsWith('.2')) {
+            throw 'plain-string-rotation-failure'
+          }
+          return actual.rm(...args)
+        }
+      }
+    })
+
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    const { withAuditLog } = await import('./audit-log.js')
+    const wrapped = withAuditLog('claude_code_cleaner_test', 'cleaner', async () => ({ content: [{ type: 'text', text: '{}' }] }))
+    await wrapped({ note: 'forces-rotation', padding: 'x'.repeat(300) })
+    await new Promise((r) => setTimeout(r, 30))
+
+    expect(errSpy.mock.calls.some(([msg]) => typeof msg === 'string' && msg.includes('rotation failed') && msg.includes('plain-string-rotation-failure'))).toBe(true)
+    errSpy.mockRestore()
+    vi.doUnmock('node:fs/promises')
+  })
+
+  it('coerces a non-Error rejection from fs to a string when logging the appendFile failure', async () => {
+    // Same defensive branch as above, but in appendAuditEvent's outer catch.
+    vi.doMock('node:fs/promises', async () => {
+      const actual = await vi.importActual<typeof import('node:fs/promises')>('node:fs/promises')
+      return {
+        ...actual,
+        mkdir: async (..._args: unknown[]) => {
+          throw 'plain-string-mkdir-failure'
+        }
+      }
+    })
+
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    const { withAuditLog } = await import('./audit-log.js')
+    const wrapped = withAuditLog('claude_code_cleaner_test', 'cleaner', async () => ({ content: [{ type: 'text', text: '{}' }] }))
+    await expect(wrapped({ note: 'x' })).resolves.toBeDefined()
+    await new Promise((r) => setTimeout(r, 30))
+
+    expect(errSpy.mock.calls.some(([msg]) => typeof msg === 'string' && msg.includes('failed to write') && msg.includes('plain-string-mkdir-failure'))).toBe(true)
+    errSpy.mockRestore()
+    vi.doUnmock('node:fs/promises')
+  })
+
+  it('reports an appendFile failure to stderr without throwing back to the caller', async () => {
+    // Point AUDIT_LOG_PATH at a path whose parent is a regular file, not a
+    // directory. `fs.mkdir(..., { recursive: true })` fails with ENOTDIR in
+    // that case, surfacing the outer `catch` in appendAuditEvent.
+    await fs.mkdir(tmpDir, { recursive: true })
+    const blockerFile = path.join(tmpDir, 'blocker')
+    await fs.writeFile(blockerFile, '')
+    process.env.MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_PATH = path.join(blockerFile, 'log.jsonl')
+
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    const { withAuditLog } = await import('./audit-log.js')
+    const wrapped = withAuditLog('claude_code_cleaner_test', 'cleaner', async () => ({ content: [{ type: 'text', text: '{}' }] }))
+    // The wrapped tool call must still resolve normally even though the audit
+    // append fails underneath — that's the whole point of the swallow.
+    await expect(wrapped({ note: 'x' })).resolves.toBeDefined()
+    await new Promise((r) => setTimeout(r, 30))
+
+    expect(errSpy.mock.calls.some(([msg]) => typeof msg === 'string' && msg.includes('failed to write'))).toBe(true)
+    errSpy.mockRestore()
+  })
 })

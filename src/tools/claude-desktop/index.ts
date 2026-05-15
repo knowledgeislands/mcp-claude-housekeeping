@@ -31,12 +31,13 @@ const requireSingleWorkspace = async (workspaceFilter?: string): Promise<Workspa
     }
     return found
   }
-  if (all.length === 0) throw new Error(`No workspaces found under CLAUDE_DESKTOP_ROOT_PATH=${CLAUDE_DESKTOP_ROOT_PATH}`)
   if (all.length > 1) {
     const ids = all.map((w) => w.id).join(', ')
     throw new Error(`${all.length} workspaces found; specify "workspace" to pick one: ${ids}`)
   }
-  return all[0]
+  const [only] = all
+  if (!only) throw new Error(`No workspaces found under CLAUDE_DESKTOP_ROOT_PATH=${CLAUDE_DESKTOP_ROOT_PATH}`)
+  return only
 }
 
 const aggregate = async <T>(workspaceFilter: string | undefined, fn: (root: string) => Promise<T>) => {

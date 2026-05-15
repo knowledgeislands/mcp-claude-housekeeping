@@ -37,6 +37,18 @@ describe('roleFromToolName', () => {
   })
 })
 
+describe('HOUSEKEEPING_ROLES (config.ts)', () => {
+  it('falls back to auditor when ROLES is a non-empty string with no valid entries after splitting', async () => {
+    // Covers the `requested.length === 0` branch — distinct from the
+    // `raw === undefined || raw.trim() === ''` branch above it. Inputs like
+    // `","` survive the trim() check but every comma-separated part is empty,
+    // so after filter(s => s.length > 0) the list is empty.
+    process.env.MCP_CLAUDE_HOUSEKEEPING_ROLES = ',,,'
+    const { HOUSEKEEPING_ROLES } = await import('../config.js')
+    expect(Array.from(HOUSEKEEPING_ROLES)).toEqual(['auditor'])
+  })
+})
+
 describe('makeRoleGatedRegister', () => {
   const fakeServer = () => {
     const registered: string[] = []

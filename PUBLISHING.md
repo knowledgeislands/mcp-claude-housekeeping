@@ -69,7 +69,7 @@ git push --follow-tags
 npm publish --provenance --access public
 ```
 
-`prepublishOnly` automatically runs `npm run build` first.
+`prepublishOnly` automatically runs `bun run build` first. We use `npm publish` (rather than `bun publish`) because the `--provenance` flag produces the sigstore attestation that's verified on the npm registry.
 
 After a manual publish, sync `release-please-config.json` and `.release-please-manifest.json` so release-please picks up where you left off.
 

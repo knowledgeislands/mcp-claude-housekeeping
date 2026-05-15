@@ -39,3 +39,4 @@ logs
 *.log
 *.tsbuildinfo
 *.lock
+!bun.lock

@@ -21,11 +21,12 @@ export default defineConfig({
         'src/**/*.test.ts',
         // Server entry points and tool registration aggregators are pure
         // wiring (every line is `server.registerTool(...)`); their behaviour
-        // is exercised by `npm run inspect` and the smoke test in CI.
+        // is exercised by `bun run inspect` and the smoke test in CI.
         'src/mcp-server/index.ts',
-        'src/claude-code/tools.ts',
-        'src/claude-desktop/tools.ts',
-        'src/vscode/tools.ts',
+        'src/tools/index.ts',
+        'src/tools/claude-code/index.ts',
+        'src/tools/claude-desktop/index.ts',
+        'src/tools/vscode/index.ts',
         'src/utils/annotations.ts'
       ],
       thresholds: {

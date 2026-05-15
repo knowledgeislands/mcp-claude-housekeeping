@@ -4,26 +4,28 @@ Thanks for your interest. This file covers the dev loop, conventions, and what t
 
 ## Setup
 
+You'll need [Bun](https://bun.sh) 1.3+ for the dev loop, and Node.js 22+ to run the compiled `dist/` output the published package ships.
+
 ```bash
 git clone https://github.com/knowledgeislands/mcp-claude-housekeeping.git
 cd mcp-claude-housekeeping
-npm install
+bun install
 ```
 
-`npm install` triggers `prepare` which configures the husky pre-commit hook — so every commit will auto-run `lint-staged` and format your changes.
+`bun install` triggers `prepare` which configures the husky pre-commit hook — so every commit will auto-run `lint-staged` and format your changes.
 
 ## Dev loop
 
 ```bash
-npm run dev:mcp           # tsx watch — runs the server from source
-npm run inspect           # MCP Inspector against the TS source
-npm run typecheck         # tsc --noEmit
-npm run test              # vitest
-npm run test:watch        # vitest in watch mode
-npm run test:coverage     # vitest with v8 coverage report
-npm run lint:check        # Biome lint + format check
-npm run lint:fix          # Biome auto-fix
-npm run lint:md           # prettier + markdownlint for *.md
+bun run dev:mcp           # bun --watch — runs the server from source
+bun run inspect           # MCP Inspector against the TS source
+bun run typecheck         # tsc --noEmit
+bun run test              # vitest (use `bun run test`, not `bun test`)
+bun run test:watch        # vitest in watch mode
+bun run test:coverage     # vitest with v8 coverage report
+bun run lint:check        # Biome lint + format check
+bun run lint:fix          # Biome auto-fix
+bun run lint:md           # prettier + markdownlint for *.md
 ```
 
 ## Conventions
@@ -62,9 +64,9 @@ Add `!` for breaking changes (`feat!:` / `fix!:`) — bumps major.
 
 ## Before opening a PR
 
-- [ ] `npm run lint:check` passes
-- [ ] `npm run typecheck` passes
-- [ ] `npm run test:coverage` passes (no threshold failures)
+- [ ] `bun run lint:check` passes
+- [ ] `bun run typecheck` passes
+- [ ] `bun run test:coverage` passes (no threshold failures)
 - [ ] Commit messages follow Conventional Commits
 - [ ] If you added/removed/renamed a tool, update `README.md` and `CLAUDE.md`
 

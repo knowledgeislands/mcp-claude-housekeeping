@@ -427,7 +427,7 @@ export const pluginsInventory = async (workspaceRoot: string) => {
     const ages = knowledgeWork.map((p) => p.install_age_days).sort((a, b) => a - b)
     const median = ages[Math.floor(ages.length / 2)]
     const oldest = knowledgeWork[0]
-    if (median !== undefined && oldest.install_age_days > median + 30) {
+    if (oldest && median !== undefined && oldest.install_age_days > median + 30) {
       flags.push(`stale_install:${oldest.plugin} (${oldest.install_age_days}d vs median ${median}d)`)
     }
   }

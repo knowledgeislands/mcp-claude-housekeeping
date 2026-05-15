@@ -10,7 +10,7 @@ Include:
 
 - A description of the issue and the impact (e.g. "path traversal", "arbitrary file write outside a workspace").
 - Steps to reproduce, ideally with a minimal proof-of-concept.
-- The version of the package (`npm ls @knowledgeislands/mcp-claude-housekeeping`) and Node version.
+- The version of the package (`bun pm ls @knowledgeislands/mcp-claude-housekeeping`, or `npm ls ...` if installed via npm) and Node version.
 
 You should expect an acknowledgement within 72 hours. We aim to triage, investigate, and ship a fix within 14 days for high-severity issues.
 

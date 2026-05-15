@@ -20,16 +20,24 @@ jobs:
       - uses: actions/checkout@v6
         if: ${{ steps.release.outputs.release_created }}
 
+      - uses: oven-sh/setup-bun@v2
+        if: ${{ steps.release.outputs.release_created }}
+        with:
+          bun-version: latest
+
       - uses: actions/setup-node@v6
         if: ${{ steps.release.outputs.release_created }}
         with:
           node-version-file: '.node-version'
-          cache: npm
           registry-url: 'https://registry.npmjs.org'
 
-      - run: npm ci
+      - run: bun install --frozen-lockfile
         if: ${{ steps.release.outputs.release_created }}
 
+      # `npm publish` is still used (rather than `bun publish`) for the
+      # --provenance flag, which produces the sigstore attestation surfaced on
+      # the npm registry via the `id-token: write` permission above. The
+      # `prepublishOnly` script handles the TypeScript build.
       - run: npm publish --provenance --access public
         if: ${{ steps.release.outputs.release_created }}
         env:

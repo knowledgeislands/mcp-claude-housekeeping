@@ -31,8 +31,8 @@ describe('reportList', () => {
     await new Promise((r) => setTimeout(r, 10))
     await fs.writeFile(path.join(HOUSEKEEPING_PATH, 'cowork-audit-2026-02-01.md'), 'new')
     const r = await reportList()
-    expect(r.reports[0].name).toBe('cowork-audit-2026-02-01.md')
-    expect(r.reports[1].name).toBe('cowork-audit-2026-01-01.md')
+    expect(r.reports[0]?.name).toBe('cowork-audit-2026-02-01.md')
+    expect(r.reports[1]?.name).toBe('cowork-audit-2026-01-01.md')
   })
 
   it('skips non-matching files', async () => {

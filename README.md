@@ -114,7 +114,7 @@ bun install
 | --- | --- | --- |
 | `MCP_CLAUDE_HOUSEKEEPING_PATH` | yes | Absolute path or `~/...` to the directory where audit reports are written. |
 | `MCP_CLAUDE_HOUSEKEEPING_ROLES` | no | Comma-separated list of enabled roles. Allowed: `auditor`, `cleaner`. Defaults to `auditor` only when unset or empty. Tools whose name contains `_auditor_` / `_cleaner_` are only registered when the matching role is enabled; an unknown role aborts startup. |
-| `NODE_ENV` | no | Dev convention. `dev:mcp`/`inspect` set this to `development`, which makes [`src/config.ts`](./src/config.ts) load `.env.development` from the CWD. Unset under Claude Desktop, so `.env*` files are ignored in production. |
+| `NODE_ENV` | no | Dev convention. `server:mcp:dev`/`server:mcp:inspect` set this to `development`, which makes [`src/config.ts`](./src/config.ts) load `.env.development` from the CWD. Unset under Claude Desktop, so `.env*` files are ignored in production. |
 
 The sessions root (`~/Library/Application Support/Claude/local-agent-mode-sessions`), Claude Code root (`~/.claude`), and VSCode workspaceStorage (`~/Library/Application Support/Code/User/workspaceStorage`) are hardcoded in [`src/config.ts`](./src/config.ts) and are not user-configurable.
 
@@ -140,19 +140,19 @@ A starter is in [`claude-config-sample.json`](./claude-config-sample.json).
 
 ### Running From Source (Dev)
 
-Copy [`.env.example`](./.env.example) to `.env.development` and fill in `MCP_CLAUDE_HOUSEKEEPING_PATH`. The `dev:mcp` and `inspect` scripts run with `NODE_ENV=development`, which causes Bun to auto-load `.env.development` from the CWD (and is also picked up by [`src/config.ts`](./src/config.ts)'s `process.loadEnvFile` call when run under Node). Claude Desktop does not set `NODE_ENV`, so the file is ignored in production; `MCP_CLAUDE_HOUSEKEEPING_PATH` must come from the Claude Desktop config `env` block.
+Copy [`.env.example`](./.env.example) to `.env.development` and fill in `MCP_CLAUDE_HOUSEKEEPING_PATH`. The `server:mcp:dev` and `server:mcp:inspect` scripts run with `NODE_ENV=development`, which causes Bun to auto-load `.env.development` from the CWD (and is also picked up by [`src/config.ts`](./src/config.ts)'s `process.loadEnvFile` call when run under Node). Claude Desktop does not set `NODE_ENV`, so the file is ignored in production; `MCP_CLAUDE_HOUSEKEEPING_PATH` must come from the Claude Desktop config `env` block.
 
 ```bash
 cp .env.example .env.development
 # edit .env.development, then:
-bun run dev:mcp
+bun run server:mcp:dev
 ```
 
 You can also pass the vars inline if you'd rather skip `.env.development`:
 
 ```bash
 MCP_CLAUDE_HOUSEKEEPING_PATH=~/Documents/Claude/Projects/Claude\ Housekeeping \
-  bun run dev:mcp
+  bun run server:mcp:dev
 ```
 
 ### Workspaces
@@ -164,11 +164,11 @@ Use `claude_desktop_auditor_workspaces_list` to see the discovered ids. If the s
 ## Development
 
 ```bash
-bun run dev:mcp        # bun --watch (NODE_ENV=development)
-bun run start:mcp      # build then run from dist/ under node
-bun run inspect        # MCP Inspector against TS source (NODE_ENV=development)
+bun run server:mcp:dev      # bun --watch (NODE_ENV=development)
+bun run server:mcp:start    # build then run from dist/ under node
+bun run server:mcp:inspect  # MCP Inspector against TS source (NODE_ENV=development)
 bun run test           # vitest (use `bun run`, not `bun test`, since `bun test` invokes Bun's own runner)
-bun run typecheck      # tsc --noEmit
+bun run lint:types     # tsc --noEmit
 bun run lint:check     # Biome lint + format check
 bun run lint:fix       # Biome auto-fix (uses --unsafe)
 bun run lint:md        # prettier + markdownlint for *.md
@@ -203,7 +203,7 @@ bun run lint:md        # prettier + markdownlint for *.md
 
 **`MCP_CLAUDE_HOUSEKEEPING_PATH environment variable must be set`**
 
-Set it in the Claude Desktop config `env` block, or as a shell variable for `dev:mcp`. This is the only required env var; all target roots are hardcoded to their standard macOS locations.
+Set it in the Claude Desktop config `env` block, or as a shell variable for `server:mcp:dev`. This is the only required env var; all target roots are hardcoded to their standard macOS locations.
 
 **Boot-time `CLAUDE_DESKTOP_ROOT_PATH: not accessible`**
 

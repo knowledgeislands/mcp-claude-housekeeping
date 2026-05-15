@@ -8,26 +8,26 @@ This project uses [Bun](https://bun.sh) (≥ 1.3) for dependency install and dev
 
 Two ways to run the server:
 
-- **From source (fast iteration, `bun --watch`)**: `bun run dev:mcp`
-- **From compiled `dist/` (what Claude Desktop runs, under node)**: `bun run start:mcp` (auto-rebuilds via `prestart:mcp`)
+- **From source (fast iteration, `bun --watch`)**: `bun run server:mcp:dev`
+- **From compiled `dist/` (what Claude Desktop runs, under node)**: `bun run server:mcp:start` (builds first, then runs)
 
-Scripts:
+Scripts use a `<group>:<sub>:<action>` convention: `server:<type>:<action>` for runnable servers (generalizes to other server types in sibling repos), `lint:*` for code checks/formatting, `deps:*` for dependency management, `test:*` for vitest.
 
 - `bun install` - **ALWAYS run first** to install dependencies
-- `bun run dev:mcp` - Run the MCP server from TS source under `bun --watch`
-- `bun run start:mcp` - Build and run the MCP server from compiled `dist/` under node
+- `bun run server:mcp:dev` - Run the MCP server from TS source under `bun --watch`
+- `bun run server:mcp:start` - Build and run the MCP server from compiled `dist/` under node
+- `bun run server:mcp:inspect` - Use MCP Inspector to test the server interactively (runs TS via bun)
 - `bun run build` - Compile TS to JS in `dist/` via `tsc` (uses `tsconfig.build.json`, excludes tests)
-- `bun run typecheck` - Type-check without emitting (`tsc --noEmit`)
-- `bun run inspect` - Use MCP Inspector to test the server interactively (runs TS via bun)
+- `bun run lint:types` - Type-check without emitting (`tsc --noEmit`)
 - `bun run test` - Run vitest tests (note: `bun run test`, not `bun test` — `bun test` invokes Bun's own runner). Use `bun run test:watch` for watch mode
 - `bun run lint:check` - Lint and format-check TS/JS/JSON with Biome
 - `bun run lint:fix` - Auto-fix Biome lint findings (with `--unsafe`) and apply formatting
-- `bun run format` - Apply Biome formatting only (no lint)
+- `bun run lint:format` - Apply Biome formatting only (no lint)
 - `bun run lint:md` - Format and lint markdown files (prettier + markdownlint; Biome doesn't format markdown yet)
 - `bun run lint:package` - Format `package.json` with syncpack
-- `bun run lint:deps:missing` - Add missing dependencies detected by depcheck
-- `bun run lint:deps:unused` - Remove unused devDependencies detected by depcheck
-- `bun run update:libs` - Show outdated packages via `bun outdated`
+- `bun run deps:missing` - Add missing dependencies detected by depcheck
+- `bun run deps:unused` - Remove unused devDependencies detected by depcheck
+- `bun run deps:update` - Update all dependencies via `bun update`
 - `bun run clean` - Remove `dist/` and `node_modules/`
 
 ## Architecture Overview
@@ -143,7 +143,7 @@ State repositories:
 
 `CLAUDE_DESKTOP_ROOT_PATH`, `CLAUDE_CODE_ROOT_PATH`, and `VSCODE_WORKSPACE_STORAGE_ROOT_PATH` are hardcoded in [`src/config.ts`](./src/config.ts) to their standard locations under the current user's home dir; they are not user-configurable.
 
-Convention: `src/config.ts` calls `process.loadEnvFile('./.env.${NODE_ENV}')` at startup (try/caught so a missing file is harmless — and harmless under Bun too, where `process.loadEnvFile` is undefined: the catch swallows the `TypeError` and Bun has already auto-loaded `.env.${NODE_ENV}` itself). The `dev:mcp` and `inspect` scripts set `NODE_ENV=development`, so `.env.development` is picked up from the CWD. Claude Desktop does not set `NODE_ENV`, so no `.env.*` file is loaded — `MCP_CLAUDE_HOUSEKEEPING_PATH` comes from the Claude Desktop config `env` block in production.
+Convention: `src/config.ts` calls `process.loadEnvFile('./.env.${NODE_ENV}')` at startup (try/caught so a missing file is harmless — and harmless under Bun too, where `process.loadEnvFile` is undefined: the catch swallows the `TypeError` and Bun has already auto-loaded `.env.${NODE_ENV}` itself). The `server:mcp:dev` and `server:mcp:inspect` scripts set `NODE_ENV=development`, so `.env.development` is picked up from the CWD. Claude Desktop does not set `NODE_ENV`, so no `.env.*` file is loaded — `MCP_CLAUDE_HOUSEKEEPING_PATH` comes from the Claude Desktop config `env` block in production.
 
 ### Boot-time Checks
 

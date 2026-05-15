@@ -15,7 +15,7 @@ jobs:
           bun-version: latest
       - run: bun install --frozen-lockfile
       - run: bun run lint:check
-      - run: bun run typecheck
+      - run: bun run lint:types
       - run: bun run test:coverage
       - name: Upload coverage report
         if: always()

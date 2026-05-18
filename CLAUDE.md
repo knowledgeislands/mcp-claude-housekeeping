@@ -125,7 +125,7 @@ State repositories:
 
 ### Key Components
 
-- **Path safety**: `resolveWithinRoot()` in `src/utils/utils.ts` matches the helper in mcp-kb. Memory tools resolve against `ROOT_PATH/spaces/<id>/memory/`. Inputs that resolve outside their root are rejected with `Path escapes root`.
+- **Path safety**: `resolveWithinRoot()` in `src/utils/utils.ts` matches the helper in mcp-kb-fs. Memory tools resolve against `ROOT_PATH/spaces/<id>/memory/`. Inputs that resolve outside their root are rejected with `Path escapes root`.
 - **Disk usage**: `duBytes()` shells out to `du -sk` for speed (~1000 session dirs). Falls through to 0 if the path is missing.
 - **Error shape**: Tool errors return `{ isError: true, content: [{ type: 'text', text }] }` via `errorResult()`. Successful tools return JSON via `jsonResult()`.
 - **Transport**: `StdioServerTransport` from `@modelcontextprotocol/sdk`. Logs go to stderr (`console.error`) so they don't pollute the stdio MCP channel.

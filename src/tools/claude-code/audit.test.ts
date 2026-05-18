@@ -55,8 +55,8 @@ describe('decodeProjectDir', () => {
   })
 
   it('decoded path loses original hyphens (documented lossy behaviour)', async () => {
-    const r = await decodeProjectDir('-Users-krisbrown-kis-mcps-mcp-kb')
-    expect(r.decoded).toBe('/Users/krisbrown/kis/mcps/mcp/kb')
+    const r = await decodeProjectDir('-Users-krisbrown-kis-mcps-mcp-kb-fs')
+    expect(r.decoded).toBe('/Users/krisbrown/kis/mcps/mcp/kb/fs')
   })
 
   it('reports source_exists=false when the decoded path is missing', async () => {

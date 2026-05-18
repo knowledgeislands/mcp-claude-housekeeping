@@ -46,33 +46,33 @@ describe('MCP_CLAUDE_HOUSEKEEPING_ROLES', () => {
     process.env.MCP_CLAUDE_HOUSEKEEPING_PATH = '/tmp/housekeeping'
   })
 
-  it('defaults to auditor only when unset', async () => {
+  it('defaults to read only when unset', async () => {
     delete process.env.MCP_CLAUDE_HOUSEKEEPING_ROLES
     const { HOUSEKEEPING_ROLES } = await import('./config.js')
-    expect([...HOUSEKEEPING_ROLES]).toEqual(['auditor'])
+    expect([...HOUSEKEEPING_ROLES]).toEqual(['read'])
   })
 
-  it('defaults to auditor only when empty', async () => {
+  it('defaults to read only when empty', async () => {
     process.env.MCP_CLAUDE_HOUSEKEEPING_ROLES = '   '
     const { HOUSEKEEPING_ROLES } = await import('./config.js')
-    expect([...HOUSEKEEPING_ROLES]).toEqual(['auditor'])
+    expect([...HOUSEKEEPING_ROLES]).toEqual(['read'])
   })
 
   it('accepts a single role', async () => {
-    process.env.MCP_CLAUDE_HOUSEKEEPING_ROLES = 'cleaner'
+    process.env.MCP_CLAUDE_HOUSEKEEPING_ROLES = 'write'
     const { HOUSEKEEPING_ROLES } = await import('./config.js')
-    expect(HOUSEKEEPING_ROLES.has('cleaner')).toBe(true)
-    expect(HOUSEKEEPING_ROLES.has('auditor')).toBe(false)
+    expect(HOUSEKEEPING_ROLES.has('write')).toBe(true)
+    expect(HOUSEKEEPING_ROLES.has('read')).toBe(false)
   })
 
   it('accepts both roles with whitespace', async () => {
-    process.env.MCP_CLAUDE_HOUSEKEEPING_ROLES = ' auditor , cleaner '
+    process.env.MCP_CLAUDE_HOUSEKEEPING_ROLES = ' read , write '
     const { HOUSEKEEPING_ROLES } = await import('./config.js')
-    expect([...HOUSEKEEPING_ROLES].sort()).toEqual(['auditor', 'cleaner'])
+    expect([...HOUSEKEEPING_ROLES].sort()).toEqual(['read', 'write'])
   })
 
   it('throws on an unknown role', async () => {
-    process.env.MCP_CLAUDE_HOUSEKEEPING_ROLES = 'auditor,observer'
+    process.env.MCP_CLAUDE_HOUSEKEEPING_ROLES = 'read,observer'
     await expect(import('./config.js')).rejects.toThrow(/Invalid MCP_CLAUDE_HOUSEKEEPING_ROLES entries: observer/)
   })
 })

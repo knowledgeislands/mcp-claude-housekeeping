@@ -23,7 +23,7 @@ export const registerVscodeTools = (server: McpServer): void => {
   const register = makeRoleGatedRegister(server)
 
   register(
-    'vscode_auditor_workspaces_list',
+    'vscode_workspaces_list',
     {
       title: 'VSCode Auditor: list chat-session workspaces',
       description: `List every workspaceStorage/<id>/chatSessions/ entry with the original workspace URI (from workspace.json), session-file count, and size. Sorted by bytes descending.`,
@@ -40,7 +40,7 @@ export const registerVscodeTools = (server: McpServer): void => {
   )
 
   register(
-    'vscode_auditor_storage_summary',
+    'vscode_storage_summary',
     {
       title: 'VSCode Auditor: chat-session storage summary',
       description: `Aggregate totals across every workspaceStorage/<id>/chatSessions/: workspace count, session count, total chat bytes. Flags large size or session counts.`,
@@ -62,7 +62,7 @@ export const registerVscodeTools = (server: McpServer): void => {
   )
 
   register(
-    'vscode_auditor_obsolete_sessions',
+    'vscode_sessions_obsolete',
     {
       title: 'VSCode Auditor: obsolete chat sessions',
       description: `Find chat session .json/.jsonl files older than older_than_days (default 30) across all workspaceStorage entries (or one if "workspace" is set). Returns the 10 oldest plus totals.`,
@@ -80,13 +80,13 @@ export const registerVscodeTools = (server: McpServer): void => {
       try {
         return jsonResult(await audit.obsoleteSessions(VSCODE_WORKSPACE_STORAGE_ROOT_PATH, args))
       } catch (err) {
-        return errorResult(`Error in vscode obsolete_sessions: ${err instanceof Error ? err.message : String(err)}`)
+        return errorResult(`Error in vscode sessions_obsolete: ${err instanceof Error ? err.message : String(err)}`)
       }
     }
   )
 
   register(
-    'vscode_auditor_session_read',
+    'vscode_session_read',
     {
       title: 'VSCode Auditor: read chat session (preview)',
       description: `Return the first or last N lines of a chat session at workspaceStorage/<workspace>/chatSessions/<session>. Handles both .json (single document, pretty-printed) and .jsonl (one record per line). Cap with max_lines.`,
@@ -110,10 +110,10 @@ export const registerVscodeTools = (server: McpServer): void => {
   )
 
   register(
-    'vscode_cleaner_delete_workspace',
+    'vscode_workspace_delete',
     {
       title: 'VSCode Cleaner: delete a workspaceStorage entry',
-      description: `Delete an entire workspaceStorage/<workspace>/ subtree (chatSessions plus extension state). Use for orphaned workspaces whose source folder has been removed — run vscode_auditor_workspaces_list first to confirm. dry_run defaults to TRUE — pass dry_run=false to actually delete.`,
+      description: `Delete an entire workspaceStorage/<workspace>/ subtree (chatSessions plus extension state). Use for orphaned workspaces whose source folder has been removed — run vscode_workspaces_list first to confirm. dry_run defaults to TRUE — pass dry_run=false to actually delete.`,
       inputSchema: z
         .object({
           workspace: workspaceArg,
@@ -126,13 +126,13 @@ export const registerVscodeTools = (server: McpServer): void => {
       try {
         return jsonResult(await audit.workspaceDelete(VSCODE_WORKSPACE_STORAGE_ROOT_PATH, args))
       } catch (err) {
-        return errorResult(`Error in vscode delete_workspace: ${err instanceof Error ? err.message : String(err)}`)
+        return errorResult(`Error in vscode workspace_delete: ${err instanceof Error ? err.message : String(err)}`)
       }
     }
   )
 
   register(
-    'vscode_cleaner_prune_sessions',
+    'vscode_sessions_prune',
     {
       title: 'VSCode Cleaner: prune obsolete chat sessions',
       description: `Delete every chat session .json/.jsonl older than older_than_days across all workspaceStorage entries (or the one named in "workspace"). dry_run defaults to TRUE — pass dry_run=false to actually delete.`,
@@ -149,7 +149,7 @@ export const registerVscodeTools = (server: McpServer): void => {
       try {
         return jsonResult(await audit.sessionsPrune(VSCODE_WORKSPACE_STORAGE_ROOT_PATH, args))
       } catch (err) {
-        return errorResult(`Error in vscode prune_sessions: ${err instanceof Error ? err.message : String(err)}`)
+        return errorResult(`Error in vscode sessions_prune: ${err instanceof Error ? err.message : String(err)}`)
       }
     }
   )

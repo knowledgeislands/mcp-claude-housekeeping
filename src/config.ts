@@ -16,16 +16,16 @@ assert(process.env.MCP_CLAUDE_HOUSEKEEPING_PATH, 'MCP_CLAUDE_HOUSEKEEPING_PATH e
 
 export const HOUSEKEEPING_PATH: string = path.resolve(expandHome(process.env.MCP_CLAUDE_HOUSEKEEPING_PATH))
 
-export type Role = 'auditor' | 'cleaner'
-export const ALL_ROLES: readonly Role[] = ['auditor', 'cleaner'] as const
+export type Role = 'read' | 'write'
+export const ALL_ROLES: readonly Role[] = ['read', 'write'] as const
 
 const parseRoles = (raw: string | undefined): Set<Role> => {
-  if (raw === undefined || raw.trim() === '') return new Set(['auditor'])
+  if (raw === undefined || raw.trim() === '') return new Set(['read'])
   const requested = raw
     .split(',')
     .map((s) => s.trim())
     .filter((s) => s.length > 0)
-  if (requested.length === 0) return new Set(['auditor'])
+  if (requested.length === 0) return new Set(['read'])
   const invalid = requested.filter((r): r is string => !(ALL_ROLES as readonly string[]).includes(r))
   if (invalid.length > 0) {
     throw new Error(`Invalid MCP_CLAUDE_HOUSEKEEPING_ROLES entries: ${invalid.join(', ')}. Allowed: ${ALL_ROLES.join(', ')}`)
@@ -45,9 +45,10 @@ export const VSCODE_WORKSPACE_STORAGE_ROOT_PATH: string = path.join(os.homedir()
 export const AUDIT_LOG_PATH: string = path.resolve(expandHome(process.env.MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_PATH ?? path.join(HOUSEKEEPING_PATH, 'audit', 'audit.jsonl')))
 
 /**
- * Scope of tool invocations to record. Default `writes` logs `_cleaner_` tools
- * only; `all` adds `_auditor_` reads; `off` disables logging entirely (the
- * audit-log wrapper short-circuits and never opens the file).
+ * Scope of tool invocations to record. Default `writes` logs `write`-role
+ * tools only (anything whose annotations are not `readOnlyHint: true`); `all`
+ * adds `read`-role tools; `off` disables logging entirely (the audit-log wrapper
+ * short-circuits and never opens the file).
  */
 export type AuditLogMode = 'off' | 'writes' | 'all'
 

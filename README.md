@@ -2,67 +2,108 @@
 
 [![CI](https://github.com/knowledgeislands/mcp-claude-housekeeping/actions/workflows/ci.yml/badge.svg)](https://github.com/knowledgeislands/mcp-claude-housekeeping/actions/workflows/ci.yml) [![npm version](https://img.shields.io/npm/v/@knowledgeislands/mcp-claude-housekeeping.svg)](https://www.npmjs.com/package/@knowledgeislands/mcp-claude-housekeeping) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
-An MCP (Model Context Protocol) server that codifies the daily Cowork local-agent-mode-sessions filesystem audit. Each step of the audit is a dedicated tool; the agent orchestrates the checks and writes a markdown report.
+An MCP (Model Context Protocol) server for housekeeping the three filesystem areas where Claude apps accumulate state on macOS: **Claude Desktop / Cowork sessions**, **Claude Code** (`~/.claude/`), and **VSCode chat sessions**. Each audit step is a dedicated tool; the agent orchestrates the checks and writes a markdown report.
 
 ## Features
 
-- **Codified audit** — 10 read-only checks plus a memory-consolidation pass, matching the existing `cowork-filesystem-audit` scheduled task one-for-one.
-- **Role-gated tools** — every tool belongs to either the `auditor` role (read-only) or the `cleaner` role (destructive). Set `MCP_CLAUDE_HOUSEKEEPING_ROLES` to opt into the roles you want; defaults to `auditor` only.
-- **Workspace auto-discovery** — walks `~/Library/Application Support/Claude/local-agent-mode-sessions/<account>/<workspace>/` and aggregates results across every discovered workspace.
-- **Path-safe** — every path is validated against the discovered workspace root; memory operations are also confined to `spaces/<space_id>/memory/`.
+- **Codified audits across three storage areas** — 38 tools spanning Cowork local-agent-mode-sessions (the daily `cowork-filesystem-audit`), `~/.claude/` Claude Code state, and VSCode `workspaceStorage/<id>/chatSessions/`.
+- **Role-gated tools** — every tool belongs to either the `read` role (read-only) or the `write` role (destructive). Set `MCP_CLAUDE_HOUSEKEEPING_ROLES` to opt into the roles you want; defaults to `read` only. Roles are derived from each tool's MCP annotations (`readOnlyHint`), not its name.
+- **Workspace auto-discovery** (Cowork only) — walks `~/Library/Application Support/Claude/local-agent-mode-sessions/<account>/<workspace>/` and aggregates results across every discovered workspace.
+- **Path-safe** — every path is validated against its configured root; memory operations are also confined to their `memory/` subdir.
 - **No network, no auth** — pure local filesystem over MCP stdio.
 
-**Quality:** 229 tests; 100% line and function coverage (statement/branch hover ~99.8% as the suite evolves).
+**Quality:** 260 tests; 100% line and function coverage (statement/branch hover ~99.8% as the suite evolves).
 
 ## Available Tools
 
-### `claude_desktop_auditor_*` — read-only checks
+Tools follow the convention `<app>_<resource>_<action>`. Each tool's role (`read` for read-only, `write` for destructive) is derived from its MCP annotations (`readOnlyHint`).
 
-| Tool                                           | Purpose                                                                         |
-| ---------------------------------------------- | ------------------------------------------------------------------------------- |
-| `claude_desktop_auditor_storage_summary`       | Counts, total disk usage, JSON total, top 5 largest dirs, oldest/newest, flags. |
-| `claude_desktop_auditor_obsolete_sessions`     | Sessions older than N days; oldest 10 with combined size, flags.                |
-| `claude_desktop_auditor_artifact_health`       | Per-artifact metadata + flags (high churn, stale, unstarred + idle).            |
-| `claude_desktop_auditor_obsolete_outputs`      | Non-empty `outputs/`/`uploads/` in sessions older than N days.                  |
-| `claude_desktop_auditor_backup_summary`        | `.claude.json.backup.*` count, size, dates with thresholds.                     |
-| `claude_desktop_auditor_memory_spaces_summary` | Per-space memory file counts + first 10 lines of `MEMORY.md`.                   |
-| `claude_desktop_auditor_plugins_inventory`     | Knowledge-work + rpm plugins with versions/dates.                               |
-| `claude_desktop_auditor_project_cache_status`  | `.project-cache/` entries with last-sync dates.                                 |
-| `claude_desktop_auditor_debug_info`            | `debug/` size, entry count, oldest entry age.                                   |
-| `claude_desktop_auditor_memory_list`           | List `.md` files + `MEMORY.md` content for one space.                           |
-| `claude_desktop_auditor_memory_read`           | Read one memory file.                                                           |
-| `claude_desktop_auditor_reports_list`          | List existing `cowork-audit-*.md` reports in `MCP_CLAUDE_HOUSEKEEPING_PATH`.    |
-| `claude_desktop_auditor_workspaces_list`       | List discovered `<account>/<workspace>` workspace ids.                          |
+### `claude_desktop_*` — read-only (`read` role)
 
-### `claude_desktop_cleaner_*` — destructive
+| Tool                                   | Purpose                                                                         |
+| -------------------------------------- | ------------------------------------------------------------------------------- |
+| `claude_desktop_storage_summary`       | Counts, total disk usage, JSON total, top 5 largest dirs, oldest/newest, flags. |
+| `claude_desktop_sessions_obsolete`     | Sessions older than N days; oldest 10 with combined size, flags.                |
+| `claude_desktop_artifacts_health`      | Per-artifact metadata + flags (high churn, stale, unstarred + idle).            |
+| `claude_desktop_outputs_obsolete`      | Non-empty `outputs/`/`uploads/` in sessions older than N days.                  |
+| `claude_desktop_backups_summary`       | `.claude.json.backup.*` count, size, dates with thresholds.                     |
+| `claude_desktop_memory_spaces_summary` | Per-space memory file counts + first 10 lines of `MEMORY.md`.                   |
+| `claude_desktop_plugins_inventory`     | Knowledge-work + rpm plugins with versions/dates.                               |
+| `claude_desktop_project_cache_status`  | `.project-cache/` entries with last-sync dates.                                 |
+| `claude_desktop_debug_info`            | `debug/` size, entry count, oldest entry age.                                   |
+| `claude_desktop_memory_list`           | List `.md` files + `MEMORY.md` content for one space.                           |
+| `claude_desktop_memory_read`           | Read one memory file.                                                           |
+| `claude_desktop_reports_list`          | List existing `cowork-audit-*.md` reports in `MCP_CLAUDE_HOUSEKEEPING_PATH`.    |
+| `claude_desktop_workspaces_list`       | List discovered `<account>/<workspace>` workspace ids.                          |
 
-| Tool                                        | Purpose                                                                 |
-| ------------------------------------------- | ----------------------------------------------------------------------- |
-| `claude_desktop_cleaner_prune_artifacts`    | Delete unstarred artifacts beyond top N (default 5) by `lastUpdated`.   |
-| `claude_desktop_cleaner_clear_reports`      | Delete every `cowork-audit-*.md` from `MCP_CLAUDE_HOUSEKEEPING_PATH`.   |
-| `claude_desktop_cleaner_write_report`       | Save `cowork-audit-YYYY-MM-DD.md` to `MCP_CLAUDE_HOUSEKEEPING_PATH`.    |
-| `claude_desktop_cleaner_write_memory`       | Create/overwrite a memory file in `spaces/<space_id>/memory/<name>.md`. |
-| `claude_desktop_cleaner_delete_memory`      | Retire a memory file (cannot delete `MEMORY.md`).                       |
-| `claude_desktop_cleaner_write_memory_index` | Replace `MEMORY.md` for a space.                                        |
+### `claude_desktop_*` — destructive (`write` role)
+
+| Tool                                | Purpose                                                                 |
+| ----------------------------------- | ----------------------------------------------------------------------- |
+| `claude_desktop_artifacts_prune`    | Delete unstarred artifacts beyond top N (default 5) by `lastUpdated`.   |
+| `claude_desktop_reports_clear`      | Delete every `cowork-audit-*.md` from `MCP_CLAUDE_HOUSEKEEPING_PATH`.   |
+| `claude_desktop_report_write`       | Save `cowork-audit-YYYY-MM-DD.md` to `MCP_CLAUDE_HOUSEKEEPING_PATH`.    |
+| `claude_desktop_memory_write`       | Create/overwrite a memory file in `spaces/<space_id>/memory/<name>.md`. |
+| `claude_desktop_memory_delete`      | Retire a memory file (cannot delete `MEMORY.md`).                       |
+| `claude_desktop_memory_index_write` | Replace `MEMORY.md` for a space.                                        |
+
+### `claude_code_*` — read-only (`read` role)
+
+| Tool                            | Purpose                                                                                           |
+| ------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `claude_code_projects_list`     | Projects with session counts, bytes, decoded source path, orphan flag.                            |
+| `claude_code_storage_summary`   | Aggregate counts + flags; surfaces orphan-project totals.                                         |
+| `claude_code_sessions_obsolete` | Sessions older than N days (with sidecar dir bytes).                                              |
+| `claude_code_global_status`     | `history.jsonl`, `settings.cleanupPeriodDays`, `.last-cleanup`, top-level dirs, freshness signal. |
+| `claude_code_session_read`      | Preview head/tail of a session JSONL.                                                             |
+| `claude_code_memory_list`       | List memory files in `<project>/memory/`.                                                         |
+| `claude_code_memory_read`       | Read one memory file.                                                                             |
+
+### `claude_code_*` — destructive (`write` role)
+
+| Tool                                | Purpose                                                                              |
+| ----------------------------------- | ------------------------------------------------------------------------------------ |
+| `claude_code_sessions_prune`        | Delete sessions older than N days (+ sidecar dirs), with `dry_run`.                  |
+| `claude_code_project_relocate`      | Rename a project subdir to match a new source path (fixes `/resume` after a rename). |
+| `claude_code_orphan_projects_prune` | Delete project subdirs whose decoded source path no longer exists.                   |
+| `claude_code_memory_write`          | Create/overwrite a memory file.                                                      |
+| `claude_code_memory_delete`         | Retire a memory file.                                                                |
+| `claude_code_memory_index_write`    | Replace `MEMORY.md`.                                                                 |
+
+### `vscode_*` — read-only (`read` role)
+
+| Tool                       | Purpose                                                          |
+| -------------------------- | ---------------------------------------------------------------- |
+| `vscode_workspaces_list`   | List workspaceStorage entries with chat-session counts and URIs. |
+| `vscode_storage_summary`   | Aggregate workspace/session counts + size flags.                 |
+| `vscode_sessions_obsolete` | Chat sessions older than N days.                                 |
+| `vscode_session_read`      | Preview head/tail of a `.json`/`.jsonl` chat session.            |
+
+### `vscode_*` — destructive (`write` role)
+
+| Tool                      | Purpose                                            |
+| ------------------------- | -------------------------------------------------- |
+| `vscode_workspace_delete` | Delete an entire `workspaceStorage/<id>/` subtree. |
+| `vscode_sessions_prune`   | Delete chat sessions older than N days.            |
 
 ### Daily Audit — Tool Choreography
 
 A typical `cowork-filesystem-audit` run uses the tools in this order:
 
-1. `claude_desktop_cleaner_clear_reports` — clear yesterday's report.
-2. `claude_desktop_auditor_storage_summary` … `claude_desktop_auditor_debug_info` — run all read-only checks (parallelisable).
-3. `claude_desktop_cleaner_prune_artifacts` — prune unstarred artifacts past top 5.
-4. `claude_desktop_auditor_memory_spaces_summary` — pick the space to consolidate.
-5. `claude_desktop_auditor_memory_list` + `claude_desktop_auditor_memory_read` — review memories.
-6. `claude_desktop_cleaner_write_memory` / `delete_memory` / `write_memory_index` — consolidate.
-7. `claude_desktop_cleaner_write_report` — save today's `cowork-audit-YYYY-MM-DD.md`.
+1. `claude_desktop_reports_clear` — clear yesterday's report.
+2. `claude_desktop_storage_summary` … `claude_desktop_debug_info` — run all read-only checks (parallelisable).
+3. `claude_desktop_artifacts_prune` — prune unstarred artifacts past top 5.
+4. `claude_desktop_memory_spaces_summary` — pick the space to consolidate.
+5. `claude_desktop_memory_list` + `claude_desktop_memory_read` — review memories.
+6. `claude_desktop_memory_write` / `memory_delete` / `memory_index_write` — consolidate.
+7. `claude_desktop_report_write` — save today's `cowork-audit-YYYY-MM-DD.md`.
 
 ## Quick Start
 
 1. **Install dependencies**: `bun install`.
 2. **Build**: `bun run build`.
 3. **Configure Claude Desktop** with `dist/mcp-server/index.js` and `MCP_CLAUDE_HOUSEKEEPING_PATH` (see [Configuration](#configuration)). The sessions root, Claude Code state, and VSCode chat storage are all read from their standard macOS locations under your home dir — no configuration needed.
-4. **Restart Claude Desktop** — the `claude_desktop_auditor_*` and `claude_desktop_cleaner_*` tools should appear.
+4. **Restart Claude Desktop** — the `claude_desktop_*`, `claude_code_*`, and `vscode_*` tools should appear.
 
 ## Example Conversations
 
@@ -72,25 +113,25 @@ Concrete asks you might make of Claude with this server connected.
 
 > "Run the daily cowork filesystem audit and write today's report."
 
-Claude clears yesterday's report via `claude_desktop_cleaner_clear_reports`, runs every read-only check in parallel (storage summary, obsolete sessions, artifact health, backups, memory spaces, plugins, cache, debug info), then writes `cowork-audit-YYYY-MM-DD.md` to `MCP_CLAUDE_HOUSEKEEPING_PATH` via `claude_desktop_cleaner_write_report`. See the full ordering under [Daily Audit — Tool Choreography](#daily-audit--tool-choreography).
+Claude clears yesterday's report via `claude_desktop_reports_clear`, runs every read-only check in parallel (storage summary, obsolete sessions, artifact health, backups, memory spaces, plugins, cache, debug info), then writes `cowork-audit-YYYY-MM-DD.md` to `MCP_CLAUDE_HOUSEKEEPING_PATH` via `claude_desktop_report_write`. See the full ordering under [Daily Audit — Tool Choreography](#daily-audit--tool-choreography).
 
 **Audit before cleaning:**
 
 > "Show me sessions older than 30 days and tell me which ones still have non-empty outputs or uploads."
 
-Claude calls `claude_desktop_auditor_obsolete_sessions` followed by `claude_desktop_auditor_obsolete_outputs` — both read-only — so you see the picture before any destructive action. No data is modified.
+Claude calls `claude_desktop_sessions_obsolete` followed by `claude_desktop_outputs_obsolete` — both read-only — so you see the picture before any destructive action. No data is modified.
 
 **Consolidate a memory space:**
 
 > "Pick the memory space with the most files and show me its MEMORY.md plus the first few memory files before we consolidate."
 
-Claude uses `claude_desktop_auditor_memory_spaces_summary` to find the candidate, then `claude_desktop_auditor_memory_list` + `claude_desktop_auditor_memory_read` to surface the actual content for review. Writes (`write_memory`, `delete_memory`, `write_memory_index`) only happen after you approve the plan.
+Claude uses `claude_desktop_memory_spaces_summary` to find the candidate, then `claude_desktop_memory_list` + `claude_desktop_memory_read` to surface the actual content for review. Writes (`memory_write`, `memory_delete`, `memory_index_write`) only happen after you approve the plan.
 
 **Prune accumulated artifacts:**
 
 > "Free some disk — drop unstarred artifacts beyond the top 5 most recently updated."
 
-Claude calls `claude_desktop_cleaner_prune_artifacts` (destructive; requires the `cleaner` role). Starred artifacts are always preserved and the top N most recent are kept regardless of star status.
+Claude calls `claude_desktop_artifacts_prune` (destructive; requires the `write` role). Starred artifacts are always preserved and the top N most recent are kept regardless of star status.
 
 ## Installation
 
@@ -113,7 +154,7 @@ bun install
 | Name | Required | Description |
 | --- | --- | --- |
 | `MCP_CLAUDE_HOUSEKEEPING_PATH` | yes | Absolute path or `~/...` to the directory where audit reports are written. |
-| `MCP_CLAUDE_HOUSEKEEPING_ROLES` | no | Comma-separated list of enabled roles. Allowed: `auditor`, `cleaner`. Defaults to `auditor` only when unset or empty. Tools whose name contains `_auditor_` / `_cleaner_` are only registered when the matching role is enabled; an unknown role aborts startup. |
+| `MCP_CLAUDE_HOUSEKEEPING_ROLES` | no | Comma-separated list of enabled roles. Allowed: `read`, `write`. Defaults to `read` only when unset or empty. Each tool's role is derived from its MCP annotations (`readOnlyHint: true` → `read`, otherwise → `write`); only tools whose role is enabled here are registered. An unknown role aborts startup. |
 | `NODE_ENV` | no | Dev convention. `server:mcp:dev`/`server:mcp:inspect` set this to `development`, which makes [`src/config.ts`](./src/config.ts) load `.env.development` from the CWD. Unset under Claude Desktop, so `.env*` files are ignored in production. |
 
 The sessions root (`~/Library/Application Support/Claude/local-agent-mode-sessions`), Claude Code root (`~/.claude`), and VSCode workspaceStorage (`~/Library/Application Support/Code/User/workspaceStorage`) are hardcoded in [`src/config.ts`](./src/config.ts) and are not user-configurable.
@@ -157,9 +198,9 @@ MCP_CLAUDE_HOUSEKEEPING_PATH=~/Documents/Claude/Projects/Claude\ Housekeeping \
 
 ### Workspaces
 
-The server walks `~/Library/Application Support/Claude/local-agent-mode-sessions/<account_uuid>/<workspace_uuid>/` and discovers each workspace by looking for marker files (`.claude.json`, `artifacts.json`, `spaces.json`, `cowork_settings.json`, or `local_*.json`). Read-only audit tools aggregate results across every discovered workspace under a `workspaces` array; destructive cleaner tools and the memory list/read tools accept an optional `workspace` arg (`"<account>/<workspace>"`) and require it explicitly when more than one workspace is present.
+The server walks `~/Library/Application Support/Claude/local-agent-mode-sessions/<account_uuid>/<workspace_uuid>/` and discovers each workspace by looking for marker files (`.claude.json`, `artifacts.json`, `spaces.json`, `cowork_settings.json`, or `local_*.json`). Read-only audit tools aggregate results across every discovered workspace under a `workspaces` array; destructive `write`-role tools and the memory list/read tools accept an optional `workspace` arg (`"<account>/<workspace>"`) and require it explicitly when more than one workspace is present.
 
-Use `claude_desktop_auditor_workspaces_list` to see the discovered ids. If the sessions root itself contains the marker files, it is treated as a single workspace with id `.` (back-compat with hard-coded inner-UUID configs).
+Use `claude_desktop_workspaces_list` to see the discovered ids. If the sessions root itself contains the marker files, it is treated as a single workspace with id `.` (back-compat with hard-coded inner-UUID configs).
 
 ## Development
 
@@ -177,7 +218,7 @@ bun run lint:md        # prettier + markdownlint for *.md
 ## Security Model
 
 - All paths are validated against the discovered workspace root (or, for memory tools, against `<workspace>/spaces/<space_id>/memory/`). Inputs resolving outside their root are rejected with `Path escapes root: "<input>"`.
-- `claude_desktop_cleaner_*` tools are flagged with `destructiveHint: true` so MCP clients can prompt before invoking them.
+- Every destructive tool (any annotated `DESTRUCTIVE` or `DESTRUCTIVE_ONESHOT`, i.e. the `write`-role tools) carries `destructiveHint: true` so MCP clients can prompt before invoking them; the role gate at startup uses the same `readOnlyHint` annotation to decide whether to register the tool at all.
 - The server has no network access and performs no authentication. Trust is delegated entirely to the local OS user running it.
 
 ## Directory Structure

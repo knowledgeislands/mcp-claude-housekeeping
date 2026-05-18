@@ -22,7 +22,7 @@ In scope:
 
 - Path containment in `src/utils.ts` (`resolveWithinRoot`) — any input that resolves outside its workspace root (traversal, symlink escape, encoded separators, edge cases around trailing slashes).
 - Memory-tool containment under `<workspace>/spaces/<space_id>/memory/`.
-- Tool handlers in `src/audit.ts`, `src/report.ts`, `src/memory.ts` — including the destructive `sessions_cleaner_*` operations.
+- Tool handlers under `src/tools/{claude-desktop,claude-code,vscode}/` — including the destructive `write`-role operations (anything annotated `DESTRUCTIVE` or `DESTRUCTIVE_ONESHOT`).
 - Boot-time root validation in `src/config.ts` and workspace discovery in `src/utils.ts` (`discoverWorkspaces`).
 
 Out of scope:

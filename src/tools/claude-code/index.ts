@@ -21,11 +21,11 @@ export const registerClaudeCodeTools = (server: McpServer): void => {
   const register = makeRoleGatedRegister(server)
 
   /* ================================================================ */
-  /*  claude_code_auditor_* — read-only                               */
+  /*  claude_code_* — read-only (annotations: READ_ONLY)               */
   /* ================================================================ */
 
   register(
-    'claude_code_auditor_projects_list',
+    'claude_code_projects_list',
     {
       title: 'Claude Code Auditor: list projects',
       description: `List every project under ~/.claude/projects/ with session-file count, on-disk size, whether a memory/ subdir exists, and a best-effort decode of the encoded directory name back to the original filesystem path (with source_exists indicating whether that decoded path still resolves on disk). Sorted by bytes descending.`,
@@ -42,7 +42,7 @@ export const registerClaudeCodeTools = (server: McpServer): void => {
   )
 
   register(
-    'claude_code_auditor_storage_summary',
+    'claude_code_storage_summary',
     {
       title: 'Claude Code Auditor: storage summary',
       description: `Aggregate stats across ~/.claude: total bytes, projects bytes, project count, session count, orphan-project count (projects whose decoded source path no longer exists). Flags large total size, high session count, or many orphans.`,
@@ -65,7 +65,7 @@ export const registerClaudeCodeTools = (server: McpServer): void => {
   )
 
   register(
-    'claude_code_auditor_obsolete_sessions',
+    'claude_code_sessions_obsolete',
     {
       title: 'Claude Code Auditor: obsolete sessions',
       description: `Find session .jsonl files (and any matching <uuid>/ sidecar dirs) older than older_than_days (default 30) across all projects (or one project if "project" is set). Returns the 10 oldest plus totals; flags counts or sizes that exceed thresholds.`,
@@ -83,13 +83,13 @@ export const registerClaudeCodeTools = (server: McpServer): void => {
       try {
         return jsonResult(await audit.obsoleteSessions(CLAUDE_CODE_ROOT_PATH, args))
       } catch (err) {
-        return errorResult(`Error in claude_code obsolete_sessions: ${err instanceof Error ? err.message : String(err)}`)
+        return errorResult(`Error in claude_code sessions_obsolete: ${err instanceof Error ? err.message : String(err)}`)
       }
     }
   )
 
   register(
-    'claude_code_auditor_global_status',
+    'claude_code_global_status',
     {
       title: 'Claude Code Auditor: global status',
       description: `Report ~/.claude top-level state: history.jsonl size+mtime+line count if present, settings.json existence and cleanupPeriodDays, .last-cleanup contents, plus a sorted list of every top-level dir with its bytes (so bloated subtrees like file-history/ or plugins/ are visible).`,
@@ -106,7 +106,7 @@ export const registerClaudeCodeTools = (server: McpServer): void => {
   )
 
   register(
-    'claude_code_auditor_session_read',
+    'claude_code_session_read',
     {
       title: 'Claude Code Auditor: read session JSONL (preview)',
       description: `Return the first or last N lines of a session JSONL at ~/.claude/projects/<project>/<session>. Use tail=true to peek the most recent turns. Cap with max_lines to keep responses small — full files can be megabytes.`,
@@ -133,7 +133,7 @@ export const registerClaudeCodeTools = (server: McpServer): void => {
   )
 
   register(
-    'claude_code_auditor_memory_list',
+    'claude_code_memory_list',
     {
       title: 'Claude Code Auditor: list memory files',
       description: `List .md files in ~/.claude/projects/<project>/memory/ with size and modified date, plus the full content of MEMORY.md if present.`,
@@ -150,7 +150,7 @@ export const registerClaudeCodeTools = (server: McpServer): void => {
   )
 
   register(
-    'claude_code_auditor_memory_read',
+    'claude_code_memory_read',
     {
       title: 'Claude Code Auditor: read memory file',
       description: `Read the contents of a single memory file at ~/.claude/projects/<project>/memory/<name>.`,
@@ -172,11 +172,11 @@ export const registerClaudeCodeTools = (server: McpServer): void => {
   )
 
   /* ================================================================ */
-  /*  claude_code_cleaner_* — destructive                             */
+  /*  claude_code_* — destructive (annotations: DESTRUCTIVE*)          */
   /* ================================================================ */
 
   register(
-    'claude_code_cleaner_prune_sessions',
+    'claude_code_sessions_prune',
     {
       title: 'Claude Code Cleaner: prune obsolete sessions',
       description: `Delete every <uuid>.jsonl session (and matching <uuid>/ sidecar dir if any) older than older_than_days across all projects (or the one named in "project"). dry_run defaults to TRUE — pass dry_run=false to actually delete. Returns a list of deletions with bytes freed.`,
@@ -193,13 +193,13 @@ export const registerClaudeCodeTools = (server: McpServer): void => {
       try {
         return jsonResult(await audit.sessionsPrune(CLAUDE_CODE_ROOT_PATH, args))
       } catch (err) {
-        return errorResult(`Error in claude_code prune_sessions: ${err instanceof Error ? err.message : String(err)}`)
+        return errorResult(`Error in claude_code sessions_prune: ${err instanceof Error ? err.message : String(err)}`)
       }
     }
   )
 
   register(
-    'claude_code_cleaner_relocate_project',
+    'claude_code_project_relocate',
     {
       title: 'Claude Code Cleaner: relocate project subdir',
       description: `Rename a project subdir under ~/.claude/projects/ to match the encoding of "new_path". Use after renaming or moving the project source folder so /resume keeps finding the session history. Rejects if the destination encoded name already exists or new_path doesn't resolve on disk. dry_run defaults to TRUE — pass dry_run=false to actually rename.`,
@@ -216,16 +216,16 @@ export const registerClaudeCodeTools = (server: McpServer): void => {
       try {
         return jsonResult(await audit.relocateProject(CLAUDE_CODE_ROOT_PATH, args))
       } catch (err) {
-        return errorResult(`Error in claude_code relocate_project: ${err instanceof Error ? err.message : String(err)}`)
+        return errorResult(`Error in claude_code project_relocate: ${err instanceof Error ? err.message : String(err)}`)
       }
     }
   )
 
   register(
-    'claude_code_cleaner_prune_orphan_projects',
+    'claude_code_orphan_projects_prune',
     {
       title: 'Claude Code Cleaner: prune orphan project subdirs',
-      description: `Delete project subdirs whose decoded source path no longer exists on disk. By default, skips orphans that contain a memory/ subdir (the most expensive thing to lose by accident); set include_with_memory=true to clear those too. dry_run defaults to TRUE — pass dry_run=false to actually delete. Run claude_code_audit_projects_list first to confirm what's being targeted — and consider claude_code_cleaner_relocate_project for any orphans that are really renames.`,
+      description: `Delete project subdirs whose decoded source path no longer exists on disk. By default, skips orphans that contain a memory/ subdir (the most expensive thing to lose by accident); set include_with_memory=true to clear those too. dry_run defaults to TRUE — pass dry_run=false to actually delete. Run claude_code_projects_list first to confirm what's being targeted — and consider claude_code_project_relocate for any orphans that are really renames.`,
       inputSchema: z
         .object({
           dry_run: z.boolean().default(true).describe('Default true (preview only). Pass false to actually delete.'),
@@ -238,13 +238,13 @@ export const registerClaudeCodeTools = (server: McpServer): void => {
       try {
         return jsonResult(await audit.pruneOrphanProjects(CLAUDE_CODE_ROOT_PATH, args))
       } catch (err) {
-        return errorResult(`Error in claude_code prune_orphan_projects: ${err instanceof Error ? err.message : String(err)}`)
+        return errorResult(`Error in claude_code orphan_projects_prune: ${err instanceof Error ? err.message : String(err)}`)
       }
     }
   )
 
   register(
-    'claude_code_cleaner_write_memory',
+    'claude_code_memory_write',
     {
       title: 'Claude Code Cleaner: write/update memory file',
       description: `Create or overwrite a memory file at ~/.claude/projects/<project>/memory/<name>.`,
@@ -261,16 +261,16 @@ export const registerClaudeCodeTools = (server: McpServer): void => {
       try {
         return jsonResult(await memory.memoryWrite(CLAUDE_CODE_ROOT_PATH, args))
       } catch (err) {
-        return errorResult(`Error in claude_code write_memory: ${err instanceof Error ? err.message : String(err)}`)
+        return errorResult(`Error in claude_code memory_write: ${err instanceof Error ? err.message : String(err)}`)
       }
     }
   )
 
   register(
-    'claude_code_cleaner_delete_memory',
+    'claude_code_memory_delete',
     {
       title: 'Claude Code Cleaner: retire memory file',
-      description: `Delete a memory file at ~/.claude/projects/<project>/memory/<name>. MEMORY.md cannot be deleted via this tool — use write_memory_index to replace it.`,
+      description: `Delete a memory file at ~/.claude/projects/<project>/memory/<name>. MEMORY.md cannot be deleted via this tool — use memory_index_write to replace it.`,
       inputSchema: z
         .object({
           project: projectArg,
@@ -283,13 +283,13 @@ export const registerClaudeCodeTools = (server: McpServer): void => {
       try {
         return jsonResult(await memory.memoryDelete(CLAUDE_CODE_ROOT_PATH, args))
       } catch (err) {
-        return errorResult(`Error in claude_code delete_memory: ${err instanceof Error ? err.message : String(err)}`)
+        return errorResult(`Error in claude_code memory_delete: ${err instanceof Error ? err.message : String(err)}`)
       }
     }
   )
 
   register(
-    'claude_code_cleaner_write_memory_index',
+    'claude_code_memory_index_write',
     {
       title: 'Claude Code Cleaner: replace MEMORY.md',
       description: `Replace the contents of ~/.claude/projects/<project>/memory/MEMORY.md.`,
@@ -300,7 +300,7 @@ export const registerClaudeCodeTools = (server: McpServer): void => {
       try {
         return jsonResult(await memory.memoryIndexWrite(CLAUDE_CODE_ROOT_PATH, args))
       } catch (err) {
-        return errorResult(`Error in claude_code write_memory_index: ${err instanceof Error ? err.message : String(err)}`)
+        return errorResult(`Error in claude_code memory_index_write: ${err instanceof Error ? err.message : String(err)}`)
       }
     }
   )

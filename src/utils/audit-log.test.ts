@@ -21,23 +21,23 @@ describe('appendAuditEvent / withAuditLog', () => {
     delete process.env.MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_KEEP
   })
 
-  it('appends an event line for a cleaner tool', async () => {
+  it('appends an event line for a write-role tool', async () => {
     const { withAuditLog } = await import('./audit-log.js')
-    const wrapped = withAuditLog('claude_code_cleaner_test', 'cleaner', async () => ({ content: [{ type: 'text', text: '{}' }] }))
+    const wrapped = withAuditLog('test_destructive_tool', 'write', async () => ({ content: [{ type: 'text', text: '{}' }] }))
     await wrapped({ name: 'memo.md' })
     // appendAuditEvent fires via void, so wait a tick
     await new Promise((r) => setTimeout(r, 20))
     const raw = await fs.readFile(logPath, 'utf-8')
     const event = JSON.parse(raw.trim())
-    expect(event.tool).toBe('claude_code_cleaner_test')
-    expect(event.role).toBe('cleaner')
+    expect(event.tool).toBe('test_destructive_tool')
+    expect(event.role).toBe('write')
     expect(event.ok).toBe(true)
     expect(event.args).toEqual({ name: 'memo.md' })
   })
 
   it('redacts large content fields', async () => {
     const { withAuditLog } = await import('./audit-log.js')
-    const wrapped = withAuditLog('claude_code_cleaner_test', 'cleaner', async () => ({ content: [{ type: 'text', text: '{}' }] }))
+    const wrapped = withAuditLog('test_destructive_tool', 'write', async () => ({ content: [{ type: 'text', text: '{}' }] }))
     await wrapped({ name: 'memo.md', content: 'x'.repeat(5000) })
     await new Promise((r) => setTimeout(r, 20))
     const event = JSON.parse((await fs.readFile(logPath, 'utf-8')).trim())
@@ -46,7 +46,7 @@ describe('appendAuditEvent / withAuditLog', () => {
 
   it('records ok:false and error text when tool result is isError', async () => {
     const { withAuditLog } = await import('./audit-log.js')
-    const wrapped = withAuditLog('claude_code_cleaner_test', 'cleaner', async () => ({ isError: true, content: [{ type: 'text', text: 'boom' }] }))
+    const wrapped = withAuditLog('test_destructive_tool', 'write', async () => ({ isError: true, content: [{ type: 'text', text: 'boom' }] }))
     await wrapped({})
     await new Promise((r) => setTimeout(r, 20))
     const event = JSON.parse((await fs.readFile(logPath, 'utf-8')).trim())
@@ -56,7 +56,7 @@ describe('appendAuditEvent / withAuditLog', () => {
 
   it('records ok:false when the handler throws', async () => {
     const { withAuditLog } = await import('./audit-log.js')
-    const wrapped = withAuditLog('claude_code_cleaner_test', 'cleaner', async () => {
+    const wrapped = withAuditLog('test_destructive_tool', 'write', async () => {
       throw new Error('kaboom')
     })
     await expect(wrapped({})).rejects.toThrow(/kaboom/)
@@ -66,34 +66,34 @@ describe('appendAuditEvent / withAuditLog', () => {
     expect(event.error).toBe('kaboom')
   })
 
-  it('skips auditor tools by default (mode=writes)', async () => {
+  it('skips read-role tools by default (mode=writes)', async () => {
     const { withAuditLog } = await import('./audit-log.js')
     const handler = vi.fn(async () => ({ content: [{ type: 'text', text: '{}' }] }))
-    const wrapped = withAuditLog('claude_code_auditor_test', 'auditor', handler)
-    // When auditor logging is disabled, withAuditLog returns the handler verbatim.
+    const wrapped = withAuditLog('test_readonly_tool', 'read', handler)
+    // When read-role logging is disabled, withAuditLog returns the handler verbatim.
     expect(wrapped).toBe(handler)
   })
 
-  it('logs auditor tools when AUDIT_LOG=all', async () => {
+  it('logs read-role tools when AUDIT_LOG=all', async () => {
     process.env.MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG = 'all'
     const { withAuditLog } = await import('./audit-log.js')
-    const wrapped = withAuditLog('claude_code_auditor_test', 'auditor', async () => ({ content: [{ type: 'text', text: '{}' }] }))
+    const wrapped = withAuditLog('test_readonly_tool', 'read', async () => ({ content: [{ type: 'text', text: '{}' }] }))
     expect(wrapped).not.toBeUndefined()
     await wrapped({})
     await new Promise((r) => setTimeout(r, 20))
     const event = JSON.parse((await fs.readFile(logPath, 'utf-8')).trim())
-    expect(event.role).toBe('auditor')
+    expect(event.role).toBe('read')
   })
 
-  it('skips every tool — auditor and cleaner — when AUDIT_LOG=off', async () => {
+  it('skips every tool — read and write roles — when AUDIT_LOG=off', async () => {
     process.env.MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG = 'off'
     const { withAuditLog } = await import('./audit-log.js')
-    const cleaner = vi.fn(async (_args: unknown) => ({ content: [{ type: 'text', text: '{}' }] }))
-    const auditor = vi.fn(async (_args: unknown) => ({ content: [{ type: 'text', text: '{}' }] }))
+    const writeHandler = vi.fn(async (_args: unknown) => ({ content: [{ type: 'text', text: '{}' }] }))
+    const readHandler = vi.fn(async (_args: unknown) => ({ content: [{ type: 'text', text: '{}' }] }))
     // Both return the original handler verbatim — no wrapping, no file I/O.
-    expect(withAuditLog('claude_code_cleaner_test', 'cleaner', cleaner)).toBe(cleaner)
-    expect(withAuditLog('claude_code_auditor_test', 'auditor', auditor)).toBe(auditor)
-    await cleaner({})
+    expect(withAuditLog('test_destructive_tool', 'write', writeHandler)).toBe(writeHandler)
+    expect(withAuditLog('test_readonly_tool', 'read', readHandler)).toBe(readHandler)
+    await writeHandler({})
     await new Promise((r) => setTimeout(r, 20))
     // No audit file should have been created.
     await expect(fs.access(logPath)).rejects.toThrow()
@@ -112,7 +112,7 @@ describe('appendAuditEvent / withAuditLog', () => {
     expect(((await fs.stat(logPath)).mode & 0o777).toString(8)).toBe('644')
 
     const { withAuditLog } = await import('./audit-log.js')
-    const wrapped = withAuditLog('claude_code_cleaner_test', 'cleaner', async () => ({ content: [{ type: 'text', text: '{}' }] }))
+    const wrapped = withAuditLog('test_destructive_tool', 'write', async () => ({ content: [{ type: 'text', text: '{}' }] }))
     await wrapped({ name: 'memo.md' })
     await new Promise((r) => setTimeout(r, 20))
 
@@ -127,7 +127,7 @@ describe('appendAuditEvent / withAuditLog', () => {
     process.env.MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_KEEP = '2'
 
     const { withAuditLog } = await import('./audit-log.js')
-    const wrapped = withAuditLog('claude_code_cleaner_test', 'cleaner', async () => ({ content: [{ type: 'text', text: '{}' }] }))
+    const wrapped = withAuditLog('test_destructive_tool', 'write', async () => ({ content: [{ type: 'text', text: '{}' }] }))
 
     // Each call produces a ~250-byte event line, so every append rotates.
     await wrapped({ note: 'first', padding: 'x'.repeat(100) })
@@ -154,7 +154,7 @@ describe('appendAuditEvent / withAuditLog', () => {
     process.env.MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_KEEP = '2'
 
     const { withAuditLog } = await import('./audit-log.js')
-    const wrapped = withAuditLog('claude_code_cleaner_test', 'cleaner', async () => ({ content: [{ type: 'text', text: '{}' }] }))
+    const wrapped = withAuditLog('test_destructive_tool', 'write', async () => ({ content: [{ type: 'text', text: '{}' }] }))
     await wrapped({ note: 'a', padding: 'x'.repeat(500) })
     await wrapped({ note: 'b', padding: 'y'.repeat(500) })
     await new Promise((r) => setTimeout(r, 20))
@@ -171,7 +171,7 @@ describe('appendAuditEvent / withAuditLog', () => {
     process.env.MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_KEEP = '0'
 
     const { withAuditLog } = await import('./audit-log.js')
-    const wrapped = withAuditLog('claude_code_cleaner_test', 'cleaner', async () => ({ content: [{ type: 'text', text: '{}' }] }))
+    const wrapped = withAuditLog('test_destructive_tool', 'write', async () => ({ content: [{ type: 'text', text: '{}' }] }))
     await wrapped({ note: 'first', padding: 'x'.repeat(100) })
     await wrapped({ note: 'second', padding: 'y'.repeat(100) })
     await new Promise((r) => setTimeout(r, 20))
@@ -191,7 +191,7 @@ describe('appendAuditEvent / withAuditLog', () => {
     // through to the JSON.stringify length check and return a `_truncated`
     // preview — that's the path this test pins down.
     const { withAuditLog } = await import('./audit-log.js')
-    const wrapped = withAuditLog('claude_code_cleaner_test', 'cleaner', async () => ({ content: [{ type: 'text', text: '{}' }] }))
+    const wrapped = withAuditLog('test_destructive_tool', 'write', async () => ({ content: [{ type: 'text', text: '{}' }] }))
     await wrapped({ payload: 'x'.repeat(5000) })
     await new Promise((r) => setTimeout(r, 20))
     const event = JSON.parse((await fs.readFile(logPath, 'utf-8')).trim())
@@ -222,7 +222,7 @@ describe('appendAuditEvent / withAuditLog', () => {
     })
 
     const { withAuditLog } = await import('./audit-log.js')
-    const wrapped = withAuditLog('claude_code_cleaner_test', 'cleaner', async () => ({ content: [{ type: 'text', text: '{}' }] }))
+    const wrapped = withAuditLog('test_destructive_tool', 'write', async () => ({ content: [{ type: 'text', text: '{}' }] }))
     await wrapped({ note: 'a' })
     await new Promise((r) => setTimeout(r, 30))
 
@@ -244,7 +244,7 @@ describe('appendAuditEvent / withAuditLog', () => {
     const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
     const { withAuditLog } = await import('./audit-log.js')
-    const wrapped = withAuditLog('claude_code_cleaner_test', 'cleaner', async () => ({ content: [{ type: 'text', text: '{}' }] }))
+    const wrapped = withAuditLog('test_destructive_tool', 'write', async () => ({ content: [{ type: 'text', text: '{}' }] }))
     await wrapped({ note: 'forces-rotation', padding: 'x'.repeat(300) })
     await new Promise((r) => setTimeout(r, 30))
 
@@ -258,7 +258,7 @@ describe('appendAuditEvent / withAuditLog', () => {
     // (truthy + object but Array.isArray → true) and a primitive string
     // (truthy but typeof !== 'object').
     const { withAuditLog } = await import('./audit-log.js')
-    const wrapped = withAuditLog('claude_code_cleaner_test', 'cleaner', async () => ({ content: [{ type: 'text', text: '{}' }] }))
+    const wrapped = withAuditLog('test_destructive_tool', 'write', async () => ({ content: [{ type: 'text', text: '{}' }] }))
     // appendAuditEvent fires via void so we need a settle delay between calls
     // to keep the JSONL order deterministic.
     await wrapped(['x', 'y'])
@@ -275,7 +275,7 @@ describe('appendAuditEvent / withAuditLog', () => {
     // in withAuditLog's catch. Handlers can throw anything (string, object, …);
     // the audit row must still capture a textual `error` field.
     const { withAuditLog } = await import('./audit-log.js')
-    const wrapped = withAuditLog('claude_code_cleaner_test', 'cleaner', async () => {
+    const wrapped = withAuditLog('test_destructive_tool', 'write', async () => {
       throw 'plain-string-failure'
     })
     await expect(wrapped({})).rejects.toBe('plain-string-failure')
@@ -288,7 +288,7 @@ describe('appendAuditEvent / withAuditLog', () => {
   it('records ok:false with no error text when an isError result has no content array', async () => {
     // Covers the `!Array.isArray(content)` true branch in extractErrorText.
     const { withAuditLog } = await import('./audit-log.js')
-    const wrapped = withAuditLog('claude_code_cleaner_test', 'cleaner', async () => ({ isError: true }))
+    const wrapped = withAuditLog('test_destructive_tool', 'write', async () => ({ isError: true }))
     await wrapped({})
     await new Promise((r) => setTimeout(r, 20))
     const event = JSON.parse((await fs.readFile(logPath, 'utf-8')).trim())
@@ -322,7 +322,7 @@ describe('appendAuditEvent / withAuditLog', () => {
     const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
     const { withAuditLog } = await import('./audit-log.js')
-    const wrapped = withAuditLog('claude_code_cleaner_test', 'cleaner', async () => ({ content: [{ type: 'text', text: '{}' }] }))
+    const wrapped = withAuditLog('test_destructive_tool', 'write', async () => ({ content: [{ type: 'text', text: '{}' }] }))
     await wrapped({ note: 'forces-rotation', padding: 'x'.repeat(300) })
     await new Promise((r) => setTimeout(r, 30))
 
@@ -346,7 +346,7 @@ describe('appendAuditEvent / withAuditLog', () => {
     const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
     const { withAuditLog } = await import('./audit-log.js')
-    const wrapped = withAuditLog('claude_code_cleaner_test', 'cleaner', async () => ({ content: [{ type: 'text', text: '{}' }] }))
+    const wrapped = withAuditLog('test_destructive_tool', 'write', async () => ({ content: [{ type: 'text', text: '{}' }] }))
     await expect(wrapped({ note: 'x' })).resolves.toBeDefined()
     await new Promise((r) => setTimeout(r, 30))
 
@@ -367,7 +367,7 @@ describe('appendAuditEvent / withAuditLog', () => {
     const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
     const { withAuditLog } = await import('./audit-log.js')
-    const wrapped = withAuditLog('claude_code_cleaner_test', 'cleaner', async () => ({ content: [{ type: 'text', text: '{}' }] }))
+    const wrapped = withAuditLog('test_destructive_tool', 'write', async () => ({ content: [{ type: 'text', text: '{}' }] }))
     // The wrapped tool call must still resolve normally even though the audit
     // append fails underneath — that's the whole point of the swallow.
     await expect(wrapped({ note: 'x' })).resolves.toBeDefined()

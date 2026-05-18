@@ -2,7 +2,8 @@
  * Append-only JSONL audit log for tool invocations.
  *
  * Scope is controlled by MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG: `off` (no logging),
- * `writes` (default — `_cleaner_` tools only), or `all` (every tool).
+ * `writes` (default — `write`-role tools only, i.e. anything not annotated
+ * `readOnlyHint: true`), or `all` (every tool).
  * Path is configurable via MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_PATH; defaults to
  * `<MCP_CLAUDE_HOUSEKEEPING_PATH>/audit/audit.jsonl`.
  *
@@ -23,7 +24,7 @@ export interface AuditEvent {
   ts: string
   server: string
   tool: string
-  role: 'auditor' | 'cleaner'
+  role: 'read' | 'write'
   ok: boolean
   duration_ms: number
   error?: string
@@ -117,12 +118,12 @@ export const appendAuditEvent = async (event: AuditEvent): Promise<void> => {
 type ToolCallback = (...callbackArgs: unknown[]) => unknown | Promise<unknown>
 
 /**
- * Wrap a tool callback so each invocation appends an audit event. Cleaner
- * tools are always logged; auditor tools only when AUDIT_LOG_ALL is set.
+ * Wrap a tool callback so each invocation appends an audit event. `write`-role
+ * tools are always logged; `read`-role tools only when AUDIT_LOG=all is set.
  */
-export const withAuditLog = (toolName: string, role: 'auditor' | 'cleaner', callback: ToolCallback): ToolCallback => {
+export const withAuditLog = (toolName: string, role: 'read' | 'write', callback: ToolCallback): ToolCallback => {
   if (AUDIT_LOG_MODE === 'off') return callback
-  if (role === 'auditor' && AUDIT_LOG_MODE !== 'all') return callback
+  if (role === 'read' && AUDIT_LOG_MODE !== 'all') return callback
   return async (...callbackArgs: unknown[]) => {
     const start = Date.now()
     const args = callbackArgs[0]

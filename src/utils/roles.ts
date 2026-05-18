@@ -23,16 +23,23 @@ type RegisterTool = McpServer['registerTool']
  * are actually registered. Disabled tools are silently skipped. Each registered
  * tool's callback is wrapped with the audit logger.
  */
+// We can't get usable parameter types out of the overloaded generic `RegisterTool`
+// signature — `Parameters<RegisterTool>` collapses to `never` for overloads —
+// so the Proxy validates the two fields it needs (name, annotations) structurally
+// and treats the rest opaquely.
+interface RegisterToolConfig {
+  annotations?: ToolAnnotations
+}
+type ToolCallback = (...callbackArgs: unknown[]) => unknown | Promise<unknown>
+type RegisterToolArgs = [name: string, config: RegisterToolConfig, callback: ToolCallback]
+
 export const makeRoleGatedRegister = (server: McpServer): RegisterTool => {
   const proxied = new Proxy(server.registerTool.bind(server) as RegisterTool, {
-    apply(target, thisArg, args: Parameters<RegisterTool>) {
-      const name = args[0]
-      const config = args[1] as { annotations?: ToolAnnotations }
+    apply(target, thisArg, args: RegisterToolArgs) {
+      const [name, config, callback] = args
       const role = roleFromAnnotations(config.annotations)
       if (!HOUSEKEEPING_ROLES.has(role)) return undefined as never
-      const wrappedArgs = [...args] as Parameters<RegisterTool>
-      const callback = wrappedArgs[2] as (...callbackArgs: unknown[]) => unknown | Promise<unknown>
-      wrappedArgs[2] = withAuditLog(name, role, callback) as (typeof wrappedArgs)[2]
+      const wrappedArgs: RegisterToolArgs = [name, config, withAuditLog(name, role, callback)]
       return Reflect.apply(target, thisArg, wrappedArgs)
     }
   })

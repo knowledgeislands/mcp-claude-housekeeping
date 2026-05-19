@@ -76,6 +76,5 @@
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest"
   },
-  "type": "module",
-  "types": "dist/mcp-server/index.d.ts"
+  "type": "module"
 }

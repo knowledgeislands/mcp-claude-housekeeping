@@ -4,9 +4,7 @@
     "noEmit": false,
     "outDir": "./dist",
     "rootDir": "./src",
-    "allowImportingTsExtensions": false,
-    "incremental": true,
-    "tsBuildInfoFile": "./.tsbuildinfo"
+    "allowImportingTsExtensions": false
   },
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "dist", "**/*.test.ts"]

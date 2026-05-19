@@ -2,8 +2,8 @@
   "$schema": "https://json.schemastore.org/tsconfig",
   "display": "Base",
   "compilerOptions": {
-    "target": "esnext",
-    "lib": ["esnext"],
+    "target": "es2024",
+    "lib": ["es2024"],
     "module": "nodenext",
     "moduleResolution": "nodenext",
     "types": ["node", "vitest/globals"],
@@ -15,15 +15,17 @@
     "noEmit": true,
     "inlineSources": false,
     "isolatedModules": true,
+    "verbatimModuleSyntax": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedIndexedAccess": true,
+    "noImplicitReturns": true,
+    "noImplicitOverride": true,
     "skipLibCheck": true
   },
-  "include": ["**/*.ts", "**/*.mjs", "commitlint.config.ts", "lint-staged.config.ts", "prettier.config.ts", "syncpack.config.ts", "vitest.config.ts"],
-  "exclude": ["cdk.out", "node_modules", "dist"]
+  "include": ["**/*.ts"],
+  "exclude": ["node_modules", "dist"]
 }

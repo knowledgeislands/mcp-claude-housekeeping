@@ -157,7 +157,11 @@ bun install
 | Name | Required | Description |
 | --- | --- | --- |
 | `MCP_CLAUDE_HOUSEKEEPING_PATH` | yes | Absolute path or `~/...` to the directory where audit reports are written. |
-| `MCP_CLAUDE_HOUSEKEEPING_ACCESS_LEVEL` | no | Maximum tool access level to register. One of: `read` (default — read-only tools only, least privilege), `write` (reserved — no such tools today), `destructive` (adds prune/relocate/delete). Levels nest. Each tool's level is derived from its MCP annotations (`readOnlyHint: true` → `read`; `destructiveHint: true` → `destructive`; missing annotations → `destructive` fail-safe); a tool registers when its derived level ≤ the configured level. The `dry_run: true` default on destructive tools controls *effect*; the gate controls *visibility*. Unknown values abort startup. |
+| `MCP_CLAUDE_HOUSEKEEPING_ACCESS_LEVEL` | no | Maximum tool access level to register. One of: `read` (default — read-only tools only, least privilege), `write` (reserved — no such tools today), `destructive` (adds prune/relocate/delete). Levels nest. Each tool's level is derived from its MCP annotations (`readOnlyHint: true` → `read`; `destructiveHint: true` → `destructive`; missing annotations → `destructive` fail-safe); a tool registers when its derived level ≤ the configured level. The `dry_run: true` default on destructive tools controls _effect_; the gate controls _visibility_. Unknown values abort startup. |
+| `MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG` | no | Audit-log scope. One of `off`, `writes` (default — record only non-read tool calls), `all` (record every invocation). |
+| `MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_PATH` | no | Path to the JSONL audit log. Default `<MCP_CLAUDE_HOUSEKEEPING_PATH>/audit/audit.jsonl`. |
+| `MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_MAX_BYTES` | no | Size-based rotation threshold in bytes. Default `10485760` (10 MiB). Set to `0` to disable rotation. |
+| `MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_KEEP` | no | Number of rotated audit-log files to retain. Default `5`. |
 | `NODE_ENV` | no | Dev convention. `server:mcp:dev`/`server:mcp:inspect` set this to `development`, which makes [`src/config.ts`](./src/config.ts) load `.env.development` from the CWD. Unset under Claude Desktop, so `.env*` files are ignored in production. |
 
 The sessions root (`~/Library/Application Support/Claude/local-agent-mode-sessions`), Claude Code root (`~/.claude`), and VSCode workspaceStorage (`~/Library/Application Support/Code/User/workspaceStorage`) are hardcoded in [`src/config.ts`](./src/config.ts) and are not user-configurable.

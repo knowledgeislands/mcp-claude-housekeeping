@@ -7,7 +7,7 @@ An MCP (Model Context Protocol) server for housekeeping the three filesystem are
 ## Features
 
 - **Codified audits across three storage areas** — 38 tools spanning Cowork local-agent-mode-sessions (the daily `cowork-filesystem-audit`), `~/.claude/` Claude Code state, and VSCode `workspaceStorage/<id>/chatSessions/`.
-- **Role-gated tools** — every tool belongs to either the `read` role (read-only) or the `write` role (destructive). Set `MCP_CLAUDE_HOUSEKEEPING_ROLES` to opt into the roles you want; defaults to `read` only. Roles are derived from each tool's MCP annotations (`readOnlyHint`), not its name.
+- **Access-level gated tools** — every tool maps to one of `read`, `write`, or `destructive`. Set `MCP_CLAUDE_HOUSEKEEPING_ACCESS_LEVEL` to the maximum level you want exposed; defaults to `read` only. Levels nest. The level is derived from each tool's MCP annotations (`readOnlyHint` / `destructiveHint`), not its name. (Housekeeping ships only `read` and `destructive` tools today — no `write` tier.)
 - **Workspace auto-discovery** (Cowork only) — walks `~/Library/Application Support/Claude/local-agent-mode-sessions/<account>/<workspace>/` and aggregates results across every discovered workspace.
 - **Path-safe** — every path is validated against its configured root; memory operations are also confined to their `memory/` subdir.
 - **No network, no auth** — pure local filesystem over MCP stdio.
@@ -16,9 +16,9 @@ An MCP (Model Context Protocol) server for housekeeping the three filesystem are
 
 ## Available Tools
 
-Tools follow the convention `<app>_<resource>_<action>`. Each tool's role (`read` for read-only, `write` for destructive) is derived from its MCP annotations (`readOnlyHint`).
+Tools follow the convention `<app>_<resource>_<action>`. Each tool's access level (`read` or `destructive` today) is derived from its MCP annotations (`readOnlyHint` / `destructiveHint`).
 
-### `claude_desktop_*` — read-only (`read` role)
+### `claude_desktop_*` — read-only (`read` level)
 
 | Tool                                   | Purpose                                                                         |
 | -------------------------------------- | ------------------------------------------------------------------------------- |
@@ -36,7 +36,7 @@ Tools follow the convention `<app>_<resource>_<action>`. Each tool's role (`read
 | `claude_desktop_reports_list`          | List existing `cowork-audit-*.md` reports in `MCP_CLAUDE_HOUSEKEEPING_PATH`.    |
 | `claude_desktop_workspaces_list`       | List discovered `<account>/<workspace>` workspace ids.                          |
 
-### `claude_desktop_*` — destructive (`write` role)
+### `claude_desktop_*` — destructive (`destructive` level)
 
 | Tool                                | Purpose                                                                 |
 | ----------------------------------- | ----------------------------------------------------------------------- |
@@ -50,7 +50,7 @@ Tools follow the convention `<app>_<resource>_<action>`. Each tool's role (`read
 
 † Auto-picks the most-recently-active session when `session_id` is omitted — Cowork agents share one MCP server, so the server cannot infer the calling session from execution context. Pass `session_id` (bare UUID) to disambiguate when multiple sessions are active concurrently.
 
-### `claude_code_*` — read-only (`read` role)
+### `claude_code_*` — read-only (`read` level)
 
 | Tool                            | Purpose                                                                                           |
 | ------------------------------- | ------------------------------------------------------------------------------------------------- |
@@ -62,7 +62,7 @@ Tools follow the convention `<app>_<resource>_<action>`. Each tool's role (`read
 | `claude_code_memory_list`       | List memory files in `<project>/memory/`.                                                         |
 | `claude_code_memory_read`       | Read one memory file.                                                                             |
 
-### `claude_code_*` — destructive (`write` role)
+### `claude_code_*` — destructive (`destructive` level)
 
 | Tool                                | Purpose                                                                              |
 | ----------------------------------- | ------------------------------------------------------------------------------------ |
@@ -73,7 +73,7 @@ Tools follow the convention `<app>_<resource>_<action>`. Each tool's role (`read
 | `claude_code_memory_delete`         | Retire a memory file.                                                                |
 | `claude_code_memory_index_write`    | Replace `MEMORY.md`.                                                                 |
 
-### `vscode_*` — read-only (`read` role)
+### `vscode_*` — read-only (`read` level)
 
 | Tool                       | Purpose                                                          |
 | -------------------------- | ---------------------------------------------------------------- |
@@ -82,7 +82,7 @@ Tools follow the convention `<app>_<resource>_<action>`. Each tool's role (`read
 | `vscode_sessions_obsolete` | Chat sessions older than N days.                                 |
 | `vscode_session_read`      | Preview head/tail of a `.json`/`.jsonl` chat session.            |
 
-### `vscode_*` — destructive (`write` role)
+### `vscode_*` — destructive (`destructive` level)
 
 | Tool                      | Purpose                                            |
 | ------------------------- | -------------------------------------------------- |
@@ -134,7 +134,7 @@ Claude uses `claude_desktop_memory_spaces_summary` to find the candidate, then `
 
 > "Free some disk — drop unstarred artifacts beyond the top 5 most recently updated."
 
-Claude calls `claude_desktop_artifacts_prune` (destructive; requires the `write` role). Starred artifacts are always preserved and the top N most recent are kept regardless of star status.
+Claude calls `claude_desktop_artifacts_prune` (destructive; requires `MCP_CLAUDE_HOUSEKEEPING_ACCESS_LEVEL=destructive`). Starred artifacts are always preserved and the top N most recent are kept regardless of star status.
 
 ## Installation
 
@@ -157,7 +157,7 @@ bun install
 | Name | Required | Description |
 | --- | --- | --- |
 | `MCP_CLAUDE_HOUSEKEEPING_PATH` | yes | Absolute path or `~/...` to the directory where audit reports are written. |
-| `MCP_CLAUDE_HOUSEKEEPING_ROLES` | no | Comma-separated list of enabled roles. Allowed: `read`, `write`. Defaults to `read` only when unset or empty. Each tool's role is derived from its MCP annotations (`readOnlyHint: true` → `read`, otherwise → `write`); only tools whose role is enabled here are registered. An unknown role aborts startup. |
+| `MCP_CLAUDE_HOUSEKEEPING_ACCESS_LEVEL` | no | Maximum tool access level to register. One of: `read` (default — read-only tools only, least privilege), `write` (reserved — no such tools today), `destructive` (adds prune/relocate/delete). Levels nest. Each tool's level is derived from its MCP annotations (`readOnlyHint: true` → `read`; `destructiveHint: true` → `destructive`; missing annotations → `destructive` fail-safe); a tool registers when its derived level ≤ the configured level. The `dry_run: true` default on destructive tools controls *effect*; the gate controls *visibility*. Unknown values abort startup. |
 | `NODE_ENV` | no | Dev convention. `server:mcp:dev`/`server:mcp:inspect` set this to `development`, which makes [`src/config.ts`](./src/config.ts) load `.env.development` from the CWD. Unset under Claude Desktop, so `.env*` files are ignored in production. |
 
 The sessions root (`~/Library/Application Support/Claude/local-agent-mode-sessions`), Claude Code root (`~/.claude`), and VSCode workspaceStorage (`~/Library/Application Support/Code/User/workspaceStorage`) are hardcoded in [`src/config.ts`](./src/config.ts) and are not user-configurable.
@@ -201,7 +201,7 @@ MCP_CLAUDE_HOUSEKEEPING_PATH=~/Documents/Claude/Projects/Claude\ Housekeeping \
 
 ### Workspaces
 
-The server walks `~/Library/Application Support/Claude/local-agent-mode-sessions/<account_uuid>/<workspace_uuid>/` and discovers each workspace by looking for marker files (`.claude.json`, `artifacts.json`, `spaces.json`, `cowork_settings.json`, or `local_*.json`). Read-only audit tools aggregate results across every discovered workspace under a `workspaces` array; destructive `write`-role tools and the memory list/read tools accept an optional `workspace` arg (`"<account>/<workspace>"`) and require it explicitly when more than one workspace is present.
+The server walks `~/Library/Application Support/Claude/local-agent-mode-sessions/<account_uuid>/<workspace_uuid>/` and discovers each workspace by looking for marker files (`.claude.json`, `artifacts.json`, `spaces.json`, `cowork_settings.json`, or `local_*.json`). Read-only audit tools aggregate results across every discovered workspace under a `workspaces` array; destructive-level tools and the memory list/read tools accept an optional `workspace` arg (`"<account>/<workspace>"`) and require it explicitly when more than one workspace is present.
 
 Use `claude_desktop_workspaces_list` to see the discovered ids. If the sessions root itself contains the marker files, it is treated as a single workspace with id `.` (back-compat with hard-coded inner-UUID configs).
 
@@ -221,7 +221,7 @@ bun run lint:md        # prettier + markdownlint for *.md
 ## Security Model
 
 - All paths are validated against the discovered workspace root (or, for memory tools, against `<workspace>/spaces/<space_id>/memory/`). Inputs resolving outside their root are rejected with `Path escapes root: "<input>"`.
-- Every destructive tool (any annotated `DESTRUCTIVE` or `DESTRUCTIVE_ONESHOT`, i.e. the `write`-role tools) carries `destructiveHint: true` so MCP clients can prompt before invoking them; the role gate at startup uses the same `readOnlyHint` annotation to decide whether to register the tool at all.
+- Every destructive tool (any annotated `DESTRUCTIVE` or `DESTRUCTIVE_ONESHOT`) carries `destructiveHint: true` so MCP clients can prompt before invoking them; the access-level gate at startup uses the same annotations (`readOnlyHint` / `destructiveHint`) to decide whether to register the tool at all under the configured `MCP_CLAUDE_HOUSEKEEPING_ACCESS_LEVEL`.
 - The server has no network access and performs no authentication. Trust is delegated entirely to the local OS user running it.
 
 ## Directory Structure

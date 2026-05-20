@@ -35,7 +35,7 @@ A tool registers when its derived level is at or below `MCP_CLAUDE_HOUSEKEEPING_
 
 ## Security Requirements
 
-Both `read` and `write` roles touch files anywhere under four configured roots. New tools and changes to existing tools MUST preserve every invariant below.
+Every access level touches files anywhere under four configured roots. New tools and changes to existing tools MUST preserve every invariant below.
 
 1. **Path containment at every `path.join(<root>, <user-input>)` site.** Wrap with `resolveWithinRoot()` (lexical guard) AND `assertRealPathWithinRoot()` (symlink-aware) from [src/utils/utils.ts](./src/utils/utils.ts). Both apply to `args.workspace`, `args.project`, `args.session`, memory `args.name`, and any new identifier that becomes a path segment.
 2. **Tighten input schemas, not just call sites.** Identifier inputs that become path segments must have a regex constraint excluding `/`, `\`, and `..`. Existing patterns: `workspaceArg` (hex), `projectArg` (alphanumeric/`._-`), `sessionArg` (alphanumeric/`._-` + `.json[l]` suffix), memory `name` (must end `.md`). Bare `z.string().min(1)` is not acceptable for path-segment inputs.

@@ -7,6 +7,7 @@ import { discoverWorkspaces, errorResult, jsonResult, type Workspace } from '../
 import * as audit from './audit.js'
 import * as memory from './memory.js'
 import * as report from './report.js'
+import * as sessions from './sessions.js'
 
 const targetWorkspaces = async (workspaceFilter?: string): Promise<Workspace[]> => {
   const all = await discoverWorkspaces(CLAUDE_DESKTOP_ROOT_PATH)
@@ -482,6 +483,34 @@ export const registerClaudeDesktopTools = (server: McpServer): void => {
         return jsonResult({ workspace: w.id, ...(await memory.memoryIndexWrite(w.root, args)) })
       } catch (err) {
         return errorResult(`Error in memory_index_write: ${err instanceof Error ? err.message : String(err)}`)
+      }
+    }
+  )
+
+  register(
+    'claude_desktop_session_rename',
+    {
+      title: 'Claude Desktop Cleaner: set the current session label',
+      description: `Set the sidebar label (the \`title\` field of <workspace>/local_<session-id>.json) so the active Cowork session is recognisable in the list. Call once the session's purpose is clear — e.g. "kit-legal · inbound scan · 2026-05-20". Maximum 80 characters; emoji are allowed; control characters are rejected. If "session_id" is omitted, targets the most-recently-active session in the workspace (by lastActivityAt, falling back to file mtime) — Cowork agents share one MCP server process so the server cannot infer the calling session; the most-recent heuristic is correct when only one session is actively writing. Pass session_id explicitly to disambiguate. The "workspace" arg is required when more than one workspace is configured. The Cowork sidebar may not refresh until next reload.`,
+      inputSchema: z
+        .object({
+          name: z.string().min(1).max(sessions.SESSION_NAME_MAX).describe('Desired session label (≤80 chars, emoji ok).'),
+          session_id: z
+            .string()
+            .regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/, 'session_id must be a lower-case UUID with no "local_" prefix.')
+            .optional()
+            .describe('Bare UUID of the target session; omit to auto-select the most-recently-active one.'),
+          workspace: workspaceArg
+        })
+        .strict(),
+      annotations: DESTRUCTIVE
+    },
+    async ({ workspace, ...args }) => {
+      try {
+        const w = await requireSingleWorkspace(workspace)
+        return jsonResult({ workspace: w.id, ...(await sessions.sessionRename(w.root, args)) })
+      } catch (err) {
+        return errorResult(`Error in session_rename: ${err instanceof Error ? err.message : String(err)}`)
       }
     }
   )

@@ -46,6 +46,9 @@ Tools follow the convention `<app>_<resource>_<action>`. Each tool's role (`read
 | `claude_desktop_memory_write`       | Create/overwrite a memory file in `spaces/<space_id>/memory/<name>.md`. |
 | `claude_desktop_memory_delete`      | Retire a memory file (cannot delete `MEMORY.md`).                       |
 | `claude_desktop_memory_index_write` | Replace `MEMORY.md` for a space.                                        |
+| `claude_desktop_session_rename`     | Set the sidebar `title` on a session record (≤80 chars, emoji ok).†     |
+
+† Auto-picks the most-recently-active session when `session_id` is omitted — Cowork agents share one MCP server, so the server cannot infer the calling session from execution context. Pass `session_id` (bare UUID) to disambiguate when multiple sessions are active concurrently.
 
 ### `claude_code_*` — read-only (`read` role)
 

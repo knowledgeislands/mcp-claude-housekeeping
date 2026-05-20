@@ -44,6 +44,7 @@ Both `read` and `write` roles touch files anywhere under four configured roots. 
 5. **Access-level gate is the registration boundary, keyed off annotations.** See [Access-level gate](#access-level-gate--driven-by-annotations-not-names) above.
 6. **No shell-string interpolation.** `du` is invoked via `spawn('du', ['-sk', target])` — argv form. New tools that shell out must use `execFile` or `spawn` with an argv array.
 7. **Zod schemas are `.strict()`.** Already true everywhere; new schemas must continue this.
+8. **Tests MUST NOT touch the real root paths.** `CLAUDE_CODE_ROOT_PATH`, `CLAUDE_DESKTOP_ROOT_PATH`, and `VSCODE_WORKSPACE_STORAGE_ROOT_PATH` resolve to live user directories (`~/.claude/`, the Cowork sessions dir, VSCode `workspaceStorage`). Test files MUST NOT import these constants from `config.ts`. Instead, shadow them with a per-suite tmpdir, e.g. `const CLAUDE_CODE_ROOT_PATH = path.join(os.tmpdir(), 'mcp-housekeeping-<group>-<file>-tests')`, and pass that into the tool function under test. A regression here destroyed real `~/.claude/projects/` history once — don't do it again.
 
 Traversal-rejection tests live in [src/tools/vscode/audit.test.ts](./src/tools/vscode/audit.test.ts). Parallel coverage for `claudeCode.sessionRead` / `relocateProject` is a follow-up.
 

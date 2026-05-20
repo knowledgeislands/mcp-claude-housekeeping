@@ -41,38 +41,37 @@ describe('MCP_CLAUDE_HOUSEKEEPING_PATH', () => {
   })
 })
 
-describe('MCP_CLAUDE_HOUSEKEEPING_ROLES', () => {
+describe('MCP_CLAUDE_HOUSEKEEPING_ACCESS_LEVEL', () => {
   beforeEach(() => {
     process.env.MCP_CLAUDE_HOUSEKEEPING_PATH = '/tmp/housekeeping'
   })
 
-  it('defaults to read only when unset', async () => {
-    delete process.env.MCP_CLAUDE_HOUSEKEEPING_ROLES
-    const { HOUSEKEEPING_ROLES } = await import('./config.js')
-    expect([...HOUSEKEEPING_ROLES]).toEqual(['read'])
+  it('defaults to read when unset', async () => {
+    delete process.env.MCP_CLAUDE_HOUSEKEEPING_ACCESS_LEVEL
+    const { ACCESS_LEVEL } = await import('./config.js')
+    expect(ACCESS_LEVEL).toBe('read')
   })
 
-  it('defaults to read only when empty', async () => {
-    process.env.MCP_CLAUDE_HOUSEKEEPING_ROLES = '   '
-    const { HOUSEKEEPING_ROLES } = await import('./config.js')
-    expect([...HOUSEKEEPING_ROLES]).toEqual(['read'])
+  it('defaults to read when empty/whitespace', async () => {
+    process.env.MCP_CLAUDE_HOUSEKEEPING_ACCESS_LEVEL = '   '
+    const { ACCESS_LEVEL } = await import('./config.js')
+    expect(ACCESS_LEVEL).toBe('read')
   })
 
-  it('accepts a single role', async () => {
-    process.env.MCP_CLAUDE_HOUSEKEEPING_ROLES = 'write'
-    const { HOUSEKEEPING_ROLES } = await import('./config.js')
-    expect(HOUSEKEEPING_ROLES.has('write')).toBe(true)
-    expect(HOUSEKEEPING_ROLES.has('read')).toBe(false)
+  it('accepts write', async () => {
+    process.env.MCP_CLAUDE_HOUSEKEEPING_ACCESS_LEVEL = 'write'
+    const { ACCESS_LEVEL } = await import('./config.js')
+    expect(ACCESS_LEVEL).toBe('write')
   })
 
-  it('accepts both roles with whitespace', async () => {
-    process.env.MCP_CLAUDE_HOUSEKEEPING_ROLES = ' read , write '
-    const { HOUSEKEEPING_ROLES } = await import('./config.js')
-    expect([...HOUSEKEEPING_ROLES].sort()).toEqual(['read', 'write'])
+  it('accepts destructive', async () => {
+    process.env.MCP_CLAUDE_HOUSEKEEPING_ACCESS_LEVEL = 'destructive'
+    const { ACCESS_LEVEL } = await import('./config.js')
+    expect(ACCESS_LEVEL).toBe('destructive')
   })
 
-  it('throws on an unknown role', async () => {
-    process.env.MCP_CLAUDE_HOUSEKEEPING_ROLES = 'read,observer'
-    await expect(import('./config.js')).rejects.toThrow(/Invalid MCP_CLAUDE_HOUSEKEEPING_ROLES entries: observer/)
+  it('throws on an unknown level', async () => {
+    process.env.MCP_CLAUDE_HOUSEKEEPING_ACCESS_LEVEL = 'observer'
+    await expect(import('./config.js')).rejects.toThrow(/Invalid MCP_CLAUDE_HOUSEKEEPING_ACCESS_LEVEL="observer"/)
   })
 })

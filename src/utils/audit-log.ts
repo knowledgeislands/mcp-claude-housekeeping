@@ -2,8 +2,9 @@
  * Append-only JSONL audit log for tool invocations.
  *
  * Scope is controlled by MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG: `off` (no logging),
- * `writes` (default — `write`-role tools only, i.e. anything not annotated
- * `readOnlyHint: true`), or `all` (every tool).
+ * `writes` (default — `write` and `destructive` levels only, i.e. anything not
+ * annotated `readOnlyHint: true`), or `all` (every tool, including read).
+ * Level is derived from each tool's MCP annotations by `makeAccessGatedRegister`.
  * Path is configurable via MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_PATH; defaults to
  * `<MCP_CLAUDE_HOUSEKEEPING_PATH>/audit/audit.jsonl`.
  *
@@ -18,13 +19,13 @@
  */
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
-import { AUDIT_LOG_KEEP, AUDIT_LOG_MAX_BYTES, AUDIT_LOG_MODE, AUDIT_LOG_PATH } from '../config.js'
+import { type AccessLevel, AUDIT_LOG_KEEP, AUDIT_LOG_MAX_BYTES, AUDIT_LOG_MODE, AUDIT_LOG_PATH } from '../config.js'
 
 export interface AuditEvent {
   ts: string
   server: string
   tool: string
-  role: 'read' | 'write'
+  level: AccessLevel
   ok: boolean
   duration_ms: number
   error?: string
@@ -118,12 +119,13 @@ export const appendAuditEvent = async (event: AuditEvent): Promise<void> => {
 type ToolCallback = (...callbackArgs: unknown[]) => unknown | Promise<unknown>
 
 /**
- * Wrap a tool callback so each invocation appends an audit event. `write`-role
- * tools are always logged; `read`-role tools only when AUDIT_LOG=all is set.
+ * Wrap a tool callback so each invocation appends an audit event. `write` and
+ * `destructive` tools are always logged; `read` tools only when AUDIT_LOG=all
+ * is set.
  */
-export const withAuditLog = (toolName: string, role: 'read' | 'write', callback: ToolCallback): ToolCallback => {
+export const withAuditLog = (toolName: string, level: AccessLevel, callback: ToolCallback): ToolCallback => {
   if (AUDIT_LOG_MODE === 'off') return callback
-  if (role === 'read' && AUDIT_LOG_MODE !== 'all') return callback
+  if (level === 'read' && AUDIT_LOG_MODE !== 'all') return callback
   return async (...callbackArgs: unknown[]) => {
     const start = Date.now()
     const args = callbackArgs[0]
@@ -135,7 +137,7 @@ export const withAuditLog = (toolName: string, role: 'read' | 'write', callback:
         ts: new Date().toISOString(),
         server: SERVER_NAME,
         tool: toolName,
-        role,
+        level,
         ok: !isError,
         duration_ms: Date.now() - start,
         error: errText,
@@ -147,7 +149,7 @@ export const withAuditLog = (toolName: string, role: 'read' | 'write', callback:
         ts: new Date().toISOString(),
         server: SERVER_NAME,
         tool: toolName,
-        role,
+        level,
         ok: false,
         duration_ms: Date.now() - start,
         error: err instanceof Error ? err.message : String(err),

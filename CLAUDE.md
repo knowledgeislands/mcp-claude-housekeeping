@@ -18,14 +18,16 @@ Run `bun run` with no args for the full script list.
 
 Tool names follow `<app>_<resource>_<action>` (snake_case). `<app>` ∈ {`claude_desktop`, `claude_code`, `vscode`}. `<resource>` is plural for collection ops, singular for single-item ops. `<action>` is a verb or view (`list`, `read`, `write`, `delete`, `prune`, `relocate`, `summary`, `status`, `health`, `inventory`, `clear`, `obsolete`).
 
-### Role gate — driven by annotations, not names
+### Access-level gate — driven by annotations, not names
 
-[src/utils/roles.ts](./src/utils/roles.ts) `makeRoleGatedRegister()` decides at startup whether to register each tool, based on `config.annotations.readOnlyHint`:
+[src/utils/access-level.ts](./src/utils/access-level.ts) `makeAccessGatedRegister()` decides at startup whether to register each tool, based on `config.annotations`:
 
-- `readOnlyHint: true` → `read` role
-- anything else → `write` role (fail-safe; an unannotated tool is treated as destructive)
+- `readOnlyHint: true` → `read`
+- `destructiveHint: true` → `destructive`
+- explicit `readOnlyHint: false` AND `destructiveHint: false` → `write` (non-destructive mutation; reserved — no such tools today)
+- anything else (unannotated / partially annotated) → `destructive` (fail-safe)
 
-Only tools whose role is in `MCP_CLAUDE_HOUSEKEEPING_ROLES` (default: `read`) are registered. New tools MUST set `annotations` to one of the presets in [src/utils/annotations.ts](./src/utils/annotations.ts): `READ_ONLY`, `DESTRUCTIVE`, or `DESTRUCTIVE_ONESHOT`. Do not bypass the proxy.
+A tool registers when its derived level is at or below `MCP_CLAUDE_HOUSEKEEPING_ACCESS_LEVEL` (default: `read`). Levels nest: `read` registers only readers; `write` adds non-destructive mutations; `destructive` adds prune/relocate/delete. New tools MUST set `annotations` to one of the presets in [src/utils/annotations.ts](./src/utils/annotations.ts): `READ_ONLY`, `DESTRUCTIVE`, or `DESTRUCTIVE_ONESHOT`. Do not bypass the proxy. The gate controls *visibility*; the `dry_run: true` default on destructive tools controls *effect* — both layers are required.
 
 ### Workspace discovery (Cowork only)
 
@@ -37,9 +39,9 @@ Both `read` and `write` roles touch files anywhere under four configured roots. 
 
 1. **Path containment at every `path.join(<root>, <user-input>)` site.** Wrap with `resolveWithinRoot()` (lexical guard) AND `assertRealPathWithinRoot()` (symlink-aware) from [src/utils/utils.ts](./src/utils/utils.ts). Both apply to `args.workspace`, `args.project`, `args.session`, memory `args.name`, and any new identifier that becomes a path segment.
 2. **Tighten input schemas, not just call sites.** Identifier inputs that become path segments must have a regex constraint excluding `/`, `\`, and `..`. Existing patterns: `workspaceArg` (hex), `projectArg` (alphanumeric/`._-`), `sessionArg` (alphanumeric/`._-` + `.json[l]` suffix), memory `name` (must end `.md`). Bare `z.string().min(1)` is not acceptable for path-segment inputs.
-3. **Destructive tools require `dry_run` default `true`.** Every `write`-role tool that deletes or renames files must expose `dry_run: boolean`, default to preview, and only mutate when explicitly disabled. The `DESTRUCTIVE_ONESHOT` annotation is required on tools whose effect depends on current FS contents (prune, relocate, delete).
+3. **Destructive tools require `dry_run` default `true`.** Every tool registered at the `destructive` level (i.e. deleting or renaming files) must expose `dry_run: boolean`, default to preview, and only mutate when explicitly disabled. The `DESTRUCTIVE_ONESHOT` annotation is required on tools whose effect depends on current FS contents (prune, relocate, delete).
 4. **Batch deletes are scoped by filename pattern, never wildcard.** Report cleanup matches `cowork-audit-*.md`; session pruning matches `*.jsonl` (Claude Code) or `*.json[l]` (VSCode). New batch-delete tools must declare and test their pattern — never `fs.rm` arbitrary entries the user named.
-5. **Role gate is the registration boundary, keyed off annotations.** See [Role gate](#role-gate--driven-by-annotations-not-names) above.
+5. **Access-level gate is the registration boundary, keyed off annotations.** See [Access-level gate](#access-level-gate--driven-by-annotations-not-names) above.
 6. **No shell-string interpolation.** `du` is invoked via `spawn('du', ['-sk', target])` — argv form. New tools that shell out must use `execFile` or `spawn` with an argv array.
 7. **Zod schemas are `.strict()`.** Already true everywhere; new schemas must continue this.
 

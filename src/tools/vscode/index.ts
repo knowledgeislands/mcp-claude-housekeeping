@@ -1,8 +1,8 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
 import { VSCODE_WORKSPACE_STORAGE_ROOT_PATH } from '../../config.js'
+import { makeAccessGatedRegister } from '../../utils/access-level.js'
 import { DESTRUCTIVE_ONESHOT, READ_ONLY } from '../../utils/annotations.js'
-import { makeRoleGatedRegister } from '../../utils/roles.js'
 import { errorResult, jsonResult } from '../../utils/utils.js'
 import * as audit from './audit.js'
 
@@ -20,7 +20,7 @@ const sessionArg = z
   .regex(/^[A-Za-z0-9._-]+\.jsonl?$/, 'Session name must be alphanumeric/._- and end with .json or .jsonl')
 
 export const registerVscodeTools = (server: McpServer): void => {
-  const register = makeRoleGatedRegister(server)
+  const register = makeAccessGatedRegister(server)
 
   register(
     'vscode_workspaces_list',

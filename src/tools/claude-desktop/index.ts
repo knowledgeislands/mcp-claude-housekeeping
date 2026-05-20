@@ -1,8 +1,8 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
 import { CLAUDE_DESKTOP_ROOT_PATH } from '../../config.js'
+import { makeAccessGatedRegister } from '../../utils/access-level.js'
 import { DESTRUCTIVE, DESTRUCTIVE_ONESHOT, READ_ONLY } from '../../utils/annotations.js'
-import { makeRoleGatedRegister } from '../../utils/roles.js'
 import { discoverWorkspaces, errorResult, jsonResult, type Workspace } from '../../utils/utils.js'
 import * as audit from './audit.js'
 import * as memory from './memory.js'
@@ -55,7 +55,7 @@ const aggregate = async <T>(workspaceFilter: string | undefined, fn: (root: stri
 const workspaceArg = z.string().optional().describe('Filter to a single workspace by id ("<account>/<workspace>"); omit to run across all.')
 
 export const registerClaudeDesktopTools = (server: McpServer): void => {
-  const register = makeRoleGatedRegister(server)
+  const register = makeAccessGatedRegister(server)
 
   /* ================================================================ */
   /*  claude_desktop_* — read-only (annotations: READ_ONLY)            */

@@ -16,24 +16,31 @@ assert(process.env.MCP_CLAUDE_HOUSEKEEPING_PATH, 'MCP_CLAUDE_HOUSEKEEPING_PATH e
 
 export const HOUSEKEEPING_PATH: string = path.resolve(expandHome(process.env.MCP_CLAUDE_HOUSEKEEPING_PATH))
 
-export type Role = 'read' | 'write'
-export const ALL_ROLES: readonly Role[] = ['read', 'write'] as const
+/**
+ * Single ordinal access level. Each level implies all lower ones:
+ *   `read`        — only readOnly tools registered.
+ *   `write`       — readOnly + non-destructive mutations (none today, reserved
+ *                   for future additive housekeeping tools).
+ *   `destructive` — everything, including prune / relocate / delete.
+ *
+ * The gate uses ACCESS_LEVEL_RANK for ordinal comparison; a tool registers when
+ * its derived level ≤ the configured level. `dry_run` defaults remain the
+ * second line of defence inside each destructive tool's handler — the gate
+ * controls *which* tools the model can see; `dry_run` controls whether a
+ * visible tool actually mutates on first invocation.
+ */
+export type AccessLevel = 'read' | 'write' | 'destructive'
+export const ACCESS_LEVELS: readonly AccessLevel[] = ['read', 'write', 'destructive'] as const
+export const ACCESS_LEVEL_RANK: Record<AccessLevel, number> = { read: 1, write: 2, destructive: 3 }
 
-const parseRoles = (raw: string | undefined): Set<Role> => {
-  if (raw === undefined || raw.trim() === '') return new Set(['read'])
-  const requested = raw
-    .split(',')
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0)
-  if (requested.length === 0) return new Set(['read'])
-  const invalid = requested.filter((r): r is string => !(ALL_ROLES as readonly string[]).includes(r))
-  if (invalid.length > 0) {
-    throw new Error(`Invalid MCP_CLAUDE_HOUSEKEEPING_ROLES entries: ${invalid.join(', ')}. Allowed: ${ALL_ROLES.join(', ')}`)
-  }
-  return new Set(requested as Role[])
+const parseAccessLevel = (raw: string | undefined): AccessLevel => {
+  const v = raw?.trim()
+  if (v === undefined || v === '') return 'read'
+  if ((ACCESS_LEVELS as readonly string[]).includes(v)) return v as AccessLevel
+  throw new Error(`Invalid MCP_CLAUDE_HOUSEKEEPING_ACCESS_LEVEL="${raw}". Allowed: ${ACCESS_LEVELS.join(', ')}`)
 }
 
-export const HOUSEKEEPING_ROLES: ReadonlySet<Role> = parseRoles(process.env.MCP_CLAUDE_HOUSEKEEPING_ROLES)
+export const ACCESS_LEVEL: AccessLevel = parseAccessLevel(process.env.MCP_CLAUDE_HOUSEKEEPING_ACCESS_LEVEL)
 
 // Cowork sessions, Claude Code state, and VSCode chat sessions all live in
 // known locations under the current user's home directory; they are not
@@ -45,9 +52,9 @@ export const VSCODE_WORKSPACE_STORAGE_ROOT_PATH: string = path.join(os.homedir()
 export const AUDIT_LOG_PATH: string = path.resolve(expandHome(process.env.MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_PATH ?? path.join(HOUSEKEEPING_PATH, 'audit', 'audit.jsonl')))
 
 /**
- * Scope of tool invocations to record. Default `writes` logs `write`-role
- * tools only (anything whose annotations are not `readOnlyHint: true`); `all`
- * adds `read`-role tools; `off` disables logging entirely (the audit-log wrapper
+ * Scope of tool invocations to record. Default `writes` logs any tool whose
+ * derived level is not `read` (i.e. `write` or `destructive`); `all` adds
+ * `read` too; `off` disables logging entirely (the audit-log wrapper
  * short-circuits and never opens the file).
  */
 export type AuditLogMode = 'off' | 'writes' | 'all'

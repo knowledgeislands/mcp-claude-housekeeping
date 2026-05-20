@@ -1,8 +1,12 @@
 import * as fs from 'node:fs/promises'
+import * as os from 'node:os'
 import * as path from 'node:path'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
-import { CLAUDE_CODE_ROOT_PATH } from '../../config.js'
 import { memoryDelete, memoryIndexWrite, memoryList, memoryRead, memoryWrite } from './memory.js'
+
+// Tests must NEVER touch the real ~/.claude/. Shadow the config import with a
+// per-suite tmpdir.
+const CLAUDE_CODE_ROOT_PATH = path.join(os.tmpdir(), 'mcp-housekeeping-claude-code-memory-tests')
 
 const PROJECT = '-Users-foo-mem'
 const PROJECT_DIR = path.join(CLAUDE_CODE_ROOT_PATH, 'projects', PROJECT)
@@ -13,7 +17,7 @@ beforeAll(async () => {
 })
 
 afterAll(async () => {
-  await fs.rm(PROJECT_DIR, { recursive: true, force: true })
+  await fs.rm(CLAUDE_CODE_ROOT_PATH, { recursive: true, force: true })
 })
 
 beforeEach(async () => {

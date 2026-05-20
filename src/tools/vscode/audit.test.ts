@@ -1,8 +1,12 @@
 import * as fs from 'node:fs/promises'
+import * as os from 'node:os'
 import * as path from 'node:path'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
-import { VSCODE_WORKSPACE_STORAGE_ROOT_PATH } from '../../config.js'
 import { discoverWorkspaces, obsoleteSessions, sessionRead, sessionsPrune, storageSummary, workspaceDelete, workspacesList } from './audit.js'
+
+// Tests must NEVER touch the real VSCode workspaceStorage. Shadow the config
+// import with a per-suite tmpdir.
+const VSCODE_WORKSPACE_STORAGE_ROOT_PATH = path.join(os.tmpdir(), 'mcp-housekeeping-vscode-audit-tests')
 
 const DAY_MS = 24 * 60 * 60 * 1000
 

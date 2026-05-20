@@ -7,19 +7,19 @@ import * as path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 let savedPath: string | undefined
-let savedRoles: string | undefined
+let savedAccessLevel: string | undefined
 
 beforeEach(() => {
   savedPath = process.env.MCP_CLAUDE_HOUSEKEEPING_PATH
-  savedRoles = process.env.MCP_CLAUDE_HOUSEKEEPING_ROLES
+  savedAccessLevel = process.env.MCP_CLAUDE_HOUSEKEEPING_ACCESS_LEVEL
   vi.resetModules()
 })
 
 afterEach(() => {
   if (savedPath === undefined) delete process.env.MCP_CLAUDE_HOUSEKEEPING_PATH
   else process.env.MCP_CLAUDE_HOUSEKEEPING_PATH = savedPath
-  if (savedRoles === undefined) delete process.env.MCP_CLAUDE_HOUSEKEEPING_ROLES
-  else process.env.MCP_CLAUDE_HOUSEKEEPING_ROLES = savedRoles
+  if (savedAccessLevel === undefined) delete process.env.MCP_CLAUDE_HOUSEKEEPING_ACCESS_LEVEL
+  else process.env.MCP_CLAUDE_HOUSEKEEPING_ACCESS_LEVEL = savedAccessLevel
 })
 
 describe('MCP_CLAUDE_HOUSEKEEPING_PATH', () => {

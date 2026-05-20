@@ -1,7 +1,7 @@
 import * as fs from 'node:fs/promises'
+import * as os from 'node:os'
 import * as path from 'node:path'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
-import { CLAUDE_CODE_ROOT_PATH } from '../../config.js'
 import {
   decodeProjectDir,
   discoverProjects,
@@ -15,6 +15,10 @@ import {
   sessionsPrune,
   storageSummary
 } from './audit.js'
+
+// Tests must NEVER touch the real ~/.claude/. Shadow the config import with a
+// per-suite tmpdir; afterAll/beforeEach below will recursively rm this root.
+const CLAUDE_CODE_ROOT_PATH = path.join(os.tmpdir(), 'mcp-housekeeping-claude-code-audit-tests')
 
 const DAY_MS = 24 * 60 * 60 * 1000
 

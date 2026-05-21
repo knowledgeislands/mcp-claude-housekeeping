@@ -27,7 +27,7 @@ Tool names follow `<app>_<resource>_<action>` (snake_case). `<app>` ∈ {`claude
 - explicit `readOnlyHint: false` AND `destructiveHint: false` → `write` (non-destructive mutation; reserved — no such tools today)
 - anything else (unannotated / partially annotated) → `destructive` (fail-safe)
 
-A tool registers when its derived level is at or below `MCP_CLAUDE_HOUSEKEEPING_ACCESS_LEVEL` (default: `read`). Levels nest: `read` registers only readers; `write` adds non-destructive mutations; `destructive` adds prune/relocate/delete. New tools MUST set `annotations` to one of the presets in [src/utils/annotations.ts](./src/utils/annotations.ts): `READ_ONLY`, `DESTRUCTIVE`, or `DESTRUCTIVE_ONESHOT`. Do not bypass the proxy. The gate controls *visibility*; the `dry_run: true` default on destructive tools controls *effect* — both layers are required.
+A tool registers when its derived level is at or below `MCP_CLAUDE_HOUSEKEEPING_ACCESS_LEVEL` (default: `read`). Levels nest: `read` registers only readers; `write` adds non-destructive mutations; `destructive` adds prune/relocate/delete. New tools MUST set `annotations` to one of the presets in [src/utils/annotations.ts](./src/utils/annotations.ts): `READ_ONLY`, `DESTRUCTIVE`, or `DESTRUCTIVE_ONESHOT`. Do not bypass the proxy. The gate controls _visibility_; the `dry_run: true` default on destructive tools controls _effect_ — both layers are required.
 
 ### Workspace discovery (Cowork only)
 

@@ -40,7 +40,7 @@ bun run lint:md             # prettier + markdownlint for *.md
 
 ### Commits
 
-This repo uses [Conventional Commits](https://www.conventionalcommits.org/) so version bumps and `CHANGELOG.md` entries are easy to derive when releasing by hand. There is no auto-release pipeline.
+This repo uses [Conventional Commits](https://www.conventionalcommits.org/) so version bumps are easy to derive when releasing by hand. There is no auto-release pipeline.
 
 | Type        | What it means           | Bumps |
 | ----------- | ----------------------- | ----- |

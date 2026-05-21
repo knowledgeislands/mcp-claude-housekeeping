@@ -94,9 +94,9 @@ describe('makeAccessGatedRegister', () => {
     const { makeAccessGatedRegister } = await import('./access-level.js')
     const { server, registered } = fakeServer()
     const register = makeAccessGatedRegister(server as unknown as Parameters<typeof makeAccessGatedRegister>[0])
-    const ADDITIVE = { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false } as const
+    const WRITE = { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false } as const
     register('a_read_tool', { description: 'd', annotations: READ_ONLY }, (() => ({})) as never)
-    register('an_additive_tool', { description: 'd', annotations: ADDITIVE }, (() => ({})) as never)
+    register('an_additive_tool', { description: 'd', annotations: WRITE }, (() => ({})) as never)
     register('a_destructive_tool', { description: 'd', annotations: DESTRUCTIVE }, (() => ({})) as never)
     expect(registered).toEqual(['a_read_tool', 'an_additive_tool'])
   })

@@ -119,4 +119,38 @@ describe('sessionRename', () => {
     const entries = await fs.readdir(ROOT)
     expect(entries.some((e) => e.includes('.tmp-'))).toBe(false)
   })
+
+  it('auto-select ignores non-file entries and non-matching file names', async () => {
+    // A subdirectory and an unrelated file must both be skipped by collectSessions.
+    await fs.mkdir(path.join(ROOT, 'subdir'), { recursive: true })
+    await fs.writeFile(path.join(ROOT, 'not-a-session.json'), '{}', 'utf-8')
+    await writeSession(UUID_A, { lastActivityAt: 5 })
+
+    const result = await sessionRename(ROOT, { name: 'picked' })
+    expect(result.session_id).toBe(UUID_A)
+    expect(result.auto_selected).toBe(true)
+  })
+
+  it('treats a missing workspace dir as no sessions when auto-selecting', async () => {
+    const missing = path.join(ROOT, 'does-not-exist')
+    await expect(sessionRename(missing, { name: 'x' })).rejects.toThrow(/No local_\*\.json sessions/)
+  })
+
+  it('rethrows a non-ENOENT readdir error while collecting sessions (EACCES via chmod 0)', async () => {
+    const blocked = path.join(ROOT, 'blocked-workspace')
+    await fs.mkdir(blocked, { recursive: true })
+    await fs.chmod(blocked, 0o000)
+    try {
+      await expect(sessionRename(blocked, { name: 'x' })).rejects.toThrow(/EACCES|permission/i)
+    } finally {
+      await fs.chmod(blocked, 0o755)
+    }
+  })
+
+  it('rethrows a non-ENOENT readFile error (session path is a directory → EISDIR)', async () => {
+    // Make local_<uuid>.json a *directory* so readFile fails with EISDIR/EPERM
+    // rather than ENOENT, exercising the rethrow branch.
+    await fs.mkdir(path.join(ROOT, `local_${UUID_A}.json`), { recursive: true })
+    await expect(sessionRename(ROOT, { session_id: UUID_A, name: 'x' })).rejects.toThrow(/EISDIR|EPERM|illegal operation|is a directory/i)
+  })
 })

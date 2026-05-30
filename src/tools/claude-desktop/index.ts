@@ -79,7 +79,7 @@ export const registerClaudeDesktopTools = (server: McpServer): void => {
       try {
         return jsonResult(await aggregate(workspace, (root) => audit.storageSummary(root, args)))
       } catch (err) {
-        return errorResult(`Error in storage_summary: ${err instanceof Error ? err.message : String(err)}`)
+        return errorResult('summarising Claude Desktop storage', err)
       }
     }
   )
@@ -103,7 +103,7 @@ export const registerClaudeDesktopTools = (server: McpServer): void => {
       try {
         return jsonResult(await aggregate(workspace, (root) => audit.listObsolete(root, args)))
       } catch (err) {
-        return errorResult(`Error in sessions_obsolete: ${err instanceof Error ? err.message : String(err)}`)
+        return errorResult('finding obsolete Claude Desktop sessions', err)
       }
     }
   )
@@ -127,7 +127,7 @@ export const registerClaudeDesktopTools = (server: McpServer): void => {
       try {
         return jsonResult(await aggregate(workspace, (root) => audit.artifactHealth(root, args)))
       } catch (err) {
-        return errorResult(`Error in artifacts_health: ${err instanceof Error ? err.message : String(err)}`)
+        return errorResult('checking Claude Desktop artifact health', err)
       }
     }
   )
@@ -149,7 +149,7 @@ export const registerClaudeDesktopTools = (server: McpServer): void => {
       try {
         return jsonResult(await aggregate(workspace, (root) => audit.obsoleteOutputs(root, args)))
       } catch (err) {
-        return errorResult(`Error in outputs_obsolete: ${err instanceof Error ? err.message : String(err)}`)
+        return errorResult('finding obsolete Claude Desktop outputs', err)
       }
     }
   )
@@ -172,7 +172,7 @@ export const registerClaudeDesktopTools = (server: McpServer): void => {
       try {
         return jsonResult(await aggregate(workspace, (root) => audit.backupSummary(root, args)))
       } catch (err) {
-        return errorResult(`Error in backups_summary: ${err instanceof Error ? err.message : String(err)}`)
+        return errorResult('summarising Claude Desktop backups', err)
       }
     }
   )
@@ -194,7 +194,7 @@ export const registerClaudeDesktopTools = (server: McpServer): void => {
       try {
         return jsonResult(await aggregate(workspace, (root) => audit.memorySpacesSummary(root, args)))
       } catch (err) {
-        return errorResult(`Error in memory_spaces_summary: ${err instanceof Error ? err.message : String(err)}`)
+        return errorResult('summarising Claude Desktop memory spaces', err)
       }
     }
   )
@@ -211,7 +211,7 @@ export const registerClaudeDesktopTools = (server: McpServer): void => {
       try {
         return jsonResult(await aggregate(workspace, (root) => audit.pluginsInventory(root)))
       } catch (err) {
-        return errorResult(`Error in plugins_inventory: ${err instanceof Error ? err.message : String(err)}`)
+        return errorResult('inventorying Claude Desktop plugins', err)
       }
     }
   )
@@ -233,7 +233,7 @@ export const registerClaudeDesktopTools = (server: McpServer): void => {
       try {
         return jsonResult(await aggregate(workspace, (root) => audit.projectCacheStatus(root, args)))
       } catch (err) {
-        return errorResult(`Error in project_cache_status: ${err instanceof Error ? err.message : String(err)}`)
+        return errorResult('reading Claude Desktop project cache status', err)
       }
     }
   )
@@ -256,7 +256,7 @@ export const registerClaudeDesktopTools = (server: McpServer): void => {
       try {
         return jsonResult(await aggregate(workspace, (root) => audit.debugInfo(root, args)))
       } catch (err) {
-        return errorResult(`Error in debug_info: ${err instanceof Error ? err.message : String(err)}`)
+        return errorResult('reading Claude Desktop debug info', err)
       }
     }
   )
@@ -274,7 +274,7 @@ export const registerClaudeDesktopTools = (server: McpServer): void => {
         const ws = await discoverWorkspaces(CLAUDE_DESKTOP_ROOT_PATH)
         return jsonResult({ root_path: CLAUDE_DESKTOP_ROOT_PATH, workspace_count: ws.length, workspaces: ws })
       } catch (err) {
-        return errorResult(`Error in workspaces_list: ${err instanceof Error ? err.message : String(err)}`)
+        return errorResult('listing Claude Desktop workspaces', err)
       }
     }
   )
@@ -297,7 +297,7 @@ export const registerClaudeDesktopTools = (server: McpServer): void => {
         const w = await requireSingleWorkspace(workspace)
         return jsonResult({ workspace: w.id, ...(await memory.memoryList(w.root, args)) })
       } catch (err) {
-        return errorResult(`Error in memory_list: ${err instanceof Error ? err.message : String(err)}`)
+        return errorResult('listing Claude Desktop memory files', err)
       }
     }
   )
@@ -321,7 +321,7 @@ export const registerClaudeDesktopTools = (server: McpServer): void => {
         const w = await requireSingleWorkspace(workspace)
         return jsonResult({ workspace: w.id, ...(await memory.memoryRead(w.root, args)) })
       } catch (err) {
-        return errorResult(`Error in memory_read: ${err instanceof Error ? err.message : String(err)}`)
+        return errorResult('reading Claude Desktop memory file', err)
       }
     }
   )
@@ -338,7 +338,7 @@ export const registerClaudeDesktopTools = (server: McpServer): void => {
       try {
         return jsonResult(await report.reportList())
       } catch (err) {
-        return errorResult(`Error in reports_list: ${err instanceof Error ? err.message : String(err)}`)
+        return errorResult('listing Claude Desktop reports', err)
       }
     }
   )
@@ -366,7 +366,7 @@ export const registerClaudeDesktopTools = (server: McpServer): void => {
         const w = await requireSingleWorkspace(workspace)
         return jsonResult({ workspace: w.id, ...(await audit.artifactPrune(w.root, args)) })
       } catch (err) {
-        return errorResult(`Error in artifacts_prune: ${err instanceof Error ? err.message : String(err)}`)
+        return errorResult('pruning Claude Desktop artifacts', err)
       }
     }
   )
@@ -383,7 +383,7 @@ export const registerClaudeDesktopTools = (server: McpServer): void => {
       try {
         return jsonResult(await report.reportClean())
       } catch (err) {
-        return errorResult(`Error in reports_clear: ${err instanceof Error ? err.message : String(err)}`)
+        return errorResult('clearing Claude Desktop reports', err)
       }
     }
   )
@@ -409,7 +409,7 @@ export const registerClaudeDesktopTools = (server: McpServer): void => {
       try {
         return jsonResult(await report.reportWrite(args))
       } catch (err) {
-        return errorResult(`Error in report_write: ${err instanceof Error ? err.message : String(err)}`)
+        return errorResult('writing Claude Desktop report', err)
       }
     }
   )
@@ -434,7 +434,7 @@ export const registerClaudeDesktopTools = (server: McpServer): void => {
         const w = await requireSingleWorkspace(workspace)
         return jsonResult({ workspace: w.id, ...(await memory.memoryWrite(w.root, args)) })
       } catch (err) {
-        return errorResult(`Error in memory_write: ${err instanceof Error ? err.message : String(err)}`)
+        return errorResult('writing Claude Desktop memory file', err)
       }
     }
   )
@@ -458,7 +458,7 @@ export const registerClaudeDesktopTools = (server: McpServer): void => {
         const w = await requireSingleWorkspace(workspace)
         return jsonResult({ workspace: w.id, ...(await memory.memoryDelete(w.root, args)) })
       } catch (err) {
-        return errorResult(`Error in memory_delete: ${err instanceof Error ? err.message : String(err)}`)
+        return errorResult('deleting Claude Desktop memory file', err)
       }
     }
   )
@@ -482,7 +482,7 @@ export const registerClaudeDesktopTools = (server: McpServer): void => {
         const w = await requireSingleWorkspace(workspace)
         return jsonResult({ workspace: w.id, ...(await memory.memoryIndexWrite(w.root, args)) })
       } catch (err) {
-        return errorResult(`Error in memory_index_write: ${err instanceof Error ? err.message : String(err)}`)
+        return errorResult('writing Claude Desktop MEMORY.md', err)
       }
     }
   )
@@ -510,7 +510,7 @@ export const registerClaudeDesktopTools = (server: McpServer): void => {
         const w = await requireSingleWorkspace(workspace)
         return jsonResult({ workspace: w.id, ...(await sessions.sessionRename(w.root, args)) })
       } catch (err) {
-        return errorResult(`Error in session_rename: ${err instanceof Error ? err.message : String(err)}`)
+        return errorResult('renaming Claude Desktop session', err)
       }
     }
   )

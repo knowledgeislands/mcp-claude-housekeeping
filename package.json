@@ -70,6 +70,7 @@
     "server:mcp:start": "bun run build && node dist/mcp-server/index.js",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
+    "test:smoke": "bun run build && bun scripts/smoke.ts",
     "test:watch": "vitest"
   },
   "type": "module"

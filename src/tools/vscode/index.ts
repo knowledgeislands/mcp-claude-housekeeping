@@ -34,7 +34,7 @@ export const registerVscodeTools = (server: McpServer): void => {
       try {
         return jsonResult(await audit.workspacesList(VSCODE_WORKSPACE_STORAGE_ROOT_PATH))
       } catch (err) {
-        return errorResult(`Error in vscode workspaces_list: ${err instanceof Error ? err.message : String(err)}`)
+        return errorResult('listing VSCode workspaces', err)
       }
     }
   )
@@ -56,7 +56,7 @@ export const registerVscodeTools = (server: McpServer): void => {
       try {
         return jsonResult(await audit.storageSummary(VSCODE_WORKSPACE_STORAGE_ROOT_PATH, args))
       } catch (err) {
-        return errorResult(`Error in vscode storage_summary: ${err instanceof Error ? err.message : String(err)}`)
+        return errorResult('summarising VSCode storage', err)
       }
     }
   )
@@ -80,7 +80,7 @@ export const registerVscodeTools = (server: McpServer): void => {
       try {
         return jsonResult(await audit.obsoleteSessions(VSCODE_WORKSPACE_STORAGE_ROOT_PATH, args))
       } catch (err) {
-        return errorResult(`Error in vscode sessions_obsolete: ${err instanceof Error ? err.message : String(err)}`)
+        return errorResult('finding obsolete VSCode sessions', err)
       }
     }
   )
@@ -104,7 +104,7 @@ export const registerVscodeTools = (server: McpServer): void => {
       try {
         return jsonResult(await audit.sessionRead(VSCODE_WORKSPACE_STORAGE_ROOT_PATH, args))
       } catch (err) {
-        return errorResult(`Error in vscode session_read: ${err instanceof Error ? err.message : String(err)}`)
+        return errorResult('reading VSCode session', err)
       }
     }
   )
@@ -126,7 +126,7 @@ export const registerVscodeTools = (server: McpServer): void => {
       try {
         return jsonResult(await audit.workspaceDelete(VSCODE_WORKSPACE_STORAGE_ROOT_PATH, args))
       } catch (err) {
-        return errorResult(`Error in vscode workspace_delete: ${err instanceof Error ? err.message : String(err)}`)
+        return errorResult('deleting VSCode workspace', err)
       }
     }
   )
@@ -149,7 +149,7 @@ export const registerVscodeTools = (server: McpServer): void => {
       try {
         return jsonResult(await audit.sessionsPrune(VSCODE_WORKSPACE_STORAGE_ROOT_PATH, args))
       } catch (err) {
-        return errorResult(`Error in vscode sessions_prune: ${err instanceof Error ? err.message : String(err)}`)
+        return errorResult('pruning VSCode sessions', err)
       }
     }
   )

@@ -36,7 +36,7 @@ export const registerClaudeCodeTools = (server: McpServer): void => {
       try {
         return jsonResult(await audit.projectsList(CLAUDE_CODE_ROOT_PATH))
       } catch (err) {
-        return errorResult(`Error in claude_code projects_list: ${err instanceof Error ? err.message : String(err)}`)
+        return errorResult('listing Claude Code projects', err)
       }
     }
   )
@@ -59,7 +59,7 @@ export const registerClaudeCodeTools = (server: McpServer): void => {
       try {
         return jsonResult(await audit.storageSummary(CLAUDE_CODE_ROOT_PATH, args))
       } catch (err) {
-        return errorResult(`Error in claude_code storage_summary: ${err instanceof Error ? err.message : String(err)}`)
+        return errorResult('summarising Claude Code storage', err)
       }
     }
   )
@@ -83,7 +83,7 @@ export const registerClaudeCodeTools = (server: McpServer): void => {
       try {
         return jsonResult(await audit.obsoleteSessions(CLAUDE_CODE_ROOT_PATH, args))
       } catch (err) {
-        return errorResult(`Error in claude_code sessions_obsolete: ${err instanceof Error ? err.message : String(err)}`)
+        return errorResult('finding obsolete Claude Code sessions', err)
       }
     }
   )
@@ -100,7 +100,7 @@ export const registerClaudeCodeTools = (server: McpServer): void => {
       try {
         return jsonResult(await audit.globalStatus(CLAUDE_CODE_ROOT_PATH))
       } catch (err) {
-        return errorResult(`Error in claude_code global_status: ${err instanceof Error ? err.message : String(err)}`)
+        return errorResult('reading Claude Code global status', err)
       }
     }
   )
@@ -127,7 +127,7 @@ export const registerClaudeCodeTools = (server: McpServer): void => {
       try {
         return jsonResult(await audit.sessionRead(CLAUDE_CODE_ROOT_PATH, args))
       } catch (err) {
-        return errorResult(`Error in claude_code session_read: ${err instanceof Error ? err.message : String(err)}`)
+        return errorResult('reading Claude Code session', err)
       }
     }
   )
@@ -144,7 +144,7 @@ export const registerClaudeCodeTools = (server: McpServer): void => {
       try {
         return jsonResult(await memory.memoryList(CLAUDE_CODE_ROOT_PATH, args))
       } catch (err) {
-        return errorResult(`Error in claude_code memory_list: ${err instanceof Error ? err.message : String(err)}`)
+        return errorResult('listing Claude Code memory files', err)
       }
     }
   )
@@ -166,7 +166,7 @@ export const registerClaudeCodeTools = (server: McpServer): void => {
       try {
         return jsonResult(await memory.memoryRead(CLAUDE_CODE_ROOT_PATH, args))
       } catch (err) {
-        return errorResult(`Error in claude_code memory_read: ${err instanceof Error ? err.message : String(err)}`)
+        return errorResult('reading Claude Code memory file', err)
       }
     }
   )
@@ -193,7 +193,7 @@ export const registerClaudeCodeTools = (server: McpServer): void => {
       try {
         return jsonResult(await audit.sessionsPrune(CLAUDE_CODE_ROOT_PATH, args))
       } catch (err) {
-        return errorResult(`Error in claude_code sessions_prune: ${err instanceof Error ? err.message : String(err)}`)
+        return errorResult('pruning Claude Code sessions', err)
       }
     }
   )
@@ -216,7 +216,7 @@ export const registerClaudeCodeTools = (server: McpServer): void => {
       try {
         return jsonResult(await audit.relocateProject(CLAUDE_CODE_ROOT_PATH, args))
       } catch (err) {
-        return errorResult(`Error in claude_code project_relocate: ${err instanceof Error ? err.message : String(err)}`)
+        return errorResult('relocating Claude Code project', err)
       }
     }
   )
@@ -238,7 +238,7 @@ export const registerClaudeCodeTools = (server: McpServer): void => {
       try {
         return jsonResult(await audit.pruneOrphanProjects(CLAUDE_CODE_ROOT_PATH, args))
       } catch (err) {
-        return errorResult(`Error in claude_code orphan_projects_prune: ${err instanceof Error ? err.message : String(err)}`)
+        return errorResult('pruning orphan Claude Code projects', err)
       }
     }
   )
@@ -261,7 +261,7 @@ export const registerClaudeCodeTools = (server: McpServer): void => {
       try {
         return jsonResult(await memory.memoryWrite(CLAUDE_CODE_ROOT_PATH, args))
       } catch (err) {
-        return errorResult(`Error in claude_code memory_write: ${err instanceof Error ? err.message : String(err)}`)
+        return errorResult('writing Claude Code memory file', err)
       }
     }
   )
@@ -283,7 +283,7 @@ export const registerClaudeCodeTools = (server: McpServer): void => {
       try {
         return jsonResult(await memory.memoryDelete(CLAUDE_CODE_ROOT_PATH, args))
       } catch (err) {
-        return errorResult(`Error in claude_code memory_delete: ${err instanceof Error ? err.message : String(err)}`)
+        return errorResult('deleting Claude Code memory file', err)
       }
     }
   )
@@ -300,7 +300,7 @@ export const registerClaudeCodeTools = (server: McpServer): void => {
       try {
         return jsonResult(await memory.memoryIndexWrite(CLAUDE_CODE_ROOT_PATH, args))
       } catch (err) {
-        return errorResult(`Error in claude_code memory_index_write: ${err instanceof Error ? err.message : String(err)}`)
+        return errorResult('writing Claude Code MEMORY.md', err)
       }
     }
   )

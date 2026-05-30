@@ -78,10 +78,17 @@ describe('assertRealPathWithinRoot', () => {
 })
 
 describe('errorResult / jsonResult', () => {
-  it('errorResult returns the MCP error shape', () => {
-    expect(errorResult('boom')).toEqual({
+  it('errorResult returns the MCP error shape with action prefix', () => {
+    expect(errorResult('doing the thing', new Error('boom'))).toEqual({
       isError: true,
-      content: [{ type: 'text', text: 'boom' }]
+      content: [{ type: 'text', text: 'Error doing the thing: boom' }]
+    })
+  })
+
+  it('errorResult stringifies non-Error values', () => {
+    expect(errorResult('doing the thing', 'plain string')).toEqual({
+      isError: true,
+      content: [{ type: 'text', text: 'Error doing the thing: plain string' }]
     })
   })
 

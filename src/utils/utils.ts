@@ -49,10 +49,14 @@ export const assertRealPathWithinRoot = async (root: string, absPath: string): P
   }
 }
 
-export const errorResult = (message: string) => {
+export const errMessage = (err: unknown): string => {
+  return err instanceof Error ? err.message : String(err)
+}
+
+export const errorResult = (action: string, error: unknown) => {
   return {
     isError: true as const,
-    content: [{ type: 'text' as const, text: message }]
+    content: [{ type: 'text' as const, text: `Error ${action}: ${errMessage(error)}` }]
   }
 }
 

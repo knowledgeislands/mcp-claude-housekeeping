@@ -1,16 +1,15 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
-import { CLAUDE_DESKTOP_ROOT_PATH } from '../../config.js'
-import { makeAccessGatedRegister } from '../../utils/access-level.js'
+import type { Config } from '../../config/index.js'
+import * as audit from '../../main/claude-desktop/audit.js'
+import * as memory from '../../main/claude-desktop/memory.js'
+import * as report from '../../main/claude-desktop/report.js'
+import * as sessions from '../../main/claude-desktop/sessions.js'
 import { DESTRUCTIVE, DESTRUCTIVE_ONESHOT, READ_ONLY } from '../../utils/annotations.js'
 import { discoverWorkspaces, errorResult, jsonResult, type Workspace } from '../../utils/utils.js'
-import * as audit from './audit.js'
-import * as memory from './memory.js'
-import * as report from './report.js'
-import * as sessions from './sessions.js'
 
-const targetWorkspaces = async (workspaceFilter?: string): Promise<Workspace[]> => {
-  const all = await discoverWorkspaces(CLAUDE_DESKTOP_ROOT_PATH)
+const targetWorkspaces = async (rootPath: string, workspaceFilter?: string): Promise<Workspace[]> => {
+  const all = await discoverWorkspaces(rootPath)
   if (workspaceFilter) {
     const found = all.find((w) => w.id === workspaceFilter)
     if (!found) {
@@ -22,8 +21,8 @@ const targetWorkspaces = async (workspaceFilter?: string): Promise<Workspace[]> 
   return all
 }
 
-const requireSingleWorkspace = async (workspaceFilter?: string): Promise<Workspace> => {
-  const all = await discoverWorkspaces(CLAUDE_DESKTOP_ROOT_PATH)
+const requireSingleWorkspace = async (rootPath: string, workspaceFilter?: string): Promise<Workspace> => {
+  const all = await discoverWorkspaces(rootPath)
   if (workspaceFilter) {
     const found = all.find((w) => w.id === workspaceFilter)
     if (!found) {
@@ -37,25 +36,27 @@ const requireSingleWorkspace = async (workspaceFilter?: string): Promise<Workspa
     throw new Error(`${all.length} workspaces found; specify "workspace" to pick one: ${ids}`)
   }
   const [only] = all
-  if (!only) throw new Error(`No workspaces found under CLAUDE_DESKTOP_ROOT_PATH=${CLAUDE_DESKTOP_ROOT_PATH}`)
+  if (!only) throw new Error(`No workspaces found under CLAUDE_DESKTOP_ROOT_PATH=${rootPath}`)
   return only
 }
 
-const aggregate = async <T>(workspaceFilter: string | undefined, fn: (root: string) => Promise<T>) => {
-  const targets = await targetWorkspaces(workspaceFilter)
+const aggregate = async <T>(rootPath: string, workspaceFilter: string | undefined, fn: (root: string) => Promise<T>) => {
+  const targets = await targetWorkspaces(rootPath, workspaceFilter)
   const workspaces = await Promise.all(
     targets.map(async (w) => {
       const result = await fn(w.root)
       return { workspace: w.id, ...result } as { workspace: string } & T
     })
   )
-  return { root_path: CLAUDE_DESKTOP_ROOT_PATH, workspace_count: workspaces.length, workspaces }
+  return { root_path: rootPath, workspace_count: workspaces.length, workspaces }
 }
 
 const workspaceArg = z.string().optional().describe('Filter to a single workspace by id ("<account>/<workspace>"); omit to run across all.')
 
-export const registerClaudeDesktopTools = (server: McpServer): void => {
-  const register = makeAccessGatedRegister(server)
+export const registerClaudeDesktopTools = (server: McpServer, cfg: Config): void => {
+  const register = server.registerTool
+  const rootPath = cfg.claudeDesktopRootPath
+  const housekeepingPath = cfg.housekeepingPath
 
   /* ================================================================ */
   /*  claude_desktop_* — read-only (annotations: READ_ONLY)            */
@@ -77,7 +78,7 @@ export const registerClaudeDesktopTools = (server: McpServer): void => {
     },
     async ({ workspace, ...args }) => {
       try {
-        return jsonResult(await aggregate(workspace, (root) => audit.storageSummary(root, args)))
+        return jsonResult(await aggregate(rootPath, workspace, (root) => audit.storageSummary(root, args)))
       } catch (err) {
         return errorResult('summarising Claude Desktop storage', err)
       }
@@ -101,7 +102,7 @@ export const registerClaudeDesktopTools = (server: McpServer): void => {
     },
     async ({ workspace, ...args }) => {
       try {
-        return jsonResult(await aggregate(workspace, (root) => audit.listObsolete(root, args)))
+        return jsonResult(await aggregate(rootPath, workspace, (root) => audit.listObsolete(root, args)))
       } catch (err) {
         return errorResult('finding obsolete Claude Desktop sessions', err)
       }
@@ -125,7 +126,7 @@ export const registerClaudeDesktopTools = (server: McpServer): void => {
     },
     async ({ workspace, ...args }) => {
       try {
-        return jsonResult(await aggregate(workspace, (root) => audit.artifactHealth(root, args)))
+        return jsonResult(await aggregate(rootPath, workspace, (root) => audit.artifactHealth(root, args)))
       } catch (err) {
         return errorResult('checking Claude Desktop artifact health', err)
       }
@@ -147,7 +148,7 @@ export const registerClaudeDesktopTools = (server: McpServer): void => {
     },
     async ({ workspace, ...args }) => {
       try {
-        return jsonResult(await aggregate(workspace, (root) => audit.obsoleteOutputs(root, args)))
+        return jsonResult(await aggregate(rootPath, workspace, (root) => audit.obsoleteOutputs(root, args)))
       } catch (err) {
         return errorResult('finding obsolete Claude Desktop outputs', err)
       }
@@ -170,7 +171,7 @@ export const registerClaudeDesktopTools = (server: McpServer): void => {
     },
     async ({ workspace, ...args }) => {
       try {
-        return jsonResult(await aggregate(workspace, (root) => audit.backupSummary(root, args)))
+        return jsonResult(await aggregate(rootPath, workspace, (root) => audit.backupSummary(root, args)))
       } catch (err) {
         return errorResult('summarising Claude Desktop backups', err)
       }
@@ -192,7 +193,7 @@ export const registerClaudeDesktopTools = (server: McpServer): void => {
     },
     async ({ workspace, ...args }) => {
       try {
-        return jsonResult(await aggregate(workspace, (root) => audit.memorySpacesSummary(root, args)))
+        return jsonResult(await aggregate(rootPath, workspace, (root) => audit.memorySpacesSummary(root, args)))
       } catch (err) {
         return errorResult('summarising Claude Desktop memory spaces', err)
       }
@@ -209,7 +210,7 @@ export const registerClaudeDesktopTools = (server: McpServer): void => {
     },
     async ({ workspace }) => {
       try {
-        return jsonResult(await aggregate(workspace, (root) => audit.pluginsInventory(root)))
+        return jsonResult(await aggregate(rootPath, workspace, (root) => audit.pluginsInventory(root)))
       } catch (err) {
         return errorResult('inventorying Claude Desktop plugins', err)
       }
@@ -231,7 +232,7 @@ export const registerClaudeDesktopTools = (server: McpServer): void => {
     },
     async ({ workspace, ...args }) => {
       try {
-        return jsonResult(await aggregate(workspace, (root) => audit.projectCacheStatus(root, args)))
+        return jsonResult(await aggregate(rootPath, workspace, (root) => audit.projectCacheStatus(root, args)))
       } catch (err) {
         return errorResult('reading Claude Desktop project cache status', err)
       }
@@ -254,7 +255,7 @@ export const registerClaudeDesktopTools = (server: McpServer): void => {
     },
     async ({ workspace, ...args }) => {
       try {
-        return jsonResult(await aggregate(workspace, (root) => audit.debugInfo(root, args)))
+        return jsonResult(await aggregate(rootPath, workspace, (root) => audit.debugInfo(root, args)))
       } catch (err) {
         return errorResult('reading Claude Desktop debug info', err)
       }
@@ -265,14 +266,14 @@ export const registerClaudeDesktopTools = (server: McpServer): void => {
     'claude_desktop_workspaces_list',
     {
       title: 'Claude Desktop Auditor: list discovered workspaces',
-      description: `List the workspace ids ("<account>/<workspace>") and absolute roots discovered under CLAUDE_DESKTOP_ROOT_PATH. Use the ids when targeting a specific workspace via the optional "workspace" arg on other tools.`,
+      description: `List the workspace ids ("<account>/<workspace>") and absolute roots discovered under rootPath. Use the ids when targeting a specific workspace via the optional "workspace" arg on other tools.`,
       inputSchema: z.object({}).strict(),
       annotations: READ_ONLY
     },
     async () => {
       try {
-        const ws = await discoverWorkspaces(CLAUDE_DESKTOP_ROOT_PATH)
-        return jsonResult({ root_path: CLAUDE_DESKTOP_ROOT_PATH, workspace_count: ws.length, workspaces: ws })
+        const ws = await discoverWorkspaces(rootPath)
+        return jsonResult({ root_path: rootPath, workspace_count: ws.length, workspaces: ws })
       } catch (err) {
         return errorResult('listing Claude Desktop workspaces', err)
       }
@@ -294,7 +295,7 @@ export const registerClaudeDesktopTools = (server: McpServer): void => {
     },
     async ({ workspace, ...args }) => {
       try {
-        const w = await requireSingleWorkspace(workspace)
+        const w = await requireSingleWorkspace(rootPath, workspace)
         return jsonResult({ workspace: w.id, ...(await memory.memoryList(w.root, args)) })
       } catch (err) {
         return errorResult('listing Claude Desktop memory files', err)
@@ -318,7 +319,7 @@ export const registerClaudeDesktopTools = (server: McpServer): void => {
     },
     async ({ workspace, ...args }) => {
       try {
-        const w = await requireSingleWorkspace(workspace)
+        const w = await requireSingleWorkspace(rootPath, workspace)
         return jsonResult({ workspace: w.id, ...(await memory.memoryRead(w.root, args)) })
       } catch (err) {
         return errorResult('reading Claude Desktop memory file', err)
@@ -336,7 +337,7 @@ export const registerClaudeDesktopTools = (server: McpServer): void => {
     },
     async () => {
       try {
-        return jsonResult(await report.reportList())
+        return jsonResult(await report.reportList(housekeepingPath))
       } catch (err) {
         return errorResult('listing Claude Desktop reports', err)
       }
@@ -363,7 +364,7 @@ export const registerClaudeDesktopTools = (server: McpServer): void => {
     },
     async ({ workspace, ...args }) => {
       try {
-        const w = await requireSingleWorkspace(workspace)
+        const w = await requireSingleWorkspace(rootPath, workspace)
         return jsonResult({ workspace: w.id, ...(await audit.artifactPrune(w.root, args)) })
       } catch (err) {
         return errorResult('pruning Claude Desktop artifacts', err)
@@ -381,7 +382,7 @@ export const registerClaudeDesktopTools = (server: McpServer): void => {
     },
     async () => {
       try {
-        return jsonResult(await report.reportClean())
+        return jsonResult(await report.reportClean(housekeepingPath))
       } catch (err) {
         return errorResult('clearing Claude Desktop reports', err)
       }
@@ -407,7 +408,7 @@ export const registerClaudeDesktopTools = (server: McpServer): void => {
     },
     async (args) => {
       try {
-        return jsonResult(await report.reportWrite(args))
+        return jsonResult(await report.reportWrite(housekeepingPath, args))
       } catch (err) {
         return errorResult('writing Claude Desktop report', err)
       }
@@ -431,7 +432,7 @@ export const registerClaudeDesktopTools = (server: McpServer): void => {
     },
     async ({ workspace, ...args }) => {
       try {
-        const w = await requireSingleWorkspace(workspace)
+        const w = await requireSingleWorkspace(rootPath, workspace)
         return jsonResult({ workspace: w.id, ...(await memory.memoryWrite(w.root, args)) })
       } catch (err) {
         return errorResult('writing Claude Desktop memory file', err)
@@ -455,7 +456,7 @@ export const registerClaudeDesktopTools = (server: McpServer): void => {
     },
     async ({ workspace, ...args }) => {
       try {
-        const w = await requireSingleWorkspace(workspace)
+        const w = await requireSingleWorkspace(rootPath, workspace)
         return jsonResult({ workspace: w.id, ...(await memory.memoryDelete(w.root, args)) })
       } catch (err) {
         return errorResult('deleting Claude Desktop memory file', err)
@@ -479,7 +480,7 @@ export const registerClaudeDesktopTools = (server: McpServer): void => {
     },
     async ({ workspace, ...args }) => {
       try {
-        const w = await requireSingleWorkspace(workspace)
+        const w = await requireSingleWorkspace(rootPath, workspace)
         return jsonResult({ workspace: w.id, ...(await memory.memoryIndexWrite(w.root, args)) })
       } catch (err) {
         return errorResult('writing Claude Desktop MEMORY.md', err)
@@ -507,7 +508,7 @@ export const registerClaudeDesktopTools = (server: McpServer): void => {
     },
     async ({ workspace, ...args }) => {
       try {
-        const w = await requireSingleWorkspace(workspace)
+        const w = await requireSingleWorkspace(rootPath, workspace)
         return jsonResult({ workspace: w.id, ...(await sessions.sessionRename(w.root, args)) })
       } catch (err) {
         return errorResult('renaming Claude Desktop session', err)

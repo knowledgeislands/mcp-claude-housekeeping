@@ -7,12 +7,24 @@ Guidance for Claude Code when working in this repo. The user-facing tool surface
 This project uses Bun (≥ 1.3) for install and dev scripts, but the compiled `dist/` runs under Node (≥ 22) — that's what Claude Desktop launches.
 
 - `bun run test` (NOT `bun test` — the latter invokes Bun's own runner instead of vitest).
-- Bun auto-loads `.env.${NODE_ENV}` from the CWD; Node needs the explicit `process.loadEnvFile()` call in [src/config.ts](./src/config.ts). The try/catch swallows the `TypeError` Bun raises (no `process.loadEnvFile`), so the same code works under both.
+- Bun auto-loads `.env.${NODE_ENV}` from the CWD; Node needs the explicit `process.loadEnvFile()` call inside `loadConfig()` in [src/config/index.ts](./src/config/index.ts). The try/catch swallows the `TypeError` Bun raises (no `process.loadEnvFile`), so the same code works under both.
 - `NODE_ENV` is set to `development` only by `server:mcp:dev` and `server:mcp:inspect`. Claude Desktop doesn't set it, so `.env.*` is ignored in production — `MCP_CLAUDE_HOUSEKEEPING_PATH` must come from the Claude Desktop config `env` block.
 
 Run `bun run` with no args for the full script list.
 
 ## Architecture Invariants
+
+### Project layout & config injection (the workspace MCP shape)
+
+This is the canonical layout we roll out across the MCPs:
+
+- **[src/config/index.ts](./src/config/index.ts)** — `loadConfig(env?) → Config`. Reads env (optionally hydrated from `.env.${NODE_ENV}`) into a plain `Config` value. **There is no module-level config singleton — nothing reads env at import time.** `Config` carries `housekeepingPath`, `accessLevel`, the three derived target roots (`claudeCodeRootPath`, `claudeDesktopRootPath`, `vscodeWorkspaceStorageRootPath`), and the audit-log knobs (`auditLogMode`/`auditLogPath`/`auditLogMaxBytes`/`auditLogKeep`). Exported types/constants (`AccessLevel`, `ACCESS_LEVELS`, `ACCESS_LEVEL_RANK`, `AuditLogMode`) live here too.
+- **[src/mcp-server/index.ts](./src/mcp-server/index.ts)** — the stdio MCP wrapper. Calls `loadConfig()` once, builds the `AuditConfig` slice, sets `server.registerTool = makeAccessGatedRegister(server, config.accessLevel, audit)`, and threads `config` into each `register<group>Tools(server, config)`. Keeps the startup logging.
+- **[src/tools/](./src/tools/)** — MCP tool definitions only. Thin: validate args, call a `main/` function (passing the relevant `cfg` slice as the first arg), map result/throw to an MCP envelope via `jsonResult` / `errorResult`. Excluded from coverage.
+- **[src/main/](./src/main/)** — the real implementation, usable outside the MCP server (e.g. from a script). Grouped by concern: `main/claude-code/`, `main/claude-desktop/`, `main/vscode/`. Every `main` entry point takes the config it needs as its **first argument** — a root path (`projectsList(claudeRoot)`, `storageSummary(root, args)`) or `housekeepingPath` (`reportWrite(housekeepingPath, args)`). No hidden state. Tests are co-located.
+- **[src/utils/](./src/utils/)** — cross-MCP reusable helpers; keep in sync with sibling repos. These take the **specific config primitive** they need (`makeAccessGatedRegister(server, accessLevel, audit)`, `withAuditLog(audit, name, level, cb)`, `resolveWithinRoot(root, …)`), not the whole `Config`, so they stay MCP-agnostic. `utils.ts` holds the generic FS/format helpers and `discoverWorkspaces(root)`.
+
+To use the code from a script: `const cfg = loadConfig(); await projectsList(cfg.claudeCodeRootPath)`.
 
 ### Naming convention
 
@@ -44,10 +56,10 @@ Every access level touches files anywhere under four configured roots. New tools
 5. **Access-level gate is the registration boundary, keyed off annotations.** See [Access-level gate](#access-level-gate--driven-by-annotations-not-names) above.
 6. **No shell-string interpolation.** `du` is invoked via `spawn('du', ['-sk', target])` — argv form. New tools that shell out must use `execFile` or `spawn` with an argv array.
 7. **Zod schemas are `.strict()`.** Already true everywhere; new schemas must continue this.
-8. **Tests MUST NOT touch the real root paths.** `CLAUDE_CODE_ROOT_PATH`, `CLAUDE_DESKTOP_ROOT_PATH`, and `VSCODE_WORKSPACE_STORAGE_ROOT_PATH` resolve to live user directories (`~/.claude/`, the Cowork sessions dir, VSCode `workspaceStorage`). Test files MUST NOT import these constants from `config.ts`. Instead, shadow them with a per-suite tmpdir, e.g. `const CLAUDE_CODE_ROOT_PATH = path.join(os.tmpdir(), 'mcp-housekeeping-<group>-<file>-tests')`, and pass that into the tool function under test. A regression here destroyed real `~/.claude/projects/` history once — don't do it again.
+8. **Tests MUST NOT touch the real root paths.** `Config.claudeCodeRootPath`, `Config.claudeDesktopRootPath`, and `Config.vscodeWorkspaceStorageRootPath` resolve to live user directories (`~/.claude/`, the Cowork sessions dir, VSCode `workspaceStorage`). Test files MUST NOT call `loadConfig()` and feed its derived roots into a `main/` function. Instead, define a per-suite tmpdir, e.g. `const CLAUDE_CODE_ROOT = path.join(os.tmpdir(), 'mcp-housekeeping-<group>-<file>-tests')`, and pass that as the first arg to the function under test. Because `main/` functions take their root (or `housekeepingPath`) as an injected first argument, this is the natural calling convention — there is no env to mutate. A regression here destroyed real `~/.claude/projects/` history once — don't do it again.
 
-Traversal-rejection tests live in [src/tools/vscode/audit.test.ts](./src/tools/vscode/audit.test.ts). Parallel coverage for `claudeCode.sessionRead` / `relocateProject` is a follow-up.
+Traversal-rejection tests live in [src/main/vscode/audit.test.ts](./src/main/vscode/audit.test.ts). Parallel coverage for `claudeCode.sessionRead` / `relocateProject` is a follow-up.
 
 ## Tool registration call sites
 
-Each `<app>` group registers its tools in `src/tools/<app>/index.ts`. To survey the surface, `grep "register(" src/tools/*/index.ts`. README's [Available Tools](./README.md#available-tools) tabulates them with purposes.
+Each `<app>` group registers its tools in `src/tools/<app>/index.ts` (thin wiring) and implements them in `src/main/<app>/`. To survey the surface, `grep "register(" src/tools/*/index.ts`. README's [Available Tools](./README.md#available-tools) tabulates them with purposes.

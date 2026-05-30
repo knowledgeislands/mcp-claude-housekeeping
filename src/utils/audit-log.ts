@@ -6,20 +6,28 @@
  * annotated `readOnlyHint: true`), or `all` (every tool, including read).
  * Level is derived from each tool's MCP annotations by `makeAccessGatedRegister`.
  * Path is configurable via MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_PATH; defaults to
- * `<MCP_CLAUDE_HOUSEKEEPING_PATH>/audit/audit.jsonl`.
+ * `<MCP_CLAUDE_HOUSEKEEPING_PATH>/audit/audit.jsonl`. Mode, path, size cap and
+ * keep count all arrive as the `AuditConfig` slice of the loaded Config.
  *
  * The log rotates on size: after each append, if the file exceeds
- * MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_MAX_BYTES (default 10 MiB), it's renamed
- * to `audit.jsonl.1` and prior rotations shift up. MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_KEEP
- * (default 5) controls how many rotated files survive; the oldest beyond that
- * is dropped. Set MAX_BYTES=0 to disable rotation.
+ * `audit.maxBytes` (default 10 MiB), it's renamed to `audit.jsonl.1` and prior
+ * rotations shift up. `audit.keep` (default 5) controls how many rotated files
+ * survive; the oldest beyond that is dropped. Set maxBytes=0 to disable rotation.
  *
  * Failures to write the audit line are swallowed (stderr only) — a broken log
  * must never prevent a tool call from completing.
  */
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
-import { type AccessLevel, AUDIT_LOG_KEEP, AUDIT_LOG_MAX_BYTES, AUDIT_LOG_MODE, AUDIT_LOG_PATH } from '../config.js'
+import type { AccessLevel, AuditLogMode } from '../config/index.js'
+
+/** The audit-log slice of Config the caller passes in (keeps this util MCP-agnostic). */
+export interface AuditConfig {
+  mode: AuditLogMode
+  path: string
+  maxBytes: number
+  keep: number
+}
 
 export interface AuditEvent {
   ts: string
@@ -65,52 +73,52 @@ let chmodEnsured = false
  * `fs.rename`. Best-effort: any failure logs to stderr and leaves the file in
  * place so the next append still succeeds.
  */
-const rotateIfNeeded = async (): Promise<void> => {
-  if (AUDIT_LOG_MAX_BYTES === 0) return
+const rotateIfNeeded = async (audit: AuditConfig): Promise<void> => {
+  if (audit.maxBytes === 0) return
   let size: number
   try {
-    size = (await fs.stat(AUDIT_LOG_PATH)).size
+    size = (await fs.stat(audit.path)).size
   } catch {
     return
   }
-  if (size <= AUDIT_LOG_MAX_BYTES) return
+  if (size <= audit.maxBytes) return
   try {
     // Drop the file at slot `keep + 1` (anything older than what we keep).
-    if (AUDIT_LOG_KEEP > 0) {
-      await fs.rm(`${AUDIT_LOG_PATH}.${AUDIT_LOG_KEEP}`, { force: true })
+    if (audit.keep > 0) {
+      await fs.rm(`${audit.path}.${audit.keep}`, { force: true })
       // Shift .keep-1 → .keep, …, .1 → .2. Highest-index first so we don't clobber.
-      for (let i = AUDIT_LOG_KEEP - 1; i >= 1; i--) {
-        const from = `${AUDIT_LOG_PATH}.${i}`
-        const to = `${AUDIT_LOG_PATH}.${i + 1}`
+      for (let i = audit.keep - 1; i >= 1; i--) {
+        const from = `${audit.path}.${i}`
+        const to = `${audit.path}.${i + 1}`
         try {
           await fs.rename(from, to)
         } catch {
           // missing slot — fine, rotation history may not be full yet
         }
       }
-      await fs.rename(AUDIT_LOG_PATH, `${AUDIT_LOG_PATH}.1`)
+      await fs.rename(audit.path, `${audit.path}.1`)
     } else {
-      // KEEP=0: truncate without preserving history.
-      await fs.rm(AUDIT_LOG_PATH, { force: true })
+      // keep=0: truncate without preserving history.
+      await fs.rm(audit.path, { force: true })
     }
   } catch (err) {
     console.error(`[audit-log] rotation failed: ${err instanceof Error ? err.message : String(err)}`)
   }
 }
 
-const writeAuditEvent = async (event: AuditEvent): Promise<void> => {
+const writeAuditEvent = async (audit: AuditConfig, event: AuditEvent): Promise<void> => {
   try {
-    await fs.mkdir(path.dirname(AUDIT_LOG_PATH), { recursive: true })
-    await fs.appendFile(AUDIT_LOG_PATH, `${JSON.stringify(event)}\n`, { encoding: 'utf-8', mode: 0o600 })
+    await fs.mkdir(path.dirname(audit.path), { recursive: true })
+    await fs.appendFile(audit.path, `${JSON.stringify(event)}\n`, { encoding: 'utf-8', mode: 0o600 })
     if (!chmodEnsured) {
       try {
-        await fs.chmod(AUDIT_LOG_PATH, 0o600)
+        await fs.chmod(audit.path, 0o600)
       } catch {
         // best-effort — log may have been rotated/removed between write and chmod
       }
       chmodEnsured = true
     }
-    await rotateIfNeeded()
+    await rotateIfNeeded(audit)
   } catch (err) {
     console.error(`[audit-log] failed to write: ${err instanceof Error ? err.message : String(err)}`)
   }
@@ -122,21 +130,28 @@ const writeAuditEvent = async (event: AuditEvent): Promise<void> => {
 // errors are swallowed inside writeAuditEvent so the chain never rejects.
 let auditQueue: Promise<void> = Promise.resolve()
 
-export const appendAuditEvent = (event: AuditEvent): Promise<void> => {
-  auditQueue = auditQueue.then(() => writeAuditEvent(event))
+export const appendAuditEvent = (audit: AuditConfig, event: AuditEvent): Promise<void> => {
+  auditQueue = auditQueue.then(() => writeAuditEvent(audit, event))
   return auditQueue
 }
 
 type ToolCallback = (...callbackArgs: unknown[]) => unknown | Promise<unknown>
 
+const extractErrorText = (result: unknown): string | undefined => {
+  const content = (result as { content?: { type: string; text: string }[] }).content
+  if (!Array.isArray(content)) return undefined
+  const first = content.find((c) => c.type === 'text')
+  return first?.text
+}
+
 /**
  * Wrap a tool callback so each invocation appends an audit event. `write` and
- * `destructive` tools are always logged; `read` tools only when AUDIT_LOG=all
+ * `destructive` tools are always logged; `read` tools only when audit.mode='all'
  * is set.
  */
-export const withAuditLog = (toolName: string, level: AccessLevel, callback: ToolCallback): ToolCallback => {
-  if (AUDIT_LOG_MODE === 'off') return callback
-  if (level === 'read' && AUDIT_LOG_MODE !== 'all') return callback
+export const withAuditLog = (audit: AuditConfig, toolName: string, level: AccessLevel, callback: ToolCallback): ToolCallback => {
+  if (audit.mode === 'off') return callback
+  if (level === 'read' && audit.mode !== 'all') return callback
   return async (...callbackArgs: unknown[]) => {
     const start = Date.now()
     const args = callbackArgs[0]
@@ -144,7 +159,7 @@ export const withAuditLog = (toolName: string, level: AccessLevel, callback: Too
       const result = await callback(...callbackArgs)
       const isError = typeof result === 'object' && result !== null && (result as { isError?: boolean }).isError === true
       const errText = isError ? extractErrorText(result) : undefined
-      void appendAuditEvent({
+      void appendAuditEvent(audit, {
         ts: new Date().toISOString(),
         server: SERVER_NAME,
         tool: toolName,
@@ -156,7 +171,7 @@ export const withAuditLog = (toolName: string, level: AccessLevel, callback: Too
       })
       return result
     } catch (err) {
-      void appendAuditEvent({
+      void appendAuditEvent(audit, {
         ts: new Date().toISOString(),
         server: SERVER_NAME,
         tool: toolName,
@@ -169,11 +184,4 @@ export const withAuditLog = (toolName: string, level: AccessLevel, callback: Too
       throw err
     }
   }
-}
-
-const extractErrorText = (result: unknown): string | undefined => {
-  const content = (result as { content?: { type: string; text: string }[] }).content
-  if (!Array.isArray(content)) return undefined
-  const first = content.find((c) => c.type === 'text')
-  return first?.text
 }

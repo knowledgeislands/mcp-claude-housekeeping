@@ -1,10 +1,9 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
-import { VSCODE_WORKSPACE_STORAGE_ROOT_PATH } from '../../config.js'
-import { makeAccessGatedRegister } from '../../utils/access-level.js'
+import type { Config } from '../../config/index.js'
+import * as audit from '../../main/vscode/audit.js'
 import { DESTRUCTIVE_ONESHOT, READ_ONLY } from '../../utils/annotations.js'
 import { errorResult, jsonResult } from '../../utils/utils.js'
-import * as audit from './audit.js'
 
 // Hex-only — rejects "..", "/", and other traversal characters before any
 // path.join. Defense in depth alongside resolveWithinRoot at the call sites.
@@ -19,8 +18,9 @@ const sessionArg = z
   .min(1)
   .regex(/^[A-Za-z0-9._-]+\.jsonl?$/, 'Session name must be alphanumeric/._- and end with .json or .jsonl')
 
-export const registerVscodeTools = (server: McpServer): void => {
-  const register = makeAccessGatedRegister(server)
+export const registerVscodeTools = (server: McpServer, cfg: Config): void => {
+  const register = server.registerTool
+  const rootPath = cfg.vscodeWorkspaceStorageRootPath
 
   register(
     'vscode_workspaces_list',
@@ -32,7 +32,7 @@ export const registerVscodeTools = (server: McpServer): void => {
     },
     async () => {
       try {
-        return jsonResult(await audit.workspacesList(VSCODE_WORKSPACE_STORAGE_ROOT_PATH))
+        return jsonResult(await audit.workspacesList(rootPath))
       } catch (err) {
         return errorResult('listing VSCode workspaces', err)
       }
@@ -54,7 +54,7 @@ export const registerVscodeTools = (server: McpServer): void => {
     },
     async (args) => {
       try {
-        return jsonResult(await audit.storageSummary(VSCODE_WORKSPACE_STORAGE_ROOT_PATH, args))
+        return jsonResult(await audit.storageSummary(rootPath, args))
       } catch (err) {
         return errorResult('summarising VSCode storage', err)
       }
@@ -78,7 +78,7 @@ export const registerVscodeTools = (server: McpServer): void => {
     },
     async (args) => {
       try {
-        return jsonResult(await audit.obsoleteSessions(VSCODE_WORKSPACE_STORAGE_ROOT_PATH, args))
+        return jsonResult(await audit.obsoleteSessions(rootPath, args))
       } catch (err) {
         return errorResult('finding obsolete VSCode sessions', err)
       }
@@ -102,7 +102,7 @@ export const registerVscodeTools = (server: McpServer): void => {
     },
     async (args) => {
       try {
-        return jsonResult(await audit.sessionRead(VSCODE_WORKSPACE_STORAGE_ROOT_PATH, args))
+        return jsonResult(await audit.sessionRead(rootPath, args))
       } catch (err) {
         return errorResult('reading VSCode session', err)
       }
@@ -124,7 +124,7 @@ export const registerVscodeTools = (server: McpServer): void => {
     },
     async (args) => {
       try {
-        return jsonResult(await audit.workspaceDelete(VSCODE_WORKSPACE_STORAGE_ROOT_PATH, args))
+        return jsonResult(await audit.workspaceDelete(rootPath, args))
       } catch (err) {
         return errorResult('deleting VSCode workspace', err)
       }
@@ -147,7 +147,7 @@ export const registerVscodeTools = (server: McpServer): void => {
     },
     async (args) => {
       try {
-        return jsonResult(await audit.sessionsPrune(VSCODE_WORKSPACE_STORAGE_ROOT_PATH, args))
+        return jsonResult(await audit.sessionsPrune(rootPath, args))
       } catch (err) {
         return errorResult('pruning VSCode sessions', err)
       }

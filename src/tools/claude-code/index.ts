@@ -1,11 +1,10 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
-import { CLAUDE_CODE_ROOT_PATH } from '../../config.js'
-import { makeAccessGatedRegister } from '../../utils/access-level.js'
+import type { Config } from '../../config/index.js'
+import * as audit from '../../main/claude-code/audit.js'
+import * as memory from '../../main/claude-code/memory.js'
 import { DESTRUCTIVE, DESTRUCTIVE_ONESHOT, READ_ONLY } from '../../utils/annotations.js'
 import { errorResult, jsonResult } from '../../utils/utils.js'
-import * as audit from './audit.js'
-import * as memory from './memory.js'
 
 // Claude Code encodes project source paths with `/` → `-` and `.` → `-`, so the
 // subdir name is dash-delimited alphanumeric. Reject anything else before any
@@ -17,8 +16,9 @@ const projectArg = z
   .describe('Project directory name under ~/.claude/projects/ (the encoded path).')
 const optionalProjectArg = projectArg.optional()
 
-export const registerClaudeCodeTools = (server: McpServer): void => {
-  const register = makeAccessGatedRegister(server)
+export const registerClaudeCodeTools = (server: McpServer, cfg: Config): void => {
+  const register = server.registerTool
+  const claudeCodeRootPath = cfg.claudeCodeRootPath
 
   /* ================================================================ */
   /*  claude_code_* — read-only (annotations: READ_ONLY)               */
@@ -34,7 +34,7 @@ export const registerClaudeCodeTools = (server: McpServer): void => {
     },
     async () => {
       try {
-        return jsonResult(await audit.projectsList(CLAUDE_CODE_ROOT_PATH))
+        return jsonResult(await audit.projectsList(claudeCodeRootPath))
       } catch (err) {
         return errorResult('listing Claude Code projects', err)
       }
@@ -57,7 +57,7 @@ export const registerClaudeCodeTools = (server: McpServer): void => {
     },
     async (args) => {
       try {
-        return jsonResult(await audit.storageSummary(CLAUDE_CODE_ROOT_PATH, args))
+        return jsonResult(await audit.storageSummary(claudeCodeRootPath, args))
       } catch (err) {
         return errorResult('summarising Claude Code storage', err)
       }
@@ -81,7 +81,7 @@ export const registerClaudeCodeTools = (server: McpServer): void => {
     },
     async (args) => {
       try {
-        return jsonResult(await audit.obsoleteSessions(CLAUDE_CODE_ROOT_PATH, args))
+        return jsonResult(await audit.obsoleteSessions(claudeCodeRootPath, args))
       } catch (err) {
         return errorResult('finding obsolete Claude Code sessions', err)
       }
@@ -98,7 +98,7 @@ export const registerClaudeCodeTools = (server: McpServer): void => {
     },
     async () => {
       try {
-        return jsonResult(await audit.globalStatus(CLAUDE_CODE_ROOT_PATH))
+        return jsonResult(await audit.globalStatus(claudeCodeRootPath))
       } catch (err) {
         return errorResult('reading Claude Code global status', err)
       }
@@ -125,7 +125,7 @@ export const registerClaudeCodeTools = (server: McpServer): void => {
     },
     async (args) => {
       try {
-        return jsonResult(await audit.sessionRead(CLAUDE_CODE_ROOT_PATH, args))
+        return jsonResult(await audit.sessionRead(claudeCodeRootPath, args))
       } catch (err) {
         return errorResult('reading Claude Code session', err)
       }
@@ -142,7 +142,7 @@ export const registerClaudeCodeTools = (server: McpServer): void => {
     },
     async (args) => {
       try {
-        return jsonResult(await memory.memoryList(CLAUDE_CODE_ROOT_PATH, args))
+        return jsonResult(await memory.memoryList(claudeCodeRootPath, args))
       } catch (err) {
         return errorResult('listing Claude Code memory files', err)
       }
@@ -164,7 +164,7 @@ export const registerClaudeCodeTools = (server: McpServer): void => {
     },
     async (args) => {
       try {
-        return jsonResult(await memory.memoryRead(CLAUDE_CODE_ROOT_PATH, args))
+        return jsonResult(await memory.memoryRead(claudeCodeRootPath, args))
       } catch (err) {
         return errorResult('reading Claude Code memory file', err)
       }
@@ -191,7 +191,7 @@ export const registerClaudeCodeTools = (server: McpServer): void => {
     },
     async (args) => {
       try {
-        return jsonResult(await audit.sessionsPrune(CLAUDE_CODE_ROOT_PATH, args))
+        return jsonResult(await audit.sessionsPrune(claudeCodeRootPath, args))
       } catch (err) {
         return errorResult('pruning Claude Code sessions', err)
       }
@@ -214,7 +214,7 @@ export const registerClaudeCodeTools = (server: McpServer): void => {
     },
     async (args) => {
       try {
-        return jsonResult(await audit.relocateProject(CLAUDE_CODE_ROOT_PATH, args))
+        return jsonResult(await audit.relocateProject(claudeCodeRootPath, args))
       } catch (err) {
         return errorResult('relocating Claude Code project', err)
       }
@@ -236,7 +236,7 @@ export const registerClaudeCodeTools = (server: McpServer): void => {
     },
     async (args) => {
       try {
-        return jsonResult(await audit.pruneOrphanProjects(CLAUDE_CODE_ROOT_PATH, args))
+        return jsonResult(await audit.pruneOrphanProjects(claudeCodeRootPath, args))
       } catch (err) {
         return errorResult('pruning orphan Claude Code projects', err)
       }
@@ -259,7 +259,7 @@ export const registerClaudeCodeTools = (server: McpServer): void => {
     },
     async (args) => {
       try {
-        return jsonResult(await memory.memoryWrite(CLAUDE_CODE_ROOT_PATH, args))
+        return jsonResult(await memory.memoryWrite(claudeCodeRootPath, args))
       } catch (err) {
         return errorResult('writing Claude Code memory file', err)
       }
@@ -281,7 +281,7 @@ export const registerClaudeCodeTools = (server: McpServer): void => {
     },
     async (args) => {
       try {
-        return jsonResult(await memory.memoryDelete(CLAUDE_CODE_ROOT_PATH, args))
+        return jsonResult(await memory.memoryDelete(claudeCodeRootPath, args))
       } catch (err) {
         return errorResult('deleting Claude Code memory file', err)
       }
@@ -298,7 +298,7 @@ export const registerClaudeCodeTools = (server: McpServer): void => {
     },
     async (args) => {
       try {
-        return jsonResult(await memory.memoryIndexWrite(CLAUDE_CODE_ROOT_PATH, args))
+        return jsonResult(await memory.memoryIndexWrite(claudeCodeRootPath, args))
       } catch (err) {
         return errorResult('writing Claude Code MEMORY.md', err)
       }

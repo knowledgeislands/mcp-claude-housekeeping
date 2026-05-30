@@ -20,10 +20,10 @@ You should expect an acknowledgement within 72 hours. We aim to triage, investig
 
 In scope:
 
-- Path containment in `src/utils.ts` (`resolveWithinRoot`) — any input that resolves outside its workspace root (traversal, symlink escape, encoded separators, edge cases around trailing slashes).
+- Path containment in `src/utils/utils.ts` (`resolveWithinRoot`) — any input that resolves outside its workspace root (traversal, symlink escape, encoded separators, edge cases around trailing slashes).
 - Memory-tool containment under `<workspace>/spaces/<space_id>/memory/`.
-- Tool handlers under `src/tools/{claude-desktop,claude-code,vscode}/` — including the destructive `write`-role operations (anything annotated `DESTRUCTIVE` or `DESTRUCTIVE_ONESHOT`).
-- Boot-time root validation in `src/config.ts` and workspace discovery in `src/utils.ts` (`discoverWorkspaces`).
+- Tool implementations under `src/main/{claude-desktop,claude-code,vscode}/` (with their thin registration wrappers under `src/tools/{claude-desktop,claude-code,vscode}/`) — including the destructive `write`-role operations (anything annotated `DESTRUCTIVE` or `DESTRUCTIVE_ONESHOT`).
+- Config loading in `src/config/index.ts` (`loadConfig` — MCP_CLAUDE_HOUSEKEEPING_PATH required) and workspace discovery in `src/utils/utils.ts` (`discoverWorkspaces`).
 
 Out of scope:
 

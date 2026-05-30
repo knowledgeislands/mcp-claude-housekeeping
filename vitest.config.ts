@@ -1,8 +1,4 @@
-import * as os from 'node:os'
-import * as path from 'node:path'
 import { defineConfig } from 'vitest/config'
-
-const TEST_HOUSEKEEPING = path.join(os.tmpdir(), 'mcp-local-tests-housekeeping')
 
 export default defineConfig({
   test: {
@@ -10,23 +6,23 @@ export default defineConfig({
     environment: 'node',
     include: ['src/**/*.test.ts'],
     fileParallelism: false,
-    env: {
-      MCP_CLAUDE_HOUSEKEEPING_PATH: TEST_HOUSEKEEPING
-    },
+    // No env seeding needed: config is loaded explicitly via loadConfig() and
+    // passed into calls, so nothing reads process.env at import time. Tests
+    // build their own Config/AuditConfig (or call loadConfig with an explicit
+    // env object) and define their own tmpdir fixture roots.
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov', 'html'],
       include: ['src/**/*.ts'],
       exclude: [
         'src/**/*.test.ts',
-        // Server entry points and tool registration aggregators are pure
-        // wiring (every line is `server.registerTool(...)`); their behaviour
-        // is exercised by `bun run server:mcp:inspect` and the smoke test in CI.
+        // Server entry point and tool registration aggregators are pure wiring
+        // (every line is `server.registerTool(...)`); their behaviour is
+        // exercised by `bun run server:mcp:inspect` and the smoke test in CI.
         'src/mcp-server/index.ts',
-        'src/tools/index.ts',
-        'src/tools/claude-code/index.ts',
-        'src/tools/claude-desktop/index.ts',
-        'src/tools/vscode/index.ts',
+        'src/tools/**/index.ts',
+        // Pure data: annotation presets are referenced only from tool
+        // registration sites (which are themselves excluded).
         'src/utils/annotations.ts'
       ],
       thresholds: {

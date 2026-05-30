@@ -29,6 +29,29 @@
   "engines": {
     "node": ">=22.0.0"
   },
+  "exports": {
+    ".": {
+      "types": "./dist/mcp-server/index.d.ts",
+      "import": "./dist/mcp-server/index.js"
+    },
+    "./config": {
+      "types": "./dist/config/index.d.ts",
+      "import": "./dist/config/index.js"
+    },
+    "./claude-code": {
+      "types": "./dist/main/claude-code/index.d.ts",
+      "import": "./dist/main/claude-code/index.js"
+    },
+    "./claude-desktop": {
+      "types": "./dist/main/claude-desktop/index.d.ts",
+      "import": "./dist/main/claude-desktop/index.js"
+    },
+    "./vscode": {
+      "types": "./dist/main/vscode/index.d.ts",
+      "import": "./dist/main/vscode/index.js"
+    },
+    "./package.json": "./package.json"
+  },
   "files": [
     "dist"
   ],

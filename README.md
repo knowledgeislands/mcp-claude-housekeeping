@@ -6,7 +6,7 @@ An MCP (Model Context Protocol) server for housekeeping the three filesystem are
 
 ## Features
 
-- **Codified audits across three storage areas** — 38 tools spanning Cowork local-agent-mode-sessions (the daily `cowork-filesystem-audit`), `~/.claude/` Claude Code state, and VSCode `workspaceStorage/<id>/chatSessions/`.
+- **Codified audits across three storage areas** — 39 tools spanning Cowork local-agent-mode-sessions (the daily `cowork-filesystem-audit`), `~/.claude/` Claude Code state, and VSCode `workspaceStorage/<id>/chatSessions/`.
 - **Access-level gated tools** — every tool maps to one of `read`, `write`, or `destructive`. Set `MCP_CLAUDE_HOUSEKEEPING_ACCESS_LEVEL` to the maximum level you want exposed; defaults to `read` only. Levels nest. The level is derived from each tool's MCP annotations (`readOnlyHint` / `destructiveHint`), not its name. (Housekeeping ships only `read` and `destructive` tools today — no `write` tier.)
 - **Workspace auto-discovery** (Cowork only) — walks `~/Library/Application Support/Claude/local-agent-mode-sessions/<account>/<workspace>/` and aggregates results across every discovered workspace.
 - **Path-safe** — every path is validated against its configured root; memory operations are also confined to their `memory/` subdir.
@@ -162,9 +162,9 @@ bun install
 | `MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_PATH` | no | Path to the JSONL audit log. Default `<MCP_CLAUDE_HOUSEKEEPING_PATH>/audit/audit.jsonl`. |
 | `MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_MAX_BYTES` | no | Size-based rotation threshold in bytes. Default `10485760` (10 MiB). Set to `0` to disable rotation. |
 | `MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_KEEP` | no | Number of rotated audit-log files to retain. Default `5`. |
-| `NODE_ENV` | no | Dev convention. `server:mcp:dev`/`server:mcp:inspect` set this to `development`, which makes [`src/config.ts`](./src/config.ts) load `.env.development` from the CWD. Unset under Claude Desktop, so `.env*` files are ignored in production. |
+| `NODE_ENV` | no | Dev convention. `server:mcp:dev`/`server:mcp:inspect` set this to `development`, which makes [`loadConfig()`](./src/config/index.ts) load `.env.development` from the CWD. Unset under Claude Desktop, so `.env*` files are ignored in production. |
 
-The sessions root (`~/Library/Application Support/Claude/local-agent-mode-sessions`), Claude Code root (`~/.claude`), and VSCode workspaceStorage (`~/Library/Application Support/Code/User/workspaceStorage`) are hardcoded in [`src/config.ts`](./src/config.ts) and are not user-configurable.
+The sessions root (`~/Library/Application Support/Claude/local-agent-mode-sessions`), Claude Code root (`~/.claude`), and VSCode workspaceStorage (`~/Library/Application Support/Code/User/workspaceStorage`) are computed defaults in [`src/config/index.ts`](./src/config/index.ts) and are not user-configurable.
 
 ### Claude Desktop Configuration
 
@@ -188,7 +188,7 @@ A starter is in [`claude-config-sample.json`](./claude-config-sample.json).
 
 ### Running From Source (Dev)
 
-Copy [`.env.example`](./.env.example) to `.env.development` and fill in `MCP_CLAUDE_HOUSEKEEPING_PATH`. The `server:mcp:dev` and `server:mcp:inspect` scripts run with `NODE_ENV=development`, which causes Bun to auto-load `.env.development` from the CWD (and is also picked up by [`src/config.ts`](./src/config.ts)'s `process.loadEnvFile` call when run under Node). Claude Desktop does not set `NODE_ENV`, so the file is ignored in production; `MCP_CLAUDE_HOUSEKEEPING_PATH` must come from the Claude Desktop config `env` block.
+Copy [`.env.example`](./.env.example) to `.env.development` and fill in `MCP_CLAUDE_HOUSEKEEPING_PATH`. The `server:mcp:dev` and `server:mcp:inspect` scripts run with `NODE_ENV=development`, which causes Bun to auto-load `.env.development` from the CWD (and is also picked up by [`loadConfig()`](./src/config/index.ts)'s `process.loadEnvFile` call when run under Node). Claude Desktop does not set `NODE_ENV`, so the file is ignored in production; `MCP_CLAUDE_HOUSEKEEPING_PATH` must come from the Claude Desktop config `env` block.
 
 ```bash
 cp .env.example .env.development
@@ -235,14 +235,20 @@ bun run lint:md        # prettier + markdownlint for *.md
 ├── package.json
 ├── tsconfig.json               # Base TS config
 ├── tsconfig.build.json         # Build config (emits to dist/)
-├── .env.example                # Template for MCP_CLAUDE_HOUSEKEEPING_PATH (copy to .env.development)
+├── .env.example                # Env template (copy to .env.development)
 ├── src/
-│   ├── mcp-server/index.ts     # MCP server entry — registers every tool
-│   ├── config.ts               # Env var loading
-│   ├── utils.ts                # Path safety, du wrapper, JSON helpers
-│   ├── audit.ts                # 10 read-only checks + artifactPrune
-│   ├── report.ts               # Report list/clean/write
-│   └── memory.ts               # Memory list/read/write/delete/index_write
+│   ├── config/index.ts         # loadConfig(env?) → Config; no import-time env reads
+│   ├── mcp-server/index.ts     # MCP server entry — loads config, registers every tool
+│   ├── tools/                  # Thin MCP tool definitions (validate args, call main/, map result)
+│   │   ├── index.ts            #   barrel re-exporting register<group>Tools
+│   │   ├── claude-code/index.ts
+│   │   ├── claude-desktop/index.ts
+│   │   └── vscode/index.ts
+│   ├── main/                   # Real implementation (usable from a script); cfg slice as first arg
+│   │   ├── claude-code/        #   index.ts barrel + audit.ts, memory.ts
+│   │   ├── claude-desktop/     #   index.ts barrel + audit.ts, memory.ts, report.ts, sessions.ts
+│   │   └── vscode/             #   index.ts barrel + audit.ts
+│   └── utils/                  # Cross-MCP helpers: access-level gate, audit log, path safety, du, JSON
 └── dist/                       # Build output (gitignored, created by `bun run build`)
     └── mcp-server/index.js     # Compiled entry point used by Claude Desktop
 ```
@@ -267,10 +273,10 @@ The requested path resolves outside its allowed root. Use names without leading 
 
 ## Extending the Server
 
-Add a new tool by registering it in [`src/mcp-server/index.ts`](./src/mcp-server/index.ts) via `server.registerTool(...)`. Follow the existing pattern:
+Add a new tool by registering it in the relevant group barrel under [`src/tools/<group>/index.ts`](./src/tools) via `server.registerTool(...)`, and implementing the logic in [`src/main/<group>/`](./src/main). Tool definitions stay thin; the real work lives in `main/`. Follow the existing pattern:
 
-1. Validate inputs with a strict zod schema (`.strict()` to reject extras).
-2. Set MCP annotations honestly (`readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint`).
-3. Take a `workspaceRoot` (or use `aggregate`/`requireSingleWorkspace`) so the tool composes with multi-workspace discovery.
-4. Run any path inputs through `resolveWithinRoot(workspaceRoot, ...)` before touching the filesystem.
-5. Return errors via `errorResult(...)` so the client sees `isError: true`.
+1. Validate inputs with a strict zod schema (`.strict()` to reject extras), constraining any path-segment identifier with a regex that excludes `/`, `\`, and `..`.
+2. Set MCP annotations honestly using a preset from [`src/utils/annotations.ts`](./src/utils/annotations.ts) (`READ_ONLY`, `DESTRUCTIVE`, `DESTRUCTIVE_ONESHOT`) — the access-level gate keys off these, not the name.
+3. Implement the work in `src/main/<group>/`, taking the config slice it needs (a root path, or `housekeepingPath`) as its **first argument** — no module-level state, so it stays callable from a script.
+4. Run any path inputs through `resolveWithinRoot(<root>, ...)` from [`src/utils/utils.ts`](./src/utils/utils.ts) before touching the filesystem.
+5. Map results with `jsonResult(...)` and errors with `errorResult(...)` so the client sees `isError: true`.

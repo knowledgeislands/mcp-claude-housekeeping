@@ -48,9 +48,9 @@ export const registerClaudeCodeTools = (server: McpServer, cfg: Config): void =>
       description: `Aggregate stats across ~/.claude: total bytes, projects bytes, project count, session count, orphan-project count (projects whose decoded source path no longer exists). Flags large total size, high session count, or many orphans.`,
       inputSchema: z
         .object({
-          flag_size_gb: z.number().default(2),
-          flag_session_count: z.number().default(500),
-          flag_orphan_count: z.number().default(5)
+          flag_size_gb: z.number().int().min(0).max(1_000_000).default(2),
+          flag_session_count: z.number().int().min(0).max(10_000_000).default(500),
+          flag_orphan_count: z.number().int().min(0).max(10_000_000).default(5)
         })
         .strict(),
       annotations: READ_ONLY
@@ -71,9 +71,9 @@ export const registerClaudeCodeTools = (server: McpServer, cfg: Config): void =>
       description: `Find session .jsonl files (and any matching <uuid>/ sidecar dirs) older than older_than_days (default 30) across all projects (or one project if "project" is set). Returns the 10 oldest plus totals; flags counts or sizes that exceed thresholds.`,
       inputSchema: z
         .object({
-          older_than_days: z.number().default(30),
-          flag_count: z.number().default(50),
-          flag_size_mb: z.number().default(500),
+          older_than_days: z.number().int().min(0).max(36500).default(30),
+          flag_count: z.number().int().min(0).max(10_000_000).default(50),
+          flag_size_mb: z.number().int().min(0).max(10_000_000).default(500),
           project: optionalProjectArg
         })
         .strict(),
@@ -182,7 +182,7 @@ export const registerClaudeCodeTools = (server: McpServer, cfg: Config): void =>
       description: `Delete every <uuid>.jsonl session (and matching <uuid>/ sidecar dir if any) older than older_than_days across all projects (or the one named in "project"). dry_run defaults to TRUE — pass dry_run=false to actually delete. Returns a list of deletions with bytes freed.`,
       inputSchema: z
         .object({
-          older_than_days: z.number().default(60),
+          older_than_days: z.number().int().min(0).max(36500).default(60),
           project: optionalProjectArg,
           dry_run: z.boolean().default(true).describe('Default true (preview only). Pass false to actually delete.')
         })
@@ -270,11 +270,12 @@ export const registerClaudeCodeTools = (server: McpServer, cfg: Config): void =>
     'claude_code_memory_delete',
     {
       title: 'Claude Code Cleaner: retire memory file',
-      description: `Delete a memory file at ~/.claude/projects/<project>/memory/<name>. MEMORY.md cannot be deleted via this tool — use memory_index_write to replace it.`,
+      description: `Delete a memory file at ~/.claude/projects/<project>/memory/<name>. MEMORY.md cannot be deleted via this tool — use memory_index_write to replace it. dry_run defaults to TRUE — pass dry_run=false to actually delete.`,
       inputSchema: z
         .object({
           project: projectArg,
-          name: z.string().min(1).regex(/\.md$/, 'Memory file name must end with .md')
+          name: z.string().min(1).regex(/\.md$/, 'Memory file name must end with .md'),
+          dry_run: z.boolean().default(true).describe('Default true (preview only). Pass false to actually delete.')
         })
         .strict(),
       annotations: DESTRUCTIVE_ONESHOT

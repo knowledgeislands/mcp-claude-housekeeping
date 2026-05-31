@@ -47,18 +47,28 @@ describe('claude-code memoryWrite + memoryRead', () => {
 })
 
 describe('claude-code memoryDelete', () => {
-  it('deletes an existing file', async () => {
+  it('deletes an existing file when dry_run is false', async () => {
     await memoryWrite(CLAUDE_CODE_ROOT_PATH, { project: PROJECT, name: 'tmp.md', content: 'x' })
-    await memoryDelete(CLAUDE_CODE_ROOT_PATH, { project: PROJECT, name: 'tmp.md' })
+    const r = await memoryDelete(CLAUDE_CODE_ROOT_PATH, { project: PROJECT, name: 'tmp.md', dry_run: false })
+    expect(r).toMatchObject({ deleted: true, dry_run: false, bytes: 1 })
     await expect(memoryRead(CLAUDE_CODE_ROOT_PATH, { project: PROJECT, name: 'tmp.md' })).rejects.toThrow(/not found/)
   })
 
+  it('previews without deleting when dry_run is true', async () => {
+    await memoryWrite(CLAUDE_CODE_ROOT_PATH, { project: PROJECT, name: 'keep.md', content: 'abc' })
+    const r = await memoryDelete(CLAUDE_CODE_ROOT_PATH, { project: PROJECT, name: 'keep.md', dry_run: true })
+    expect(r).toMatchObject({ deleted: false, dry_run: true, bytes: 3 })
+    // File must still be readable — preview only.
+    const back = await memoryRead(CLAUDE_CODE_ROOT_PATH, { project: PROJECT, name: 'keep.md' })
+    expect(back.content).toBe('abc')
+  })
+
   it('refuses to delete MEMORY.md', async () => {
-    await expect(memoryDelete(CLAUDE_CODE_ROOT_PATH, { project: PROJECT, name: 'MEMORY.md' })).rejects.toThrow(/Cannot delete MEMORY.md/)
+    await expect(memoryDelete(CLAUDE_CODE_ROOT_PATH, { project: PROJECT, name: 'MEMORY.md', dry_run: false })).rejects.toThrow(/Cannot delete MEMORY.md/)
   })
 
   it('throws on missing file', async () => {
-    await expect(memoryDelete(CLAUDE_CODE_ROOT_PATH, { project: PROJECT, name: 'nope.md' })).rejects.toThrow(/not found/)
+    await expect(memoryDelete(CLAUDE_CODE_ROOT_PATH, { project: PROJECT, name: 'nope.md', dry_run: false })).rejects.toThrow(/not found/)
   })
 })
 
@@ -133,6 +143,20 @@ describe('claude-code memory error-path rethrows (non-ENOENT)', () => {
   it('memoryDelete rethrows unlink errors other than ENOENT (EISDIR when target is a directory)', async () => {
     // Create a *directory* named gone.md — unlink on a directory gives EPERM or EISDIR.
     await fs.mkdir(path.join(MEMORY_DIR, 'gone.md'), { recursive: true })
-    await expect(memoryDelete(CLAUDE_CODE_ROOT_PATH, { project: PROJECT, name: 'gone.md' })).rejects.toThrow(/EISDIR|EPERM|is a directory|operation not permitted/i)
+    await expect(memoryDelete(CLAUDE_CODE_ROOT_PATH, { project: PROJECT, name: 'gone.md', dry_run: false })).rejects.toThrow(/EISDIR|EPERM|is a directory|operation not permitted/i)
+  })
+
+  it('memoryDelete rethrows stat errors other than ENOENT (EACCES via chmod 0 on the parent dir)', async () => {
+    const blockedProject = '-Users-foo-del-blocked'
+    const blockedDir = path.join(CLAUDE_CODE_ROOT_PATH, 'projects', blockedProject, 'memory')
+    await fs.mkdir(blockedDir, { recursive: true })
+    await fs.writeFile(path.join(blockedDir, 'locked.md'), 'x')
+    await fs.chmod(blockedDir, 0o000)
+    try {
+      await expect(memoryDelete(CLAUDE_CODE_ROOT_PATH, { project: blockedProject, name: 'locked.md', dry_run: true })).rejects.toThrow(/EACCES|permission/i)
+    } finally {
+      await fs.chmod(blockedDir, 0o755)
+      await fs.rm(path.dirname(blockedDir), { recursive: true, force: true })
+    }
   })
 })

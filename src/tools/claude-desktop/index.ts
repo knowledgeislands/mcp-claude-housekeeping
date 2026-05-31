@@ -69,8 +69,8 @@ export const registerClaudeDesktopTools = (server: McpServer, cfg: Config): void
       description: `Audit check 1. For each workspace, count local_* session dirs and JSON files, compute total disk usage and total session-JSON size, find the 5 largest session dirs, and the date of the oldest and newest session JSON. Flag if total size exceeds flag_size_gb (default 2 GB) or session count exceeds flag_session_count (default 1000).`,
       inputSchema: z
         .object({
-          flag_size_gb: z.number().default(2).describe('Threshold in GB for flagging total root size.'),
-          flag_session_count: z.number().default(1000).describe('Threshold for flagging session count.'),
+          flag_size_gb: z.number().int().min(0).max(1_000_000).default(2).describe('Threshold in GB for flagging total root size.'),
+          flag_session_count: z.number().int().min(0).max(10_000_000).default(1000).describe('Threshold for flagging session count.'),
           workspace: workspaceArg
         })
         .strict(),
@@ -92,9 +92,9 @@ export const registerClaudeDesktopTools = (server: McpServer, cfg: Config): void
       description: `Audit check 2. Identify sessions whose .json mtime is older than older_than_days (default 30), with their dir+json sizes summed. Returns the 10 oldest by date plus totals per workspace. Flags if obsolete count exceeds flag_count (default 50) or combined size exceeds flag_size_mb (default 500).`,
       inputSchema: z
         .object({
-          older_than_days: z.number().default(30),
-          flag_count: z.number().default(50),
-          flag_size_mb: z.number().default(500),
+          older_than_days: z.number().int().min(0).max(36500).default(30),
+          flag_count: z.number().int().min(0).max(10_000_000).default(50),
+          flag_size_mb: z.number().int().min(0).max(10_000_000).default(500),
           workspace: workspaceArg
         })
         .strict(),
@@ -116,9 +116,9 @@ export const registerClaudeDesktopTools = (server: McpServer, cfg: Config): void
       description: `Audit check 3. Read each workspace's artifacts.json and report each artifact's name, starred status, version count, last-updated date and MCP tools used. Flag artifacts with >flag_versions versions (default 20), not updated in >flag_stale_days days (default 30), or unstarred and not updated in >flag_unstarred_idle_days days (default 14).`,
       inputSchema: z
         .object({
-          flag_versions: z.number().default(20),
-          flag_stale_days: z.number().default(30),
-          flag_unstarred_idle_days: z.number().default(14),
+          flag_versions: z.number().int().min(0).max(10_000_000).default(20),
+          flag_stale_days: z.number().int().min(0).max(36500).default(30),
+          flag_unstarred_idle_days: z.number().int().min(0).max(36500).default(14),
           workspace: workspaceArg
         })
         .strict(),
@@ -140,7 +140,7 @@ export const registerClaudeDesktopTools = (server: McpServer, cfg: Config): void
       description: `Audit check 5. For each local_* session dir in each workspace, list non-empty outputs/ or uploads/ subdirs with file names and sizes. Flag findings whose session is older than older_than_days (default 14).`,
       inputSchema: z
         .object({
-          older_than_days: z.number().default(14),
+          older_than_days: z.number().int().min(0).max(36500).default(14),
           workspace: workspaceArg
         })
         .strict(),
@@ -162,8 +162,8 @@ export const registerClaudeDesktopTools = (server: McpServer, cfg: Config): void
       description: `Audit check 6. Find all .claude.json.backup.* files in each workspace and its backups/ subdir, count them, list dates, sum size. Flag if count exceeds flag_count (default 10) or total size exceeds flag_size_mb (default 5).`,
       inputSchema: z
         .object({
-          flag_count: z.number().default(10),
-          flag_size_mb: z.number().default(5),
+          flag_count: z.number().int().min(0).max(10_000_000).default(10),
+          flag_size_mb: z.number().int().min(0).max(10_000_000).default(5),
           workspace: workspaceArg
         })
         .strict(),
@@ -185,7 +185,7 @@ export const registerClaudeDesktopTools = (server: McpServer, cfg: Config): void
       description: `Audit check 7. List directories under each workspace's spaces/, count .md files in each space's memory/ subdir, return the first 10 lines of MEMORY.md as the index hook. Flag empty spaces (memory_empty / completely_empty) and bloated ones (memory_files > flag_files, default 20).`,
       inputSchema: z
         .object({
-          flag_files: z.number().default(20),
+          flag_files: z.number().int().min(0).max(10_000_000).default(20),
           workspace: workspaceArg
         })
         .strict(),
@@ -224,7 +224,7 @@ export const registerClaudeDesktopTools = (server: McpServer, cfg: Config): void
       description: `Audit check 9. List entries in each workspace's .project-cache/, read each metadata.json (name, synced_at). Flag any not synced in >stale_days days (default 14).`,
       inputSchema: z
         .object({
-          stale_days: z.number().default(14),
+          stale_days: z.number().int().min(0).max(36500).default(14),
           workspace: workspaceArg
         })
         .strict(),
@@ -246,8 +246,8 @@ export const registerClaudeDesktopTools = (server: McpServer, cfg: Config): void
       description: `Audit check 10. Report each workspace's debug/ size, entry count and oldest-entry age. Flag if size exceeds flag_size_mb (default 10) or oldest entry is older than flag_age_days (default 7).`,
       inputSchema: z
         .object({
-          flag_size_mb: z.number().default(10),
-          flag_age_days: z.number().default(7),
+          flag_size_mb: z.number().int().min(0).max(10_000_000).default(10),
+          flag_age_days: z.number().int().min(0).max(36500).default(7),
           workspace: workspaceArg
         })
         .strict(),
@@ -355,7 +355,7 @@ export const registerClaudeDesktopTools = (server: McpServer, cfg: Config): void
       description: `Audit check 4. Sort UNSTARRED artifacts by lastUpdated descending; keep the top N (default 5) most recent and delete the rest. Pruning removes the entry from artifacts.json AND deletes the matching artifacts/cache_<id>.json file if it exists. Starred artifacts are never pruned. dry_run defaults to TRUE — pass dry_run=false to actually delete. The "workspace" arg is required when more than one workspace is configured. Returns a deletion log per workspace.`,
       inputSchema: z
         .object({
-          keep: z.number().default(5).describe('Number of unstarred artifacts to retain.'),
+          keep: z.number().int().min(0).max(10_000_000).default(5).describe('Number of unstarred artifacts to retain.'),
           dry_run: z.boolean().default(true).describe('Default true (preview only). Pass false to actually delete.'),
           workspace: workspaceArg
         })
@@ -444,11 +444,12 @@ export const registerClaudeDesktopTools = (server: McpServer, cfg: Config): void
     'claude_desktop_memory_delete',
     {
       title: 'Claude Desktop Cleaner: retire a memory file',
-      description: `Delete a single memory file at <workspace>/spaces/<space_id>/memory/<name>. MEMORY.md cannot be deleted via this tool; use memory_index_write to replace it instead. The "workspace" arg is required when more than one workspace is configured.`,
+      description: `Delete a single memory file at <workspace>/spaces/<space_id>/memory/<name>. MEMORY.md cannot be deleted via this tool; use memory_index_write to replace it instead. dry_run defaults to TRUE — pass dry_run=false to actually delete. The "workspace" arg is required when more than one workspace is configured.`,
       inputSchema: z
         .object({
           space_id: z.string().min(1),
           name: z.string().min(1).regex(/\.md$/, 'Memory file name must end with .md'),
+          dry_run: z.boolean().default(true).describe('Default true (preview only). Pass false to actually delete.'),
           workspace: workspaceArg
         })
         .strict(),

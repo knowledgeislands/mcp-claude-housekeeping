@@ -71,21 +71,26 @@ export const memoryWrite = async (workspaceRoot: string, args: { space_id: strin
   }
 }
 
-export const memoryDelete = async (workspaceRoot: string, args: { space_id: string; name: string }) => {
+export const memoryDelete = async (workspaceRoot: string, args: { space_id: string; name: string; dry_run: boolean }) => {
   if (args.name === 'MEMORY.md') {
     throw new Error('Cannot delete MEMORY.md via memory_delete; use memory_index_write to replace its contents.')
   }
   const p = memoryFilePath(workspaceRoot, args.space_id, args.name)
   await assertRealPathWithinRoot(workspaceRoot, p)
+  let bytes: number
   try {
-    await fs.unlink(p)
-    return { space_id: args.space_id, name: args.name, deleted: true }
+    bytes = (await fs.stat(p)).size
   } catch (err) {
     if (isNodeError(err) && err.code === 'ENOENT') {
       throw new Error(`Memory file not found: "${args.name}" in space "${args.space_id}"`)
     }
     throw err
   }
+  if (args.dry_run) {
+    return { space_id: args.space_id, name: args.name, dry_run: true, deleted: false, bytes }
+  }
+  await fs.unlink(p)
+  return { space_id: args.space_id, name: args.name, dry_run: false, deleted: true, bytes }
 }
 
 export const memoryIndexWrite = async (workspaceRoot: string, args: { space_id: string; content: string }) => {

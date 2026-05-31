@@ -56,7 +56,7 @@ const collectSessions = async (workspaceRoot: string): Promise<CandidateSession[
 const pickMostRecentSession = async (workspaceRoot: string): Promise<string> => {
   const sessions = await collectSessions(workspaceRoot)
   if (sessions.length === 0) {
-    throw new Error(`No local_*.json sessions found under ${workspaceRoot}`)
+    throw new Error('No local_*.json sessions found in the target workspace')
   }
   sessions.sort((a, b) => (b.lastActivityAt ?? b.mtime) - (a.lastActivityAt ?? a.mtime))
   return (sessions[0] as CandidateSession).sessionId

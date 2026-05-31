@@ -69,21 +69,26 @@ export const memoryWrite = async (claudeRoot: string, args: { project: string; n
   return { project: args.project, name: args.name, bytes: Buffer.byteLength(args.content, 'utf-8') }
 }
 
-export const memoryDelete = async (claudeRoot: string, args: { project: string; name: string }) => {
+export const memoryDelete = async (claudeRoot: string, args: { project: string; name: string; dry_run: boolean }) => {
   if (args.name === 'MEMORY.md') {
     throw new Error('Cannot delete MEMORY.md via memory_delete; use write_memory_index to replace its contents.')
   }
   const p = memoryFilePath(claudeRoot, args.project, args.name)
   await assertRealPathWithinRoot(claudeRoot, p)
+  let bytes: number
   try {
-    await fs.unlink(p)
-    return { project: args.project, name: args.name, deleted: true }
+    bytes = (await fs.stat(p)).size
   } catch (err) {
     if (isNodeError(err) && err.code === 'ENOENT') {
       throw new Error(`Memory file not found: "${args.name}" in project "${args.project}"`)
     }
     throw err
   }
+  if (args.dry_run) {
+    return { project: args.project, name: args.name, dry_run: true, deleted: false, bytes }
+  }
+  await fs.unlink(p)
+  return { project: args.project, name: args.name, dry_run: false, deleted: true, bytes }
 }
 
 export const memoryIndexWrite = async (claudeRoot: string, args: { project: string; content: string }) => {

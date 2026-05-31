@@ -64,24 +64,46 @@ describe('memoryRead error paths', () => {
 })
 
 describe('memoryDelete', () => {
-  it('deletes an existing memory file', async () => {
+  it('deletes an existing memory file when dry_run is false', async () => {
     await memoryWrite(CLAUDE_DESKTOP_ROOT_PATH, { space_id: SPACE_ID, name: 'tmp.md', content: 'x' })
-    const result = await memoryDelete(CLAUDE_DESKTOP_ROOT_PATH, { space_id: SPACE_ID, name: 'tmp.md' })
-    expect(result.deleted).toBe(true)
+    const result = await memoryDelete(CLAUDE_DESKTOP_ROOT_PATH, { space_id: SPACE_ID, name: 'tmp.md', dry_run: false })
+    expect(result).toMatchObject({ deleted: true, dry_run: false, bytes: 1 })
     await expect(memoryRead(CLAUDE_DESKTOP_ROOT_PATH, { space_id: SPACE_ID, name: 'tmp.md' })).rejects.toThrow(/Memory file not found/)
   })
 
+  it('previews without deleting when dry_run is true', async () => {
+    await memoryWrite(CLAUDE_DESKTOP_ROOT_PATH, { space_id: SPACE_ID, name: 'keep.md', content: 'abc' })
+    const result = await memoryDelete(CLAUDE_DESKTOP_ROOT_PATH, { space_id: SPACE_ID, name: 'keep.md', dry_run: true })
+    expect(result).toMatchObject({ deleted: false, dry_run: true, bytes: 3 })
+    const back = await memoryRead(CLAUDE_DESKTOP_ROOT_PATH, { space_id: SPACE_ID, name: 'keep.md' })
+    expect(back.content).toBe('abc')
+  })
+
   it('refuses to delete MEMORY.md', async () => {
-    await expect(memoryDelete(CLAUDE_DESKTOP_ROOT_PATH, { space_id: SPACE_ID, name: 'MEMORY.md' })).rejects.toThrow(/Cannot delete MEMORY.md/)
+    await expect(memoryDelete(CLAUDE_DESKTOP_ROOT_PATH, { space_id: SPACE_ID, name: 'MEMORY.md', dry_run: false })).rejects.toThrow(/Cannot delete MEMORY.md/)
   })
 
   it('throws on a missing file', async () => {
-    await expect(memoryDelete(CLAUDE_DESKTOP_ROOT_PATH, { space_id: SPACE_ID, name: 'nope.md' })).rejects.toThrow(/Memory file not found/)
+    await expect(memoryDelete(CLAUDE_DESKTOP_ROOT_PATH, { space_id: SPACE_ID, name: 'nope.md', dry_run: false })).rejects.toThrow(/Memory file not found/)
   })
 
   it('rethrows non-ENOENT errors (e.g. when target is a directory)', async () => {
     await fs.mkdir(path.join(MEMORY_DIR, 'collide.md'))
-    await expect(memoryDelete(CLAUDE_DESKTOP_ROOT_PATH, { space_id: SPACE_ID, name: 'collide.md' })).rejects.toThrow()
+    await expect(memoryDelete(CLAUDE_DESKTOP_ROOT_PATH, { space_id: SPACE_ID, name: 'collide.md', dry_run: false })).rejects.toThrow()
+  })
+
+  it('rethrows stat errors other than ENOENT (EACCES via chmod 0 on the parent dir)', async () => {
+    const blockedSpace = 'del-blocked-space'
+    const blockedDir = path.join(CLAUDE_DESKTOP_ROOT_PATH, 'spaces', blockedSpace, 'memory')
+    await fs.mkdir(blockedDir, { recursive: true })
+    await fs.writeFile(path.join(blockedDir, 'locked.md'), 'x')
+    await fs.chmod(blockedDir, 0o000)
+    try {
+      await expect(memoryDelete(CLAUDE_DESKTOP_ROOT_PATH, { space_id: blockedSpace, name: 'locked.md', dry_run: true })).rejects.toThrow(/EACCES|permission/i)
+    } finally {
+      await fs.chmod(blockedDir, 0o755)
+      await fs.rm(path.dirname(blockedDir), { recursive: true, force: true })
+    }
   })
 })
 

@@ -46,8 +46,8 @@ export const registerVscodeTools = (server: McpServer, cfg: Config): void => {
       description: `Aggregate totals across every workspaceStorage/<id>/chatSessions/: workspace count, session count, total chat bytes. Flags large size or session counts.`,
       inputSchema: z
         .object({
-          flag_size_gb: z.number().default(1),
-          flag_session_count: z.number().default(500)
+          flag_size_gb: z.number().int().min(0).max(1_000_000).default(1),
+          flag_session_count: z.number().int().min(0).max(10_000_000).default(500)
         })
         .strict(),
       annotations: READ_ONLY
@@ -68,9 +68,9 @@ export const registerVscodeTools = (server: McpServer, cfg: Config): void => {
       description: `Find chat session .json/.jsonl files older than older_than_days (default 30) across all workspaceStorage entries (or one if "workspace" is set). Returns the 10 oldest plus totals.`,
       inputSchema: z
         .object({
-          older_than_days: z.number().default(30),
-          flag_count: z.number().default(50),
-          flag_size_mb: z.number().default(100),
+          older_than_days: z.number().int().min(0).max(36500).default(30),
+          flag_count: z.number().int().min(0).max(10_000_000).default(50),
+          flag_size_mb: z.number().int().min(0).max(10_000_000).default(100),
           workspace: optionalWorkspaceArg
         })
         .strict(),
@@ -138,7 +138,7 @@ export const registerVscodeTools = (server: McpServer, cfg: Config): void => {
       description: `Delete every chat session .json/.jsonl older than older_than_days across all workspaceStorage entries (or the one named in "workspace"). dry_run defaults to TRUE — pass dry_run=false to actually delete.`,
       inputSchema: z
         .object({
-          older_than_days: z.number().default(60),
+          older_than_days: z.number().int().min(0).max(36500).default(60),
           workspace: optionalWorkspaceArg,
           dry_run: z.boolean().default(true).describe('Default true (preview only). Pass false to actually delete.')
         })

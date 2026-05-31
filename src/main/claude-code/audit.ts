@@ -361,7 +361,7 @@ export const relocateProject = async (claudeRoot: string, args: { project: strin
 
   const newPathAbs = path.resolve(args.new_path)
   if (!(await pathExists(newPathAbs))) {
-    throw new Error(`new_path does not exist on disk: "${newPathAbs}" — refusing to relocate to a path that won't resolve`)
+    throw new Error(`new_path does not exist on disk: "${args.new_path}" — refusing to relocate to a path that won't resolve`)
   }
 
   const newId = encodeProjectPath(newPathAbs)

@@ -158,6 +158,18 @@ describe('artifactPrune', () => {
     expect(onDisk).toHaveLength(1)
   })
 
+  it('dry_run reports cache_file_deleted=true when a valid cache file exists, without deleting it', async () => {
+    await fs.writeFile(path.join(CLAUDE_DESKTOP_ROOT_PATH, 'artifacts.json'), JSON.stringify([{ id: 'with-cache', name: 'WC', isStarred: false, updatedAt: 1 }]))
+    const artifactsDir = path.join(CLAUDE_DESKTOP_ROOT_PATH, 'artifacts')
+    await fs.mkdir(artifactsDir, { recursive: true })
+    const cacheFile = path.join(artifactsDir, 'cache_with-cache.json')
+    await fs.writeFile(cacheFile, '{}')
+    const result = await artifactPrune(CLAUDE_DESKTOP_ROOT_PATH, { keep: 0, dry_run: true })
+    expect(result.deleted[0]?.cache_file_deleted).toBe(true)
+    // dry_run must not actually delete the cache file.
+    await expect(fs.access(cacheFile)).resolves.toBeUndefined()
+  })
+
   it('records cache_file_deleted=false when the cache file is missing (unlink ENOENT is swallowed)', async () => {
     // No cache_<id>.json file on disk — unlink throws ENOENT, which the
     // catch swallows so the prune still completes.
@@ -166,6 +178,37 @@ describe('artifactPrune', () => {
     const result = await artifactPrune(CLAUDE_DESKTOP_ROOT_PATH, { keep: 0, dry_run: false })
     expect(result.deleted_count).toBe(1)
     expect(result.deleted[0]?.cache_file_deleted).toBe(false)
+  })
+
+  it('a malicious artifact id cannot unlink a file outside the artifacts dir (two-layer guard)', async () => {
+    // Plant a "secret" file outside the artifacts dir, at the workspace root.
+    const victim = path.join(CLAUDE_DESKTOP_ROOT_PATH, 'do-not-delete.json')
+    await fs.writeFile(victim, 'precious')
+    await fs.mkdir(path.join(CLAUDE_DESKTOP_ROOT_PATH, 'artifacts'), { recursive: true })
+    // Craft an id whose cache path (cache_<id>.json) escapes the artifacts dir
+    // and targets the victim file: artifacts/cache_../do-not-delete + ".json".
+    await fs.writeFile(path.join(CLAUDE_DESKTOP_ROOT_PATH, 'artifacts.json'), JSON.stringify([{ id: '../do-not-delete', name: 'Evil', isStarred: false, updatedAt: 1 }]))
+
+    const result = await artifactPrune(CLAUDE_DESKTOP_ROOT_PATH, { keep: 0, dry_run: false })
+    // The entry is still pruned from artifacts.json, but no file was unlinked.
+    expect(result.deleted_count).toBe(1)
+    expect(result.deleted[0]?.cache_file_deleted).toBe(false)
+    // The victim outside the artifacts dir must still exist.
+    expect(await fs.readFile(victim, 'utf-8')).toBe('precious')
+  })
+
+  it('a malicious id is also blocked in dry_run (no escape, cache_file_deleted=false)', async () => {
+    const victim = path.join(CLAUDE_DESKTOP_ROOT_PATH, 'do-not-delete.json')
+    await fs.writeFile(victim, 'precious')
+    await fs.mkdir(path.join(CLAUDE_DESKTOP_ROOT_PATH, 'artifacts'), { recursive: true })
+    await fs.writeFile(path.join(CLAUDE_DESKTOP_ROOT_PATH, 'artifacts.json'), JSON.stringify([{ id: '../do-not-delete', name: 'Evil', isStarred: false, updatedAt: 1 }]))
+
+    const result = await artifactPrune(CLAUDE_DESKTOP_ROOT_PATH, { keep: 0, dry_run: true })
+    expect(result.deleted_count).toBe(1)
+    // Even though the victim exists, the guard rejects the escaping path before
+    // pathExists is consulted, so it reports false rather than leaking existence.
+    expect(result.deleted[0]?.cache_file_deleted).toBe(false)
+    expect(await fs.readFile(victim, 'utf-8')).toBe('precious')
   })
 
   it('rethrows non-ENOENT unlink errors (EACCES when artifacts/ is chmod 0)', async () => {

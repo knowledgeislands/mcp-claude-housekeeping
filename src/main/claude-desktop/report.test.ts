@@ -65,23 +65,38 @@ describe('reportClean', () => {
     await fs.writeFile(path.join(HOUSEKEEPING_PATH, 'cowork-audit-2026-02-01.md'), 'b')
     await fs.writeFile(path.join(HOUSEKEEPING_PATH, 'other.md'), 'keep')
 
-    const r = await reportClean(HOUSEKEEPING_PATH)
+    const r = await reportClean(HOUSEKEEPING_PATH, { dry_run: false })
     expect(r.deleted.sort()).toEqual(['cowork-audit-2026-01-01.md', 'cowork-audit-2026-02-01.md'])
+    expect(r.dry_run).toBe(false)
     const remaining = await fs.readdir(HOUSEKEEPING_PATH)
     expect(remaining).toEqual(['other.md'])
   })
 
-  it('handles a missing housekeeping directory gracefully', async () => {
+  it('dry_run lists the matching reports without deleting them', async () => {
+    await fs.writeFile(path.join(HOUSEKEEPING_PATH, 'cowork-audit-2026-01-01.md'), 'a')
+    await fs.writeFile(path.join(HOUSEKEEPING_PATH, 'cowork-audit-2026-02-01.md'), 'b')
+    await fs.writeFile(path.join(HOUSEKEEPING_PATH, 'other.md'), 'keep')
+
+    const r = await reportClean(HOUSEKEEPING_PATH, { dry_run: true })
+    expect(r.deleted.sort()).toEqual(['cowork-audit-2026-01-01.md', 'cowork-audit-2026-02-01.md'])
+    expect(r.dry_run).toBe(true)
+    // Nothing actually removed.
+    const remaining = (await fs.readdir(HOUSEKEEPING_PATH)).sort()
+    expect(remaining).toEqual(['cowork-audit-2026-01-01.md', 'cowork-audit-2026-02-01.md', 'other.md'])
+  })
+
+  it('handles a missing housekeeping directory gracefully (and reports dry_run)', async () => {
     await fs.rm(HOUSEKEEPING_PATH, { recursive: true, force: true })
-    const r = await reportClean(HOUSEKEEPING_PATH)
+    const r = await reportClean(HOUSEKEEPING_PATH, { dry_run: true })
     expect(r.deleted).toEqual([])
+    expect(r.dry_run).toBe(true)
     expect(r.note).toMatch(/does not yet exist/)
   })
 
   it('rethrows non-ENOENT readdir errors (e.g. when housekeeping path is a regular file)', async () => {
     await fs.rm(HOUSEKEEPING_PATH, { recursive: true, force: true })
     await fs.writeFile(HOUSEKEEPING_PATH, 'not-a-dir')
-    await expect(reportClean(HOUSEKEEPING_PATH)).rejects.toThrow()
+    await expect(reportClean(HOUSEKEEPING_PATH, { dry_run: false })).rejects.toThrow()
     await fs.rm(HOUSEKEEPING_PATH, { force: true })
   })
 })

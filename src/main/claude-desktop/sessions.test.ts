@@ -17,6 +17,10 @@ const writeSession = async (uuid: string, body: Record<string, unknown>, mtime?:
   return p
 }
 
+// Most tests exercise the actual rename (write path); default dry_run to false.
+// Dedicated tests below pass dry_run: true to exercise the preview path.
+const rename = (root: string, args: { session_id?: string; name: string; dry_run?: boolean }) => sessionRename(root, { dry_run: false, ...args })
+
 beforeAll(async () => {
   await fs.mkdir(ROOT, { recursive: true })
 })
@@ -39,11 +43,13 @@ describe('sessionRename', () => {
       lastActivityAt: 1
     })
 
-    const result = await sessionRename(ROOT, { session_id: UUID_A, name: 'kit-legal · inbound scan · 2026-05-20' })
+    const result = await rename(ROOT, { session_id: UUID_A, name: 'kit-legal · inbound scan · 2026-05-20' })
     expect(result.session_id).toBe(UUID_A)
     expect(result.previous_title).toBe('old title')
     expect(result.new_title).toBe('kit-legal · inbound scan · 2026-05-20')
     expect(result.auto_selected).toBe(false)
+    expect(result.dry_run).toBe(false)
+    expect(result.renamed).toBe(true)
 
     const after = JSON.parse(await fs.readFile(p, 'utf-8'))
     expect(after.title).toBe('kit-legal · inbound scan · 2026-05-20')
@@ -54,14 +60,14 @@ describe('sessionRename', () => {
 
   it('reports previous_title=null when the field was absent', async () => {
     await writeSession(UUID_A, { sessionId: `local_${UUID_A}` })
-    const result = await sessionRename(ROOT, { session_id: UUID_A, name: 'first label' })
+    const result = await rename(ROOT, { session_id: UUID_A, name: 'first label' })
     expect(result.previous_title).toBeNull()
     expect(result.new_title).toBe('first label')
   })
 
   it('accepts emoji in the name', async () => {
     await writeSession(UUID_A, {})
-    const result = await sessionRename(ROOT, { session_id: UUID_A, name: '🦊 fox-trot · planning' })
+    const result = await rename(ROOT, { session_id: UUID_A, name: '🦊 fox-trot · planning' })
     expect(result.new_title).toBe('🦊 fox-trot · planning')
   })
 
@@ -70,7 +76,7 @@ describe('sessionRename', () => {
     await writeSession(UUID_B, { lastActivityAt: 300 })
     await writeSession(UUID_C, { lastActivityAt: 200 })
 
-    const result = await sessionRename(ROOT, { name: 'auto-picked' })
+    const result = await rename(ROOT, { name: 'auto-picked' })
     expect(result.session_id).toBe(UUID_B)
     expect(result.auto_selected).toBe(true)
   })
@@ -80,42 +86,42 @@ describe('sessionRename', () => {
     await writeSession(UUID_A, { lastActivityAt: 'nope' }, long)
     await writeSession(UUID_B, {}, new Date())
 
-    const result = await sessionRename(ROOT, { name: 'fallback' })
+    const result = await rename(ROOT, { name: 'fallback' })
     expect(result.session_id).toBe(UUID_B)
   })
 
   it('throws when no sessions exist and session_id is omitted', async () => {
-    await expect(sessionRename(ROOT, { name: 'nothing' })).rejects.toThrow(/No local_\*\.json sessions/)
+    await expect(rename(ROOT, { name: 'nothing' })).rejects.toThrow(/No local_\*\.json sessions/)
   })
 
   it('throws when the named session does not exist', async () => {
-    await expect(sessionRename(ROOT, { session_id: UUID_A, name: 'x' })).rejects.toThrow(/Session record not found/)
+    await expect(rename(ROOT, { session_id: UUID_A, name: 'x' })).rejects.toThrow(/Session record not found/)
   })
 
   it('rejects an empty name', async () => {
     await writeSession(UUID_A, {})
-    await expect(sessionRename(ROOT, { session_id: UUID_A, name: '' })).rejects.toThrow(/must not be empty/)
+    await expect(rename(ROOT, { session_id: UUID_A, name: '' })).rejects.toThrow(/must not be empty/)
   })
 
   it('rejects names longer than 80 chars', async () => {
     await writeSession(UUID_A, {})
-    await expect(sessionRename(ROOT, { session_id: UUID_A, name: 'x'.repeat(81) })).rejects.toThrow(/too long/)
+    await expect(rename(ROOT, { session_id: UUID_A, name: 'x'.repeat(81) })).rejects.toThrow(/too long/)
   })
 
   it('rejects control characters (newline)', async () => {
     await writeSession(UUID_A, {})
-    await expect(sessionRename(ROOT, { session_id: UUID_A, name: 'line1\nline2' })).rejects.toThrow(/control characters/)
+    await expect(rename(ROOT, { session_id: UUID_A, name: 'line1\nline2' })).rejects.toThrow(/control characters/)
   })
 
   it('rejects an invalid session_id (uppercase, missing dashes, traversal)', async () => {
-    await expect(sessionRename(ROOT, { session_id: '../escape', name: 'x' })).rejects.toThrow(/Invalid session id/)
-    await expect(sessionRename(ROOT, { session_id: UUID_A.toUpperCase(), name: 'x' })).rejects.toThrow(/Invalid session id/)
-    await expect(sessionRename(ROOT, { session_id: `local_${UUID_A}`, name: 'x' })).rejects.toThrow(/Invalid session id/)
+    await expect(rename(ROOT, { session_id: '../escape', name: 'x' })).rejects.toThrow(/Invalid session id/)
+    await expect(rename(ROOT, { session_id: UUID_A.toUpperCase(), name: 'x' })).rejects.toThrow(/Invalid session id/)
+    await expect(rename(ROOT, { session_id: `local_${UUID_A}`, name: 'x' })).rejects.toThrow(/Invalid session id/)
   })
 
   it('does not leave a .tmp file behind on success', async () => {
     await writeSession(UUID_A, {})
-    await sessionRename(ROOT, { session_id: UUID_A, name: 'clean' })
+    await rename(ROOT, { session_id: UUID_A, name: 'clean' })
     const entries = await fs.readdir(ROOT)
     expect(entries.some((e) => e.includes('.tmp-'))).toBe(false)
   })
@@ -126,14 +132,14 @@ describe('sessionRename', () => {
     await fs.writeFile(path.join(ROOT, 'not-a-session.json'), '{}', 'utf-8')
     await writeSession(UUID_A, { lastActivityAt: 5 })
 
-    const result = await sessionRename(ROOT, { name: 'picked' })
+    const result = await rename(ROOT, { name: 'picked' })
     expect(result.session_id).toBe(UUID_A)
     expect(result.auto_selected).toBe(true)
   })
 
   it('treats a missing workspace dir as no sessions when auto-selecting', async () => {
     const missing = path.join(ROOT, 'does-not-exist')
-    await expect(sessionRename(missing, { name: 'x' })).rejects.toThrow(/No local_\*\.json sessions/)
+    await expect(rename(missing, { name: 'x' })).rejects.toThrow(/No local_\*\.json sessions/)
   })
 
   it('rethrows a non-ENOENT readdir error while collecting sessions (EACCES via chmod 0)', async () => {
@@ -141,7 +147,7 @@ describe('sessionRename', () => {
     await fs.mkdir(blocked, { recursive: true })
     await fs.chmod(blocked, 0o000)
     try {
-      await expect(sessionRename(blocked, { name: 'x' })).rejects.toThrow(/EACCES|permission/i)
+      await expect(rename(blocked, { name: 'x' })).rejects.toThrow(/EACCES|permission/i)
     } finally {
       await fs.chmod(blocked, 0o755)
     }
@@ -151,6 +157,31 @@ describe('sessionRename', () => {
     // Make local_<uuid>.json a *directory* so readFile fails with EISDIR/EPERM
     // rather than ENOENT, exercising the rethrow branch.
     await fs.mkdir(path.join(ROOT, `local_${UUID_A}.json`), { recursive: true })
-    await expect(sessionRename(ROOT, { session_id: UUID_A, name: 'x' })).rejects.toThrow(/EISDIR|EPERM|illegal operation|is a directory/i)
+    await expect(rename(ROOT, { session_id: UUID_A, name: 'x' })).rejects.toThrow(/EISDIR|EPERM|illegal operation|is a directory/i)
+  })
+
+  it('dry_run previews the rename without writing the record', async () => {
+    const p = await writeSession(UUID_A, { sessionId: `local_${UUID_A}`, title: 'old title', lastActivityAt: 1 })
+    const result = await sessionRename(ROOT, { session_id: UUID_A, name: 'preview label', dry_run: true })
+    expect(result.dry_run).toBe(true)
+    expect(result.renamed).toBe(false)
+    expect(result.previous_title).toBe('old title')
+    expect(result.new_title).toBe('preview label')
+    expect(result.auto_selected).toBe(false)
+    // The record on disk is untouched.
+    const after = JSON.parse(await fs.readFile(p, 'utf-8'))
+    expect(after.title).toBe('old title')
+  })
+
+  it('dry_run still auto-selects the most-recently-active session and validates the name', async () => {
+    await writeSession(UUID_A, { lastActivityAt: 100 })
+    await writeSession(UUID_B, { lastActivityAt: 300 })
+    const result = await sessionRename(ROOT, { name: 'auto preview', dry_run: true })
+    expect(result.session_id).toBe(UUID_B)
+    expect(result.auto_selected).toBe(true)
+    expect(result.dry_run).toBe(true)
+    expect(result.renamed).toBe(false)
+    // Invalid names are rejected before the dry_run short-circuit, too.
+    await expect(sessionRename(ROOT, { session_id: UUID_A, name: '', dry_run: true })).rejects.toThrow(/must not be empty/)
   })
 })

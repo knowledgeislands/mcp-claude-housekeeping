@@ -30,7 +30,7 @@ describe('sessionRename rename-failure cleanup', () => {
     rename.mockRejectedValueOnce(Object.assign(new Error('rename failed'), { code: 'EXDEV' }))
 
     const { sessionRename } = await import('./sessions.js')
-    await expect(sessionRename('/fake/workspace', { session_id: UUID, name: 'x' })).rejects.toThrow(/rename failed/)
+    await expect(sessionRename('/fake/workspace', { session_id: UUID, name: 'x', dry_run: false })).rejects.toThrow(/rename failed/)
 
     // The temp file written before the rename must have been cleaned up.
     expect(rm).toHaveBeenCalledTimes(1)

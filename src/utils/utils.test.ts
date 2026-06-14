@@ -201,6 +201,22 @@ describe('duBytes / duEntries / pathExists / readJsonIfExists', () => {
     }
   })
 
+  it('duBytes rejects with a timeout error when du outlives the time bound', async () => {
+    // Build a tree with enough entries that `du` cannot finish within a 1ms
+    // bound; Node sends SIGKILL and runDuSk rejects with a timeout message.
+    const bigRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'utils-dutimeout-'))
+    try {
+      for (let i = 0; i < 200; i++) {
+        const sub = path.join(bigRoot, `d${i}`)
+        await fs.mkdir(sub, { recursive: true })
+        await fs.writeFile(path.join(sub, 'f.txt'), 'x'.repeat(512))
+      }
+      await expect(duBytes(bigRoot, 1)).rejects.toThrow(/du timed out after 1ms/)
+    } finally {
+      await fs.rm(bigRoot, { recursive: true, force: true })
+    }
+  })
+
   it('pathExists returns true for an existing path, false otherwise', async () => {
     expect(await pathExists(tmpRoot)).toBe(true)
     expect(await pathExists(path.join(tmpRoot, 'nope'))).toBe(false)

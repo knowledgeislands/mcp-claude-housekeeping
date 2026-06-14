@@ -1,7 +1,7 @@
 import type { Dirent } from 'node:fs'
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
-import { daysAgo, duBytes, isNodeError, pathExists, readJsonIfExists } from '../../utils/utils.js'
+import { assertRealPathWithinRoot, daysAgo, duBytes, isNodeError, pathExists, readJsonIfExists, resolveWithinRoot } from '../../utils/utils.js'
 
 const DAY_MS = 1000 * 60 * 60 * 24
 
@@ -138,6 +138,35 @@ export const artifactHealth = async (workspaceRoot: string, args: { flag_version
 
 /* ==================== Check 4: artifact prune ==================== */
 
+/**
+ * Delete (or, in dry-run, probe) the cache file for one artifact id, but only
+ * after the two-layer path guard confirms it really resolves inside the
+ * artifacts dir. The id is untrusted (it comes from artifacts.json), so a
+ * crafted value such as "../../foo" must never be allowed to unlink outside
+ * the artifacts dir. Returns whether a cache file was deleted (or, in dry-run,
+ * whether one exists); a containment failure or missing artifacts dir yields
+ * false without touching the filesystem.
+ */
+const pruneCacheFile = async (artifactsDir: string, id: string, dryRun: boolean): Promise<boolean> => {
+  let cachePath: string
+  try {
+    cachePath = resolveWithinRoot(artifactsDir, `cache_${id}.json`)
+    await assertRealPathWithinRoot(artifactsDir, cachePath)
+  } catch {
+    return false
+  }
+  if (dryRun) {
+    return pathExists(cachePath)
+  }
+  try {
+    await fs.unlink(cachePath)
+    return true
+  } catch (err) {
+    if (isNodeError(err) && err.code === 'ENOENT') return false
+    throw err
+  }
+}
+
 export const artifactPrune = async (workspaceRoot: string, args: { keep: number; dry_run: boolean }) => {
   const artifactsPath = path.join(workspaceRoot, 'artifacts.json')
   const artifacts = (await readJsonIfExists<ArtifactRecord[]>(artifactsPath)) ?? []
@@ -154,19 +183,16 @@ export const artifactPrune = async (workspaceRoot: string, args: { keep: number;
   const idsToDelete = new Set(toDelete.map((a) => a.id))
   const remaining = artifacts.filter((a) => !idsToDelete.has(a.id))
 
+  // The cache file lives at <workspaceRoot>/artifacts/cache_<id>.json. The `id`
+  // comes from untrusted artifacts.json, so a crafted value (e.g. "../..") could
+  // build a path that escapes the artifacts dir. Run the repo's two-layer guard
+  // (lexical resolveWithinRoot + symlink-aware assertRealPathWithinRoot) against
+  // the artifacts dir before any unlink; on escape, skip the unlink for that
+  // entry rather than touching anything outside the artifacts dir.
+  const artifactsDir = path.join(workspaceRoot, 'artifacts')
+
   for (const a of toDelete) {
-    const cachePath = path.join(workspaceRoot, 'artifacts', `cache_${a.id}.json`)
-    let cacheDeleted = false
-    if (!args.dry_run) {
-      try {
-        await fs.unlink(cachePath)
-        cacheDeleted = true
-      } catch (err) {
-        if (!(isNodeError(err) && err.code === 'ENOENT')) throw err
-      }
-    } else {
-      cacheDeleted = await pathExists(cachePath)
-    }
+    const cacheDeleted = await pruneCacheFile(artifactsDir, a.id, args.dry_run)
     deleted.push({
       id: a.id,
       name: a.name,

@@ -78,8 +78,8 @@ const validateName = (name: string): void => {
 
 export const sessionRename = async (
   workspaceRoot: string,
-  args: { session_id?: string; name: string }
-): Promise<{ session_id: string; previous_title: string | null; new_title: string; auto_selected: boolean }> => {
+  args: { session_id?: string; name: string; dry_run: boolean }
+): Promise<{ session_id: string; previous_title: string | null; new_title: string; auto_selected: boolean; dry_run: boolean; renamed: boolean }> => {
   validateName(args.name)
   const autoSelected = args.session_id === undefined
   const sessionId = args.session_id ?? (await pickMostRecentSession(workspaceRoot))
@@ -97,6 +97,20 @@ export const sessionRename = async (
   }
   const record = JSON.parse(raw) as Record<string, unknown>
   const previous = typeof record.title === 'string' ? record.title : null
+
+  // dry_run previews the selected session and what the title would become,
+  // without touching the record — matching the repo's other mutating tools.
+  if (args.dry_run) {
+    return {
+      session_id: sessionId,
+      previous_title: previous,
+      new_title: args.name,
+      auto_selected: autoSelected,
+      dry_run: true,
+      renamed: false
+    }
+  }
+
   record.title = args.name
 
   // Atomic replace: write to a sibling temp file and rename. Keeps the same
@@ -116,6 +130,8 @@ export const sessionRename = async (
     session_id: sessionId,
     previous_title: previous,
     new_title: args.name,
-    auto_selected: autoSelected
+    auto_selected: autoSelected,
+    dry_run: false,
+    renamed: true
   }
 }

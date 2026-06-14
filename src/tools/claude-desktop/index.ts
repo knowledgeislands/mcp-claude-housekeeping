@@ -53,6 +53,26 @@ const aggregate = async <T>(rootPath: string, workspaceFilter: string | undefine
 
 const workspaceArg = z.string().optional().describe('Filter to a single workspace by id ("<account>/<workspace>"); omit to run across all.')
 
+// A memory space id becomes a path segment under spaces/. Reject anything that
+// could escape that dir: path separators, traversal (..), and a leading "-".
+// Defense in depth alongside resolveWithinRoot at the call sites.
+export const spaceIdArg = z
+  .string()
+  .min(1)
+  .max(255)
+  .regex(/^[A-Za-z0-9._-]+$/, 'space_id must be alphanumeric/._- (no path separators or traversal).')
+  .refine((s) => s !== '.' && s !== '..' && !s.startsWith('-'), 'space_id must not be ".", ".." or start with "-".')
+  .describe('Space directory name (under spaces/).')
+
+// A memory file name becomes a path segment under <space>/memory/. It must end
+// in .md and, like spaceIdArg, must not contain separators or traversal.
+export const memoryFileNameArg = z
+  .string()
+  .min(1)
+  .max(255)
+  .regex(/^[A-Za-z0-9._-]+\.md$/, 'Memory file name must be alphanumeric/._- and end with .md (no path separators or traversal).')
+  .refine((s) => !s.startsWith('-') && !s.includes('..'), 'Memory file name must not start with "-" or contain "..".')
+
 export const registerClaudeDesktopTools = (server: McpServer, cfg: Config): void => {
   const register = server.registerTool
   const rootPath = cfg.claudeDesktopRootPath
@@ -287,7 +307,7 @@ export const registerClaudeDesktopTools = (server: McpServer, cfg: Config): void
       description: `Phase 1 of memory consolidation. List .md files in <workspace>/spaces/<space_id>/memory/ with size and modified date, plus the full content of MEMORY.md (the index) if present. The "workspace" arg is required when more than one workspace is configured.`,
       inputSchema: z
         .object({
-          space_id: z.string().min(1).describe('Space directory name (under spaces/).'),
+          space_id: spaceIdArg,
           workspace: workspaceArg
         })
         .strict(),
@@ -310,8 +330,8 @@ export const registerClaudeDesktopTools = (server: McpServer, cfg: Config): void
       description: `Read the contents of a single memory file at <workspace>/spaces/<space_id>/memory/<name>. Use this to inspect a memory before deciding whether to keep, merge or retire it. The "workspace" arg is required when more than one workspace is configured.`,
       inputSchema: z
         .object({
-          space_id: z.string().min(1),
-          name: z.string().min(1).regex(/\.md$/, 'Memory file name must end with .md'),
+          space_id: spaceIdArg,
+          name: memoryFileNameArg,
           workspace: workspaceArg
         })
         .strict(),
@@ -376,13 +396,17 @@ export const registerClaudeDesktopTools = (server: McpServer, cfg: Config): void
     'claude_desktop_reports_clear',
     {
       title: 'Claude Desktop Cleaner: delete prior audit reports',
-      description: `Step 0 of the daily audit. Delete every cowork-audit-*.md file in MCP_CLAUDE_HOUSEKEEPING_PATH so only today's report is retained. Returns the list of deleted filenames.`,
-      inputSchema: z.object({}).strict(),
+      description: `Step 0 of the daily audit. Delete every cowork-audit-*.md file in MCP_CLAUDE_HOUSEKEEPING_PATH so only today's report is retained. dry_run defaults to TRUE — it lists the files that would be deleted without removing them; pass dry_run=false to actually delete. Returns the list of (deleted or matched) filenames.`,
+      inputSchema: z
+        .object({
+          dry_run: z.boolean().default(true).describe('Default true (preview only). Pass false to actually delete.')
+        })
+        .strict(),
       annotations: DESTRUCTIVE
     },
-    async () => {
+    async (args) => {
       try {
-        return jsonResult(await report.reportClean(housekeepingPath))
+        return jsonResult(await report.reportClean(housekeepingPath, args))
       } catch (err) {
         return errorResult('clearing Claude Desktop reports', err)
       }
@@ -422,8 +446,8 @@ export const registerClaudeDesktopTools = (server: McpServer, cfg: Config): void
       description: `Create or overwrite a single memory file at <workspace>/spaces/<space_id>/memory/<name>. Use this when consolidating overlapping memories, sharpening a durable note, or updating relative dates to absolute. The "workspace" arg is required when more than one workspace is configured.`,
       inputSchema: z
         .object({
-          space_id: z.string().min(1),
-          name: z.string().min(1).regex(/\.md$/, 'Memory file name must end with .md'),
+          space_id: spaceIdArg,
+          name: memoryFileNameArg,
           content: z.string().describe('Full markdown content (frontmatter + body).'),
           workspace: workspaceArg
         })
@@ -447,8 +471,8 @@ export const registerClaudeDesktopTools = (server: McpServer, cfg: Config): void
       description: `Delete a single memory file at <workspace>/spaces/<space_id>/memory/<name>. MEMORY.md cannot be deleted via this tool; use memory_index_write to replace it instead. dry_run defaults to TRUE — pass dry_run=false to actually delete. The "workspace" arg is required when more than one workspace is configured.`,
       inputSchema: z
         .object({
-          space_id: z.string().min(1),
-          name: z.string().min(1).regex(/\.md$/, 'Memory file name must end with .md'),
+          space_id: spaceIdArg,
+          name: memoryFileNameArg,
           dry_run: z.boolean().default(true).describe('Default true (preview only). Pass false to actually delete.'),
           workspace: workspaceArg
         })
@@ -472,7 +496,7 @@ export const registerClaudeDesktopTools = (server: McpServer, cfg: Config): void
       description: `Phase 3 of memory consolidation. Replace the contents of <workspace>/spaces/<space_id>/memory/MEMORY.md. Keep the index under 200 lines, one line per entry, format \`- [Title](file.md) — one-line hook\`. The "workspace" arg is required when more than one workspace is configured.`,
       inputSchema: z
         .object({
-          space_id: z.string().min(1),
+          space_id: spaceIdArg,
           content: z.string().describe('New MEMORY.md content.'),
           workspace: workspaceArg
         })
@@ -493,7 +517,7 @@ export const registerClaudeDesktopTools = (server: McpServer, cfg: Config): void
     'claude_desktop_session_rename',
     {
       title: 'Claude Desktop Cleaner: set the current session label',
-      description: `Set the sidebar label (the \`title\` field of <workspace>/local_<session-id>.json) so the active Cowork session is recognisable in the list. Call once the session's purpose is clear — e.g. "kit-legal · inbound scan · 2026-05-20". Maximum 80 characters; emoji are allowed; control characters are rejected. If "session_id" is omitted, targets the most-recently-active session in the workspace (by lastActivityAt, falling back to file mtime) — Cowork agents share one MCP server process so the server cannot infer the calling session; the most-recent heuristic is correct when only one session is actively writing. Pass session_id explicitly to disambiguate. The "workspace" arg is required when more than one workspace is configured. The Cowork sidebar may not refresh until next reload.`,
+      description: `Set the sidebar label (the \`title\` field of <workspace>/local_<session-id>.json) so the active Cowork session is recognisable in the list. Call once the session's purpose is clear — e.g. "kit-legal · inbound scan · 2026-05-20". Maximum 80 characters; emoji are allowed; control characters are rejected. If "session_id" is omitted, targets the most-recently-active session in the workspace (by lastActivityAt, falling back to file mtime) — Cowork agents share one MCP server process so the server cannot infer the calling session; the most-recent heuristic is correct when only one session is actively writing. Pass session_id explicitly to disambiguate. dry_run defaults to TRUE — it previews the selected session and the new label without writing; pass dry_run=false to actually rename. The "workspace" arg is required when more than one workspace is configured. The Cowork sidebar may not refresh until next reload.`,
       inputSchema: z
         .object({
           name: z.string().min(1).max(sessions.SESSION_NAME_MAX).describe('Desired session label (≤80 chars, emoji ok).'),
@@ -502,6 +526,7 @@ export const registerClaudeDesktopTools = (server: McpServer, cfg: Config): void
             .regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/, 'session_id must be a lower-case UUID with no "local_" prefix.')
             .optional()
             .describe('Bare UUID of the target session; omit to auto-select the most-recently-active one.'),
+          dry_run: z.boolean().default(true).describe('Default true (preview only). Pass false to actually rename.'),
           workspace: workspaceArg
         })
         .strict(),

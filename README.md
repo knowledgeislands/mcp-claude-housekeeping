@@ -38,15 +38,15 @@ Tools follow the convention `<app>_<resource>_<action>`. Each tool's access leve
 
 ### `claude_desktop_*` — destructive (`destructive` level)
 
-| Tool                                | Purpose                                                                 |
-| ----------------------------------- | ----------------------------------------------------------------------- |
-| `claude_desktop_artifacts_prune`    | Delete unstarred artifacts beyond top N (default 5) by `lastUpdated`.   |
-| `claude_desktop_reports_clear`      | Delete every `cowork-audit-*.md` from `MCP_CLAUDE_HOUSEKEEPING_PATH`.   |
-| `claude_desktop_report_write`       | Save `cowork-audit-YYYY-MM-DD.md` to `MCP_CLAUDE_HOUSEKEEPING_PATH`.    |
-| `claude_desktop_memory_write`       | Create/overwrite a memory file in `spaces/<space_id>/memory/<name>.md`. |
-| `claude_desktop_memory_delete`      | Retire a memory file (cannot delete `MEMORY.md`).                       |
-| `claude_desktop_memory_index_write` | Replace `MEMORY.md` for a space.                                        |
-| `claude_desktop_session_rename`     | Set the sidebar `title` on a session record (≤80 chars, emoji ok).†     |
+| Tool                                | Purpose                                                                               |
+| ----------------------------------- | ------------------------------------------------------------------------------------- |
+| `claude_desktop_artifacts_prune`    | Delete unstarred artifacts beyond top N (default 5) by `lastUpdated`.                 |
+| `claude_desktop_reports_clear`      | Delete every `cowork-audit-*.md` from `MCP_CLAUDE_HOUSEKEEPING_PATH`, with `dry_run`. |
+| `claude_desktop_report_write`       | Save `cowork-audit-YYYY-MM-DD.md` to `MCP_CLAUDE_HOUSEKEEPING_PATH`.                  |
+| `claude_desktop_memory_write`       | Create/overwrite a memory file in `spaces/<space_id>/memory/<name>.md`.               |
+| `claude_desktop_memory_delete`      | Retire a memory file (cannot delete `MEMORY.md`).                                     |
+| `claude_desktop_memory_index_write` | Replace `MEMORY.md` for a space.                                                      |
+| `claude_desktop_session_rename`     | Set the sidebar `title` on a session record (≤80 chars, emoji ok), with `dry_run`.†   |
 
 † Auto-picks the most-recently-active session when `session_id` is omitted — Cowork agents share one MCP server, so the server cannot infer the calling session from execution context. Pass `session_id` (bare UUID) to disambiguate when multiple sessions are active concurrently.
 
@@ -93,7 +93,7 @@ Tools follow the convention `<app>_<resource>_<action>`. Each tool's access leve
 
 A typical `cowork-filesystem-audit` run uses the tools in this order:
 
-1. `claude_desktop_reports_clear` — clear yesterday's report.
+1. `claude_desktop_reports_clear` — clear yesterday's report (`dry_run: true` by default — pass `dry_run: false` to actually delete).
 2. `claude_desktop_storage_summary` … `claude_desktop_debug_info` — run all read-only checks (parallelisable).
 3. `claude_desktop_artifacts_prune` — prune unstarred artifacts past top 5.
 4. `claude_desktop_memory_spaces_summary` — pick the space to consolidate.

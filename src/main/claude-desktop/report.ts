@@ -25,21 +25,26 @@ export const reportList = async (housekeepingPath: string) => {
   return { housekeeping_dir: housekeepingPath, exists: true, reports }
 }
 
-export const reportClean = async (housekeepingPath: string) => {
+export const reportClean = async (housekeepingPath: string, args: { dry_run: boolean }) => {
   let entries: string[]
   try {
     entries = await fs.readdir(housekeepingPath)
   } catch (err) {
     if (isNodeError(err) && err.code === 'ENOENT') {
-      return { housekeeping_dir: housekeepingPath, deleted: [], note: 'Housekeeping directory does not yet exist; nothing to clean.' }
+      return { housekeeping_dir: housekeepingPath, deleted: [], dry_run: args.dry_run, note: 'Housekeeping directory does not yet exist; nothing to clean.' }
     }
     throw err
   }
   const matches = entries.filter((e) => REPORT_PATTERN.test(e))
+  // dry_run previews the would-be deletions without unlinking — matching the
+  // repo's other mutating tools, which default dry_run to true.
+  if (args.dry_run) {
+    return { housekeeping_dir: housekeepingPath, deleted: matches, dry_run: true }
+  }
   for (const name of matches) {
     await fs.unlink(path.join(housekeepingPath, name))
   }
-  return { housekeeping_dir: housekeepingPath, deleted: matches }
+  return { housekeeping_dir: housekeepingPath, deleted: matches, dry_run: false }
 }
 
 export const reportWrite = async (housekeepingPath: string, args: { content: string; date?: string }) => {

@@ -82,18 +82,25 @@ export const daysAgo = (date: Date | number): number => {
   return Math.floor((Date.now() - t) / (1000 * 60 * 60 * 24))
 }
 
+// Local subprocess time bound (§6.4 of the workspace MCP standard: local
+// commands use a short timeout). A huge or symlink-cyclic tree must not let
+// `du` hang the server; on timeout we SIGKILL the child and reject.
+const DU_TIMEOUT_MS = 8000
+
 /**
  * Run `du -sk <target>` and return size in bytes. Returns 0 if the path
  * is missing. Falls back to a JS walk only if `du` is unavailable.
  */
-export const duBytes = async (target: string): Promise<number> => {
-  const kb = await runDuSk(target)
+export const duBytes = async (target: string, timeoutMs: number = DU_TIMEOUT_MS): Promise<number> => {
+  const kb = await runDuSk(target, timeoutMs)
   return kb * 1024
 }
 
-const runDuSk = async (target: string): Promise<number> => {
+const runDuSk = async (target: string, timeoutMs: number): Promise<number> => {
   return new Promise((resolve, reject) => {
-    const proc = spawn('du', ['-sk', target])
+    // `timeout` lets Node send `killSignal` (SIGKILL) if the child outlives the
+    // bound, so a pathological/cyclic tree can't hang the server indefinitely.
+    const proc = spawn('du', ['-sk', target], { timeout: timeoutMs, killSignal: 'SIGKILL' })
     let out = ''
     let err = ''
     proc.stdout.on('data', (chunk) => {
@@ -103,7 +110,14 @@ const runDuSk = async (target: string): Promise<number> => {
       err += chunk.toString()
     })
     proc.on('error', reject)
-    proc.on('close', (code) => {
+    proc.on('close', (code, signal) => {
+      // The only thing that SIGKILLs this child is our own `timeout` bound, so a
+      // SIGKILL means du ran too long — surface a clear timeout error rather than
+      // trusting whatever partial output it managed to emit.
+      if (signal === 'SIGKILL') {
+        reject(new Error(`du timed out after ${timeoutMs}ms for "${target}"`))
+        return
+      }
       if (code !== 0 && !out) {
         if (err.includes('No such file')) {
           resolve(0)

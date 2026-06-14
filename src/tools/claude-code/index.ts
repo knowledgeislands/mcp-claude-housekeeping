@@ -16,6 +16,16 @@ const projectArg = z
   .describe('Project directory name under ~/.claude/projects/ (the encoded path).')
 const optionalProjectArg = projectArg.optional()
 
+// A memory file name becomes a path segment under <project>/memory/. It must end
+// in .md and, like projectArg, reject path separators, traversal (..), and a
+// leading "-". Defense in depth alongside resolveWithinRoot at the call sites.
+export const memoryFileNameArg = z
+  .string()
+  .min(1)
+  .max(255)
+  .regex(/^[A-Za-z0-9._-]+\.md$/, 'Memory file name must be alphanumeric/._- and end with .md (no path separators or traversal).')
+  .refine((s) => !s.startsWith('-') && !s.includes('..'), 'Memory file name must not start with "-" or contain "..".')
+
 export const registerClaudeCodeTools = (server: McpServer, cfg: Config): void => {
   const register = server.registerTool
   const claudeCodeRootPath = cfg.claudeCodeRootPath
@@ -251,7 +261,7 @@ export const registerClaudeCodeTools = (server: McpServer, cfg: Config): void =>
       inputSchema: z
         .object({
           project: projectArg,
-          name: z.string().min(1).regex(/\.md$/, 'Memory file name must end with .md'),
+          name: memoryFileNameArg,
           content: z.string()
         })
         .strict(),
@@ -274,7 +284,7 @@ export const registerClaudeCodeTools = (server: McpServer, cfg: Config): void =>
       inputSchema: z
         .object({
           project: projectArg,
-          name: z.string().min(1).regex(/\.md$/, 'Memory file name must end with .md'),
+          name: memoryFileNameArg,
           dry_run: z.boolean().default(true).describe('Default true (preview only). Pass false to actually delete.')
         })
         .strict(),

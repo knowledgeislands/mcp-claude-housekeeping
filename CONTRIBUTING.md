@@ -12,7 +12,8 @@ cd mcp-claude-housekeeping
 bun install
 ```
 
-`bun install` triggers `prepare` which configures the husky pre-commit hook — so every commit will auto-run `lint-staged` and format your changes.
+`bun install` triggers `prepare` which configures the husky pre-commit hook — so every commit will auto-run `lint-staged` and format your
+changes.
 
 ## Dev loop
 
@@ -34,14 +35,19 @@ bun run lint:md             # prettier + markdownlint for *.md
 
 - **TypeScript ES modules** — `"type": "module"`, internal imports use `.js` extensions (e.g. `from './audit.js'`) so `tsc` emits valid JS.
 - **Arrow functions** for top-level declarations (`export const foo = () => …`).
-- **Layout**: tool definitions are thin and live in `src/tools/<group>/index.ts`; the real implementation lives in `src/main/<group>/` and takes the config slice it needs (a root path, or `housekeepingPath`) as its first argument. Config is loaded once in `src/mcp-server/index.ts` via `loadConfig()` and threaded in — there is no env read at import time.
-- **Strict path safety**: any tool input that touches the filesystem must go through `resolveWithinRoot(<root>, …)` from `src/utils/utils.ts` (where `<root>` is the relevant injected root — `cfg.claudeDesktopRootPath`, `cfg.claudeCodeRootPath`, or `cfg.vscodeWorkspaceStorageRootPath`). Inputs that resolve outside that root throw `Path escapes root`.
+- **Layout**: tool definitions are thin and live in `src/tools/<group>/index.ts`; the real implementation lives in `src/main/<group>/` and
+  takes the config slice it needs (a root path, or `housekeepingPath`) as its first argument. Config is loaded once in
+  `src/mcp-server/index.ts` via `loadConfig()` and threaded in — there is no env read at import time.
+- **Strict path safety**: any tool input that touches the filesystem must go through `resolveWithinRoot(<root>, …)` from
+  `src/utils/utils.ts` (where `<root>` is the relevant injected root — `cfg.claudeDesktopRootPath`, `cfg.claudeCodeRootPath`, or
+  `cfg.vscodeWorkspaceStorageRootPath`). Inputs that resolve outside that root throw `Path escapes root`.
 - **Errors**: tools return MCP errors via `errorResult(...)`; structured results via `jsonResult(...)`.
 - **Annotations**: be honest with `readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint` on every tool registration.
 
 ### Commits
 
-This repo uses [Conventional Commits](https://www.conventionalcommits.org/) so version bumps are easy to derive when releasing by hand. There is no auto-release pipeline.
+This repo uses [Conventional Commits](https://www.conventionalcommits.org/) so version bumps are easy to derive when releasing by hand.
+There is no auto-release pipeline.
 
 | Type        | What it means           | Bumps |
 | ----------- | ----------------------- | ----- |
@@ -60,8 +66,10 @@ Add `!` for breaking changes (`feat!:` / `fix!:`) — bumps major.
 
 ### Testing
 
-- New code should ship with tests. Vitest is configured with V8 coverage and has thresholds in `vitest.config.ts` — if your change drops coverage below the threshold, CI fails.
-- File-level isolation: each test file defines its own fixture root under `os.tmpdir()` so test data never touches the real Claude/VSCode locations. Tests should clean up after themselves with `beforeEach`/`afterEach`.
+- New code should ship with tests. Vitest is configured with V8 coverage and has thresholds in `vitest.config.ts` — if your change drops
+  coverage below the threshold, CI fails.
+- File-level isolation: each test file defines its own fixture root under `os.tmpdir()` so test data never touches the real Claude/VSCode
+  locations. Tests should clean up after themselves with `beforeEach`/`afterEach`.
 
 ## Before opening a PR
 

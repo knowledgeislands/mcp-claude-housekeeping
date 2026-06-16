@@ -43,6 +43,21 @@ export interface AuditEvent {
 const SERVER_NAME = 'mcp-claude-housekeeping'
 const MAX_ARG_CHARS = 4096
 
+/**
+ * Redact `user:pass@` / `token@` userinfo from any URL-like string, so a
+ * credential-bearing URL can never reach the audit log verbatim. Only the
+ * authority userinfo after `scheme://` is matched — scp-style `git@host:path`
+ * (no `//`) and bare `@mentions` are left untouched.
+ */
+const redactUrlCredentials = (value: unknown): unknown => {
+  if (typeof value === 'string') return value.replace(/(\/\/)[^/@\s]+@/g, '$1<redacted>@')
+  if (Array.isArray(value)) return value.map(redactUrlCredentials)
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.entries(value as Record<string, unknown>).map(([k, v]) => [k, redactUrlCredentials(v)]))
+  }
+  return value
+}
+
 const sanitizeArgs = (args: unknown): unknown => {
   // Top-level redaction: drop bulky string fields that would bloat the log
   // (memory `content`, audit `content`). Then JSON-stringify and truncate as
@@ -55,6 +70,7 @@ const sanitizeArgs = (args: unknown): unknown => {
     }
     safe = copy
   }
+  safe = redactUrlCredentials(safe)
   const serialized = JSON.stringify(safe)
   if (serialized.length > MAX_ARG_CHARS) {
     return { _truncated: true, preview: serialized.slice(0, MAX_ARG_CHARS) }

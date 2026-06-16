@@ -248,6 +248,29 @@ describe('appendAuditEvent / withAuditLog', () => {
     expect(JSON.parse(second ?? '').args).toBe('a-primitive-string')
   })
 
+  it('redacts URL credentials anywhere in args — strings, arrays, nested objects — leaving primitives untouched', async () => {
+    // Covers redactUrlCredentials' deep walk: the credential-bearing string
+    // replacement, the array branch, recursion into a nested object, and the
+    // primitive fall-through (the number is returned verbatim, hitting line 58).
+    const { withAuditLog } = await import('./audit-log.js')
+    const wrapped = withAuditLog(auditCfg(), 'test_destructive_tool', 'destructive', async () => ({ content: [{ type: 'text', text: '{}' }] }))
+    await wrapped({
+      url: 'https://user:tok3n@example.com/x',
+      list: ['https://user:tok3n@example.com/y'],
+      nested: { inner: 'https://user:tok3n@example.com/z' },
+      count: 42
+    })
+    await flushAsync()
+    const raw = await fs.readFile(logPath, 'utf-8')
+    expect(raw).toContain('<redacted>')
+    expect(raw).not.toContain('tok3n')
+    const event = JSON.parse(raw.trim())
+    expect(event.args.url).toBe('https://<redacted>@example.com/x')
+    expect(event.args.list).toEqual(['https://<redacted>@example.com/y'])
+    expect(event.args.nested.inner).toBe('https://<redacted>@example.com/z')
+    expect(event.args.count).toBe(42)
+  })
+
   it('coerces a non-Error throw value to a string when recording the failure', async () => {
     // Covers the `err instanceof Error ? err.message : String(err)` false branch
     // in withAuditLog's catch. Handlers can throw anything (string, object, …);

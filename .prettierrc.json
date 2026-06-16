@@ -4,7 +4,7 @@
   "useTabs": false,
   "semi": false,
   "singleQuote": true,
-  "proseWrap": "never",
+  "proseWrap": "always",
   "trailingComma": "none",
   "overrides": [
     {

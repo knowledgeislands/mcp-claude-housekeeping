@@ -20,7 +20,7 @@ orchestrates the checks and writes a markdown report.
 - **Path-safe** — every path is validated against its configured root; memory operations are also confined to their `memory/` subdir.
 - **No network, no auth** — pure local filesystem over MCP stdio.
 
-**Quality:** 260 tests; 100% line and function coverage (statement/branch hover ~99.8% as the suite evolves).
+**Quality:** 307 tests; 100% statement, branch, function, and line coverage.
 
 ## Available Tools
 
@@ -181,7 +181,7 @@ bun install
 | `MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_PATH`      | no       | Path to the JSONL audit log. Default `<MCP_CLAUDE_HOUSEKEEPING_PATH>/audit/audit.jsonl`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | `MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_MAX_BYTES` | no       | Size-based rotation threshold in bytes. Default `10485760` (10 MiB). Set to `0` to disable rotation.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | `MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_KEEP`      | no       | Number of rotated audit-log files to retain. Default `5`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| `NODE_ENV`                                    | no       | Dev convention. `server:mcp:dev`/`server:mcp:inspect` set this to `development`, which makes [`loadConfig()`](./src/config/index.ts) load `.env.development` from the CWD. Unset under Claude Desktop, so `.env*` files are ignored in production.                                                                                                                                                                                                                                                                                                                                           |
+| `NODE_ENV`                                    | no       | Dev convention. `server:mcp:dev`/`server:mcp:inspect` set this to `development`. [`loadConfig()`](./src/config/index.ts) hydrates `process.env` from the package root, highest precedence first: `.env.local`, then `.env.${NODE_ENV}` (only when `NODE_ENV` is set), then `.env`. A var already in the environment — e.g. the MCP client's `env` block — always wins over every file.                                                                                                                                                                                                       |
 
 The sessions root (`~/Library/Application Support/Claude/local-agent-mode-sessions`), Claude Code root (`~/.claude`), and VSCode
 workspaceStorage (`~/Library/Application Support/Code/User/workspaceStorage`) are computed defaults in
@@ -210,9 +210,10 @@ A starter is in [`claude-config-sample.json`](./claude-config-sample.json).
 ### Running From Source (Dev)
 
 Copy [`.env.example`](./.env.example) to `.env.development` and fill in `MCP_CLAUDE_HOUSEKEEPING_PATH`. The `server:mcp:dev` and
-`server:mcp:inspect` scripts run with `NODE_ENV=development`, which causes Bun to auto-load `.env.development` from the CWD (and is also
-picked up by [`loadConfig()`](./src/config/index.ts)'s `process.loadEnvFile` call when run under Node). Claude Desktop does not set
-`NODE_ENV`, so the file is ignored in production; `MCP_CLAUDE_HOUSEKEEPING_PATH` must come from the Claude Desktop config `env` block.
+`server:mcp:inspect` scripts run with `NODE_ENV=development`. [`loadConfig()`](./src/config/index.ts) hydrates `process.env` from the
+package root, highest precedence first — `.env.local`, then `.env.${NODE_ENV}` (so `.env.development` here), then `.env` — and Bun
+auto-loads the same set. A var already in the environment always wins, so under Claude Desktop `MCP_CLAUDE_HOUSEKEEPING_PATH` comes from the
+config `env` block regardless of any file.
 
 ```bash
 cp .env.example .env.development

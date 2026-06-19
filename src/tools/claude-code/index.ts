@@ -26,6 +26,96 @@ export const memoryFileNameArg = z
   .regex(/^[A-Za-z0-9._-]+\.md$/, 'Memory file name must be alphanumeric/._- and end with .md (no path separators or traversal).')
   .refine((s) => !s.startsWith('-') && !s.includes('..'), 'Memory file name must not start with "-" or contain "..".')
 
+const ccProjectsListOutput = z.object({
+  projects_dir: z.string(),
+  project_count: z.number(),
+  projects: z.array(z.object({ id: z.string(), decoded_path: z.string(), source_exists: z.boolean(), session_count: z.number(), has_memory: z.boolean(), bytes: z.number() }))
+})
+const ccStorageSummaryOutput = z.object({
+  claude_root: z.string(),
+  project_count: z.number(),
+  session_count: z.number(),
+  orphan_project_count: z.number(),
+  total_bytes: z.number(),
+  projects_bytes: z.number(),
+  flags: z.array(z.string())
+})
+const ccObsoleteSessionsOutput = z.object({
+  cutoff_date: z.string(),
+  older_than_days: z.number(),
+  obsolete_count: z.number(),
+  total_bytes: z.number(),
+  top_10_oldest: z.array(z.object({ project: z.string(), session: z.string(), last_activity: z.string(), age_days: z.number(), bytes: z.number() })),
+  flags: z.array(z.string())
+})
+const ccGlobalStatusOutput = z.object({
+  claude_root: z.string(),
+  history: z.object({ exists: z.boolean(), bytes: z.number(), modified: z.string().nullable(), lines: z.number().optional() }),
+  settings: z.object({ exists: z.boolean(), cleanup_period_days: z.number().nullable() }),
+  last_cleanup: z.string().nullable(),
+  top_level_dirs: z.array(z.object({ name: z.string(), bytes: z.number(), modified: z.string().nullable() })),
+  freshness: z.object({ oldest_top_level_age_hours: z.number().nullable(), looks_freshly_initialized: z.boolean() })
+})
+const ccSessionReadOutput = z.object({
+  project: z.string(),
+  session: z.string(),
+  bytes: z.number(),
+  line_count: z.number(),
+  lines: z.array(z.string())
+})
+const ccMemoryListOutput = z.object({
+  project: z.string(),
+  file_count: z.number(),
+  files: z.array(z.object({ name: z.string(), bytes: z.number(), modified: z.string() })),
+  index: z.string().nullable()
+})
+const ccMemoryReadOutput = z.object({
+  project: z.string(),
+  name: z.string(),
+  content: z.string()
+})
+const ccSessionsPruneOutput = z.object({
+  cutoff_date: z.string(),
+  older_than_days: z.number(),
+  dry_run: z.boolean(),
+  deleted_count: z.number(),
+  total_bytes_freed: z.number(),
+  deleted: z.array(z.object({ project: z.string(), session: z.string(), age_days: z.number(), bytes: z.number(), sidecar_deleted: z.boolean() }))
+})
+const ccProjectRelocateOutput = z.object({
+  project: z.string(),
+  new_id: z.string(),
+  new_path: z.string(),
+  dry_run: z.boolean(),
+  moved: z.boolean(),
+  reason: z.string().optional()
+})
+const ccOrphanProjectsPruneOutput = z.object({
+  dry_run: z.boolean(),
+  include_with_memory: z.boolean(),
+  orphan_count: z.number(),
+  deleted_count: z.number(),
+  total_bytes_freed: z.number(),
+  deleted: z.array(z.object({ id: z.string(), decoded_path: z.string(), session_count: z.number(), bytes: z.number() })),
+  skipped: z.array(z.object({ id: z.string(), decoded_path: z.string(), reason: z.string() }))
+})
+const ccMemoryWriteOutput = z.object({
+  project: z.string(),
+  name: z.string(),
+  bytes: z.number()
+})
+const ccMemoryDeleteOutput = z.object({
+  project: z.string(),
+  name: z.string(),
+  dry_run: z.boolean(),
+  deleted: z.boolean(),
+  bytes: z.number()
+})
+const ccMemoryIndexWriteOutput = z.object({
+  project: z.string(),
+  bytes: z.number()
+})
+
 export const registerClaudeCodeTools = (server: McpServer, cfg: Config): void => {
   const register = server.registerTool
   const claudeCodeRootPath = cfg.claudeCodeRootPath
@@ -40,6 +130,7 @@ export const registerClaudeCodeTools = (server: McpServer, cfg: Config): void =>
       title: 'Claude Code Auditor: list projects',
       description: `List every project under ~/.claude/projects/ with session-file count, on-disk size, whether a memory/ subdir exists, and a best-effort decode of the encoded directory name back to the original filesystem path (with source_exists indicating whether that decoded path still resolves on disk). Sorted by bytes descending.`,
       inputSchema: z.object({}).strict(),
+      outputSchema: ccProjectsListOutput,
       annotations: READ_ONLY
     },
     async () => {
@@ -63,6 +154,7 @@ export const registerClaudeCodeTools = (server: McpServer, cfg: Config): void =>
           flag_orphan_count: z.number().int().min(0).max(10_000_000).default(5)
         })
         .strict(),
+      outputSchema: ccStorageSummaryOutput,
       annotations: READ_ONLY
     },
     async (args) => {
@@ -87,6 +179,7 @@ export const registerClaudeCodeTools = (server: McpServer, cfg: Config): void =>
           project: optionalProjectArg
         })
         .strict(),
+      outputSchema: ccObsoleteSessionsOutput,
       annotations: READ_ONLY
     },
     async (args) => {
@@ -104,6 +197,7 @@ export const registerClaudeCodeTools = (server: McpServer, cfg: Config): void =>
       title: 'Claude Code Auditor: global status',
       description: `Report ~/.claude top-level state: history.jsonl size+mtime+line count if present, settings.json existence and cleanupPeriodDays, .last-cleanup contents, plus a sorted list of every top-level dir with its bytes (so bloated subtrees like file-history/ or plugins/ are visible).`,
       inputSchema: z.object({}).strict(),
+      outputSchema: ccGlobalStatusOutput,
       annotations: READ_ONLY
     },
     async () => {
@@ -131,6 +225,7 @@ export const registerClaudeCodeTools = (server: McpServer, cfg: Config): void =>
           tail: z.boolean().default(true).describe('If true, return the last N lines; if false, the first N.')
         })
         .strict(),
+      outputSchema: ccSessionReadOutput,
       annotations: READ_ONLY
     },
     async (args) => {
@@ -148,6 +243,7 @@ export const registerClaudeCodeTools = (server: McpServer, cfg: Config): void =>
       title: 'Claude Code Auditor: list memory files',
       description: `List .md files in ~/.claude/projects/<project>/memory/ with size and modified date, plus the full content of MEMORY.md if present.`,
       inputSchema: z.object({ project: projectArg }).strict(),
+      outputSchema: ccMemoryListOutput,
       annotations: READ_ONLY
     },
     async (args) => {
@@ -170,6 +266,7 @@ export const registerClaudeCodeTools = (server: McpServer, cfg: Config): void =>
           name: z.string().min(1).regex(/\.md$/, 'Memory file name must end with .md')
         })
         .strict(),
+      outputSchema: ccMemoryReadOutput,
       annotations: READ_ONLY
     },
     async (args) => {
@@ -197,6 +294,7 @@ export const registerClaudeCodeTools = (server: McpServer, cfg: Config): void =>
           dry_run: z.boolean().default(true).describe('Default true (preview only). Pass false to actually delete.')
         })
         .strict(),
+      outputSchema: ccSessionsPruneOutput,
       annotations: DESTRUCTIVE_ONESHOT
     },
     async (args) => {
@@ -220,6 +318,7 @@ export const registerClaudeCodeTools = (server: McpServer, cfg: Config): void =>
           dry_run: z.boolean().default(true).describe('Default true (preview only). Pass false to actually rename.')
         })
         .strict(),
+      outputSchema: ccProjectRelocateOutput,
       annotations: DESTRUCTIVE_ONESHOT
     },
     async (args) => {
@@ -242,6 +341,7 @@ export const registerClaudeCodeTools = (server: McpServer, cfg: Config): void =>
           include_with_memory: z.boolean().default(false)
         })
         .strict(),
+      outputSchema: ccOrphanProjectsPruneOutput,
       annotations: DESTRUCTIVE_ONESHOT
     },
     async (args) => {
@@ -265,6 +365,7 @@ export const registerClaudeCodeTools = (server: McpServer, cfg: Config): void =>
           content: z.string()
         })
         .strict(),
+      outputSchema: ccMemoryWriteOutput,
       annotations: DESTRUCTIVE
     },
     async (args) => {
@@ -288,6 +389,7 @@ export const registerClaudeCodeTools = (server: McpServer, cfg: Config): void =>
           dry_run: z.boolean().default(true).describe('Default true (preview only). Pass false to actually delete.')
         })
         .strict(),
+      outputSchema: ccMemoryDeleteOutput,
       annotations: DESTRUCTIVE_ONESHOT
     },
     async (args) => {
@@ -305,6 +407,7 @@ export const registerClaudeCodeTools = (server: McpServer, cfg: Config): void =>
       title: 'Claude Code Cleaner: replace MEMORY.md',
       description: `Replace the contents of ~/.claude/projects/<project>/memory/MEMORY.md.`,
       inputSchema: z.object({ project: projectArg, content: z.string() }).strict(),
+      outputSchema: ccMemoryIndexWriteOutput,
       annotations: DESTRUCTIVE
     },
     async (args) => {

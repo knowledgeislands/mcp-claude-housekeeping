@@ -18,6 +18,50 @@ const sessionArg = z
   .min(1)
   .regex(/^[A-Za-z0-9._-]+\.jsonl?$/, 'Session name must be alphanumeric/._- and end with .json or .jsonl')
 
+const vsWorkspacesListOutput = z.object({
+  workspace_storage: z.string(),
+  workspace_count: z.number(),
+  workspaces: z.array(z.object({ id: z.string(), workspace_uri: z.string().nullable(), session_count: z.number(), bytes: z.number() }))
+})
+const vsStorageSummaryOutput = z.object({
+  workspace_storage: z.string(),
+  workspace_count: z.number(),
+  session_count: z.number(),
+  total_chat_bytes: z.number(),
+  flags: z.array(z.string())
+})
+const vsObsoleteSessionsOutput = z.object({
+  cutoff_date: z.string(),
+  older_than_days: z.number(),
+  obsolete_count: z.number(),
+  total_bytes: z.number(),
+  top_10_oldest: z.array(z.object({ workspace: z.string(), session: z.string(), last_activity: z.string(), age_days: z.number(), bytes: z.number() })),
+  flags: z.array(z.string())
+})
+const vsSessionReadOutput = z.object({
+  workspace: z.string(),
+  session: z.string(),
+  format: z.enum(['json', 'jsonl']),
+  bytes: z.number(),
+  total_lines: z.number(),
+  lines: z.array(z.string())
+})
+const vsWorkspaceDeleteOutput = z.object({
+  workspace: z.string(),
+  dir: z.string(),
+  bytes: z.number(),
+  dry_run: z.boolean(),
+  deleted: z.boolean()
+})
+const vsSessionsPruneOutput = z.object({
+  cutoff_date: z.string(),
+  older_than_days: z.number(),
+  dry_run: z.boolean(),
+  deleted_count: z.number(),
+  total_bytes_freed: z.number(),
+  deleted: z.array(z.object({ workspace: z.string(), session: z.string(), age_days: z.number(), bytes: z.number() }))
+})
+
 export const registerVscodeTools = (server: McpServer, cfg: Config): void => {
   const register = server.registerTool
   const rootPath = cfg.vscodeWorkspaceStorageRootPath
@@ -28,6 +72,7 @@ export const registerVscodeTools = (server: McpServer, cfg: Config): void => {
       title: 'VSCode Auditor: list chat-session workspaces',
       description: `List every workspaceStorage/<id>/chatSessions/ entry with the original workspace URI (from workspace.json), session-file count, and size. Sorted by bytes descending.`,
       inputSchema: z.object({}).strict(),
+      outputSchema: vsWorkspacesListOutput,
       annotations: READ_ONLY
     },
     async () => {
@@ -50,6 +95,7 @@ export const registerVscodeTools = (server: McpServer, cfg: Config): void => {
           flag_session_count: z.number().int().min(0).max(10_000_000).default(500)
         })
         .strict(),
+      outputSchema: vsStorageSummaryOutput,
       annotations: READ_ONLY
     },
     async (args) => {
@@ -74,6 +120,7 @@ export const registerVscodeTools = (server: McpServer, cfg: Config): void => {
           workspace: optionalWorkspaceArg
         })
         .strict(),
+      outputSchema: vsObsoleteSessionsOutput,
       annotations: READ_ONLY
     },
     async (args) => {
@@ -98,6 +145,7 @@ export const registerVscodeTools = (server: McpServer, cfg: Config): void => {
           tail: z.boolean().default(true)
         })
         .strict(),
+      outputSchema: vsSessionReadOutput,
       annotations: READ_ONLY
     },
     async (args) => {
@@ -120,6 +168,7 @@ export const registerVscodeTools = (server: McpServer, cfg: Config): void => {
           dry_run: z.boolean().default(true).describe('Default true (preview only). Pass false to actually delete.')
         })
         .strict(),
+      outputSchema: vsWorkspaceDeleteOutput,
       annotations: DESTRUCTIVE_ONESHOT
     },
     async (args) => {
@@ -143,6 +192,7 @@ export const registerVscodeTools = (server: McpServer, cfg: Config): void => {
           dry_run: z.boolean().default(true).describe('Default true (preview only). Pass false to actually delete.')
         })
         .strict(),
+      outputSchema: vsSessionsPruneOutput,
       annotations: DESTRUCTIVE_ONESHOT
     },
     async (args) => {

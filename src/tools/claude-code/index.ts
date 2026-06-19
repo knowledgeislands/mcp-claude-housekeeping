@@ -263,7 +263,7 @@ export const registerClaudeCodeTools = (server: McpServer, cfg: Config): void =>
       inputSchema: z
         .object({
           project: projectArg,
-          name: z.string().min(1).regex(/\.md$/, 'Memory file name must end with .md')
+          name: memoryFileNameArg
         })
         .strict(),
       outputSchema: ccMemoryReadOutput,

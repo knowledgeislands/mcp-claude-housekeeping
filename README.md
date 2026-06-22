@@ -160,7 +160,7 @@ are always preserved and the top N most recent are kept regardless of star statu
 ### Prerequisites
 
 - [Bun](https://bun.sh) 1.3 or higher — used for dependency install and dev scripts
-- Node.js 22.0.0 or higher (see `.node-version`) — used to run the compiled `dist/` output under Claude Desktop
+- Node.js 24.15.0 or higher (see `mise.toml`) — used to run the compiled `dist/` output under Claude Desktop
 - `du` (BSD/GNU) — used for fast disk-usage measurement; standard on macOS/Linux
 
 ### Install Dependencies

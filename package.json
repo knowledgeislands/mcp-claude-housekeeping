@@ -1,6 +1,6 @@
 {
   "name": "@knowledgeislands/mcp-claude-housekeeping",
-  "description": "MCP for auditing and cleaning the Claude Cowork local-agent-mode-sessions filesystem",
+  "description": "MCP for auditing and pruning Claude Code session files and memory on the local filesystem.",
   "version": "1.0.0",
   "author": "kris@kris.me.uk",
   "bin": {

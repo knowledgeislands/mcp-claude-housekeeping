@@ -20,6 +20,7 @@
 import * as fs from 'node:fs/promises'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
+import pkg from '../../package.json' with { type: 'json' }
 import { loadConfig } from '../config/index.js'
 import { registerClaudeCodeTools, registerClaudeDesktopTools, registerVscodeTools } from '../tools/index.js'
 import { makeAccessGatedRegister } from '../utils/access-level.js'
@@ -39,7 +40,7 @@ console.error(
 
 const server = new McpServer({
   name: 'mcp-claude-housekeeping',
-  version: '1.0.0'
+  version: pkg.version
 })
 server.registerTool = makeAccessGatedRegister(server, config.accessLevel, {
   mode: config.auditLogMode,

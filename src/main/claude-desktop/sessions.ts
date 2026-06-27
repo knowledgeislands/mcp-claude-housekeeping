@@ -79,7 +79,14 @@ const validateName = (name: string): void => {
 export const sessionRename = async (
   workspaceRoot: string,
   args: { session_id?: string; name: string; dry_run: boolean }
-): Promise<{ session_id: string; previous_title: string | null; new_title: string; auto_selected: boolean; dry_run: boolean; renamed: boolean }> => {
+): Promise<{
+  session_id: string
+  previous_title: string | null
+  new_title: string
+  auto_selected: boolean
+  dry_run: boolean
+  renamed: boolean
+}> => {
   validateName(args.name)
   const autoSelected = args.session_id === undefined
   const sessionId = args.session_id ?? (await pickMostRecentSession(workspaceRoot))

@@ -31,7 +31,12 @@ export const reportClean = async (housekeepingPath: string, args: { dry_run: boo
     entries = await fs.readdir(housekeepingPath)
   } catch (err) {
     if (isNodeError(err) && err.code === 'ENOENT') {
-      return { housekeeping_dir: housekeepingPath, deleted: [], dry_run: args.dry_run, note: 'Housekeeping directory does not yet exist; nothing to clean.' }
+      return {
+        housekeeping_dir: housekeepingPath,
+        deleted: [],
+        dry_run: args.dry_run,
+        note: 'Housekeeping directory does not yet exist; nothing to clean.'
+      }
     }
     throw err
   }

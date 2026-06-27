@@ -283,7 +283,9 @@ describe('sessionRead', () => {
   })
 
   it('rejects a session name that is not <uuid>.jsonl', async () => {
-    await expect(sessionRead(CLAUDE_CODE_ROOT_PATH, { project: '-A', session: 'not-a-uuid.jsonl', max_lines: 10, tail: true })).rejects.toThrow(/must be "<uuid>.jsonl"/)
+    await expect(
+      sessionRead(CLAUDE_CODE_ROOT_PATH, { project: '-A', session: 'not-a-uuid.jsonl', max_lines: 10, tail: true })
+    ).rejects.toThrow(/must be "<uuid>.jsonl"/)
   })
 
   it('honours tail=false (returns the first N lines)', async () => {
@@ -437,7 +439,9 @@ describe('relocateProject', () => {
 
   it('rejects when new_path does not exist on disk', async () => {
     await writeSession('-A', '11111111-1111-1111-1111-111111111111', new Date())
-    await expect(relocateProject(CLAUDE_CODE_ROOT_PATH, { project: '-A', new_path: '/definitely/not/a/real/path/here/xyz', dry_run: false })).rejects.toThrow(/does not exist on disk/)
+    await expect(
+      relocateProject(CLAUDE_CODE_ROOT_PATH, { project: '-A', new_path: '/definitely/not/a/real/path/here/xyz', dry_run: false })
+    ).rejects.toThrow(/does not exist on disk/)
   })
 
   it('rejects when destination encoded name already exists', async () => {
@@ -447,7 +451,9 @@ describe('relocateProject', () => {
     await writeSession('-Users-foo-source', '11111111-1111-1111-1111-111111111111', new Date())
     await writeSession(destId, '22222222-2222-2222-2222-222222222222', new Date())
 
-    await expect(relocateProject(CLAUDE_CODE_ROOT_PATH, { project: '-Users-foo-source', new_path: realDest, dry_run: false })).rejects.toThrow(/already exists/)
+    await expect(
+      relocateProject(CLAUDE_CODE_ROOT_PATH, { project: '-Users-foo-source', new_path: realDest, dry_run: false })
+    ).rejects.toThrow(/already exists/)
 
     await fs.rm(realDest, { recursive: true, force: true })
   })
@@ -456,7 +462,9 @@ describe('relocateProject', () => {
     const realDest = path.join(CLAUDE_CODE_ROOT_PATH, '__relocate_fixture_missing_source__')
     await fs.mkdir(realDest, { recursive: true })
     try {
-      await expect(relocateProject(CLAUDE_CODE_ROOT_PATH, { project: '-totally-fake-project', new_path: realDest, dry_run: false })).rejects.toThrow(/Project dir not found/)
+      await expect(
+        relocateProject(CLAUDE_CODE_ROOT_PATH, { project: '-totally-fake-project', new_path: realDest, dry_run: false })
+      ).rejects.toThrow(/Project dir not found/)
     } finally {
       await fs.rm(realDest, { recursive: true, force: true })
     }

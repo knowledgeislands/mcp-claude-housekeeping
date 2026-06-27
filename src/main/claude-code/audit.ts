@@ -1,7 +1,15 @@
 import type { Dirent } from 'node:fs'
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
-import { assertRealPathWithinRoot, daysAgo, duBytes, isNodeError, pathExists, readJsonIfExists, resolveWithinRoot } from '../../utils/utils.js'
+import {
+  assertRealPathWithinRoot,
+  daysAgo,
+  duBytes,
+  isNodeError,
+  pathExists,
+  readJsonIfExists,
+  resolveWithinRoot
+} from '../../utils/utils.js'
 
 const DAY_MS = 1000 * 60 * 60 * 24
 
@@ -110,7 +118,10 @@ export const projectsList = async (claudeRoot: string) => {
 
 /* ==================== storage summary ==================== */
 
-export const storageSummary = async (claudeRoot: string, args: { flag_size_gb: number; flag_session_count: number; flag_orphan_count: number }) => {
+export const storageSummary = async (
+  claudeRoot: string,
+  args: { flag_size_gb: number; flag_session_count: number; flag_orphan_count: number }
+) => {
   const projects = await discoverProjects(claudeRoot)
   const totalSessions = projects.reduce((sum, p) => sum + p.session_files.length, 0)
   const orphanCount = projects.filter((p) => !p.source_exists).length
@@ -147,7 +158,10 @@ const statMtime = async (file: string): Promise<number | null> => {
   /* v8 ignore stop */
 }
 
-export const obsoleteSessions = async (claudeRoot: string, args: { older_than_days: number; flag_count: number; flag_size_mb: number; project?: string }) => {
+export const obsoleteSessions = async (
+  claudeRoot: string,
+  args: { older_than_days: number; flag_count: number; flag_size_mb: number; project?: string }
+) => {
   const cutoff = Date.now() - args.older_than_days * DAY_MS
   const projects = await discoverProjects(claudeRoot)
   const target = args.project ? projects.filter((p) => p.id === args.project) : projects
@@ -369,7 +383,14 @@ export const relocateProject = async (claudeRoot: string, args: { project: strin
   await assertRealPathWithinRoot(claudeRoot, toDir)
 
   if (newId === args.project) {
-    return { project: args.project, new_id: newId, new_path: newPathAbs, dry_run: args.dry_run, moved: false, reason: 'already-encoded-to-this-id' }
+    return {
+      project: args.project,
+      new_id: newId,
+      new_path: newPathAbs,
+      dry_run: args.dry_run,
+      moved: false,
+      reason: 'already-encoded-to-this-id'
+    }
   }
 
   if (await pathExists(toDir)) {
@@ -400,7 +421,9 @@ export const pruneOrphanProjects = async (claudeRoot: string, args: { dry_run: b
   const projects = await discoverProjects(claudeRoot)
   const orphans = projects.filter((p) => !p.source_exists)
   const targets = args.include_with_memory ? orphans : orphans.filter((p) => !p.has_memory)
-  const skipped = args.include_with_memory ? [] : orphans.filter((p) => p.has_memory).map((p) => ({ id: p.id, decoded_path: p.decoded_path, reason: 'has_memory' }))
+  const skipped = args.include_with_memory
+    ? []
+    : orphans.filter((p) => p.has_memory).map((p) => ({ id: p.id, decoded_path: p.decoded_path, reason: 'has_memory' }))
 
   const deleted: { id: string; decoded_path: string; session_count: number; bytes: number }[] = []
   for (const p of targets) {

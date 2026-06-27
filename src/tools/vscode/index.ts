@@ -35,7 +35,9 @@ const vsObsoleteSessionsOutput = z.object({
   older_than_days: z.number(),
   obsolete_count: z.number(),
   total_bytes: z.number(),
-  top_10_oldest: z.array(z.object({ workspace: z.string(), session: z.string(), last_activity: z.string(), age_days: z.number(), bytes: z.number() })),
+  top_10_oldest: z.array(
+    z.object({ workspace: z.string(), session: z.string(), last_activity: z.string(), age_days: z.number(), bytes: z.number() })
+  ),
   flags: z.array(z.string())
 })
 const vsSessionReadOutput = z.object({

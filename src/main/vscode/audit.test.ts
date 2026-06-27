@@ -2,7 +2,15 @@ import * as fs from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
-import { discoverWorkspaces, obsoleteSessions, sessionRead, sessionsPrune, storageSummary, workspaceDelete, workspacesList } from './audit.js'
+import {
+  discoverWorkspaces,
+  obsoleteSessions,
+  sessionRead,
+  sessionsPrune,
+  storageSummary,
+  workspaceDelete,
+  workspacesList
+} from './audit.js'
 
 // Tests must NEVER touch the real VSCode workspaceStorage. Shadow the config
 // import with a per-suite tmpdir.
@@ -196,7 +204,12 @@ describe('obsoleteSessions (vscode)', () => {
     const oldDate = new Date(Date.now() - 45 * DAY_MS)
     await writeChatSession('hex-1', 'a.jsonl', '{}\n', oldDate)
     await writeChatSession('hex-2', 'b.jsonl', '{}\n', oldDate)
-    const r = await obsoleteSessions(VSCODE_WORKSPACE_STORAGE_ROOT_PATH, { older_than_days: 30, flag_count: 100, flag_size_mb: 100, workspace: 'hex-1' })
+    const r = await obsoleteSessions(VSCODE_WORKSPACE_STORAGE_ROOT_PATH, {
+      older_than_days: 30,
+      flag_count: 100,
+      flag_size_mb: 100,
+      workspace: 'hex-1'
+    })
     expect(r.obsolete_count).toBe(1)
   })
 })
@@ -234,7 +247,9 @@ describe('sessionRead (vscode)', () => {
   })
 
   it('rejects bad extension', async () => {
-    await expect(sessionRead(VSCODE_WORKSPACE_STORAGE_ROOT_PATH, { workspace: 'hex-1', session: 'a.txt', max_lines: 5, tail: true })).rejects.toThrow(/must end with/)
+    await expect(
+      sessionRead(VSCODE_WORKSPACE_STORAGE_ROOT_PATH, { workspace: 'hex-1', session: 'a.txt', max_lines: 5, tail: true })
+    ).rejects.toThrow(/must end with/)
   })
 })
 
@@ -298,12 +313,18 @@ describe('workspaceDelete', () => {
 
   it('rejects path-traversal attempts in the workspace id', async () => {
     // `..` segments resolve outside the root and are rejected with a Path-escape error.
-    await expect(workspaceDelete(VSCODE_WORKSPACE_STORAGE_ROOT_PATH, { workspace: '../escape', dry_run: false })).rejects.toThrow(/Path escapes root/)
-    await expect(workspaceDelete(VSCODE_WORKSPACE_STORAGE_ROOT_PATH, { workspace: '../../etc', dry_run: true })).rejects.toThrow(/Path escapes root/)
+    await expect(workspaceDelete(VSCODE_WORKSPACE_STORAGE_ROOT_PATH, { workspace: '../escape', dry_run: false })).rejects.toThrow(
+      /Path escapes root/
+    )
+    await expect(workspaceDelete(VSCODE_WORKSPACE_STORAGE_ROOT_PATH, { workspace: '../../etc', dry_run: true })).rejects.toThrow(
+      /Path escapes root/
+    )
     // Absolute-style input is neutralized (leading "/" stripped → treated as relative-to-root),
     // so it lands inside the root and falls through to the not-found branch. Still safe — it
     // cannot delete files outside the storage root.
-    await expect(workspaceDelete(VSCODE_WORKSPACE_STORAGE_ROOT_PATH, { workspace: '/etc/passwd', dry_run: true })).rejects.toThrow(/not found/)
+    await expect(workspaceDelete(VSCODE_WORKSPACE_STORAGE_ROOT_PATH, { workspace: '/etc/passwd', dry_run: true })).rejects.toThrow(
+      /not found/
+    )
   })
 })
 

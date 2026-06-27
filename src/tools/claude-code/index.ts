@@ -29,7 +29,16 @@ export const memoryFileNameArg = z
 const ccProjectsListOutput = z.object({
   projects_dir: z.string(),
   project_count: z.number(),
-  projects: z.array(z.object({ id: z.string(), decoded_path: z.string(), source_exists: z.boolean(), session_count: z.number(), has_memory: z.boolean(), bytes: z.number() }))
+  projects: z.array(
+    z.object({
+      id: z.string(),
+      decoded_path: z.string(),
+      source_exists: z.boolean(),
+      session_count: z.number(),
+      has_memory: z.boolean(),
+      bytes: z.number()
+    })
+  )
 })
 const ccStorageSummaryOutput = z.object({
   claude_root: z.string(),
@@ -45,7 +54,9 @@ const ccObsoleteSessionsOutput = z.object({
   older_than_days: z.number(),
   obsolete_count: z.number(),
   total_bytes: z.number(),
-  top_10_oldest: z.array(z.object({ project: z.string(), session: z.string(), last_activity: z.string(), age_days: z.number(), bytes: z.number() })),
+  top_10_oldest: z.array(
+    z.object({ project: z.string(), session: z.string(), last_activity: z.string(), age_days: z.number(), bytes: z.number() })
+  ),
   flags: z.array(z.string())
 })
 const ccGlobalStatusOutput = z.object({
@@ -80,7 +91,9 @@ const ccSessionsPruneOutput = z.object({
   dry_run: z.boolean(),
   deleted_count: z.number(),
   total_bytes_freed: z.number(),
-  deleted: z.array(z.object({ project: z.string(), session: z.string(), age_days: z.number(), bytes: z.number(), sidecar_deleted: z.boolean() }))
+  deleted: z.array(
+    z.object({ project: z.string(), session: z.string(), age_days: z.number(), bytes: z.number(), sidecar_deleted: z.boolean() })
+  )
 })
 const ccProjectRelocateOutput = z.object({
   project: z.string(),

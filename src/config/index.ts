@@ -137,8 +137,14 @@ export const loadConfig = (env: NodeJS.ProcessEnv = process.env): Config => {
     claudeCodeRootPath: path.join(os.homedir(), '.claude'),
     vscodeWorkspaceStorageRootPath: path.join(os.homedir(), 'Library', 'Application Support', 'Code', 'User', 'workspaceStorage'),
     auditLogMode: parseAuditLogMode(env.MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG),
-    auditLogPath: path.resolve(expandHome(env.MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_PATH ?? path.join(housekeepingPath, 'audit', 'audit.jsonl'))),
-    auditLogMaxBytes: parseNonNegativeInt(env.MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_MAX_BYTES, 10 * 1024 * 1024, 'MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_MAX_BYTES'),
+    auditLogPath: path.resolve(
+      expandHome(env.MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_PATH ?? path.join(housekeepingPath, 'audit', 'audit.jsonl'))
+    ),
+    auditLogMaxBytes: parseNonNegativeInt(
+      env.MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_MAX_BYTES,
+      10 * 1024 * 1024,
+      'MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_MAX_BYTES'
+    ),
     auditLogKeep: parseNonNegativeInt(env.MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_KEEP, 5, 'MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_KEEP')
   }
 }

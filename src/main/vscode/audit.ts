@@ -1,7 +1,15 @@
 import type { Dirent } from 'node:fs'
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
-import { assertRealPathWithinRoot, daysAgo, duBytes, isNodeError, pathExists, readJsonIfExists, resolveWithinRoot } from '../../utils/utils.js'
+import {
+  assertRealPathWithinRoot,
+  daysAgo,
+  duBytes,
+  isNodeError,
+  pathExists,
+  readJsonIfExists,
+  resolveWithinRoot
+} from '../../utils/utils.js'
 
 const DAY_MS = 1000 * 60 * 60 * 24
 
@@ -123,7 +131,10 @@ const statMtime = async (file: string): Promise<number | null> => {
   /* v8 ignore stop */
 }
 
-export const obsoleteSessions = async (storageRoot: string, args: { older_than_days: number; flag_count: number; flag_size_mb: number; workspace?: string }) => {
+export const obsoleteSessions = async (
+  storageRoot: string,
+  args: { older_than_days: number; flag_count: number; flag_size_mb: number; workspace?: string }
+) => {
   const cutoff = Date.now() - args.older_than_days * DAY_MS
   const workspaces = await discoverWorkspaces(storageRoot)
   const target = args.workspace ? workspaces.filter((w) => w.id === args.workspace) : workspaces

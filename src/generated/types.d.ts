@@ -1,7 +1,7 @@
-// Generated on 2026-06-24T14:59:11.313Z by @knowledgeislands/mcp-claude-housekeeping@1.0.0
+// Generated on 2026-06-27T20:37:56.096Z by @knowledgeislands/mcp-claude-housekeeping@1.0.0
 // Server: kit-mcp-claude-housekeeping
 // Source: /Users/krisbrown/.mcporter/mcporter.json
-// Transport: STDIO node /Users/krisbrown/kis/knowledgeislands/mcp-claude-housekeeping/dist/mcp-server/index.js
+// Transport: STDIO /Users/krisbrown/.local/share/mise/installs/node/lts/bin/node /Users/krisbrown/kis/knowledgeislands/mcp-claude-housekeeping/dist/mcp-server/index.js
 
 import type { CallResult } from 'mcporter'
 
@@ -27,7 +27,12 @@ export interface KitMcpClaudeHousekeepingTools {
    * @param workspace? Filter to a single workspace by id ("<account>/<workspace>"); omit to run across
    *                   all.
    */
-  claude_desktop_sessions_obsolete(older_than_days?: number, flag_count?: number, flag_size_mb?: number, workspace?: string): Promise<CallResult>
+  claude_desktop_sessions_obsolete(
+    older_than_days?: number,
+    flag_count?: number,
+    flag_size_mb?: number,
+    workspace?: string
+  ): Promise<CallResult>
 
   /**
    * Audit check 3. Read each workspace's artifacts.json and report each artifact's name, starred status,
@@ -38,7 +43,12 @@ export interface KitMcpClaudeHousekeepingTools {
    * @param workspace? Filter to a single workspace by id ("<account>/<workspace>"); omit to run across
    *                   all.
    */
-  claude_desktop_artifacts_health(flag_versions?: number, flag_stale_days?: number, flag_unstarred_idle_days?: number, workspace?: string): Promise<CallResult>
+  claude_desktop_artifacts_health(
+    flag_versions?: number,
+    flag_stale_days?: number,
+    flag_unstarred_idle_days?: number,
+    workspace?: string
+  ): Promise<CallResult>
 
   /**
    * Audit check 5. For each local_* session dir in each workspace, list non-empty outputs/ or uploads/
@@ -140,14 +150,14 @@ export interface KitMcpClaudeHousekeepingTools {
    * filesystem path (with source_exists indicating whether that decoded path still resolves on disk).
    * Sorted by bytes descending.
    */
-  claude_code_projects_list(): Promise<CallResult>
+  claude_code_projects_list(): Promise<object>
 
   /**
    * Aggregate stats across ~/.claude: total bytes, projects bytes, project count, session count,
    * orphan-project count (projects whose decoded source path no longer exists). Flags large total size,
    * high session count, or many orphans.
    */
-  claude_code_storage_summary(flag_size_gb?: number, flag_session_count?: number, flag_orphan_count?: number): Promise<CallResult>
+  claude_code_storage_summary(flag_size_gb?: number, flag_session_count?: number, flag_orphan_count?: number): Promise<object>
 
   /**
    * Find session .jsonl files (and any matching <uuid>/ sidecar dirs) older than older_than_days
@@ -156,14 +166,14 @@ export interface KitMcpClaudeHousekeepingTools {
    *
    * @param project? Project directory name under ~/.claude/projects/ (the encoded path).
    */
-  claude_code_sessions_obsolete(older_than_days?: number, flag_count?: number, flag_size_mb?: number, project?: string): Promise<CallResult>
+  claude_code_sessions_obsolete(older_than_days?: number, flag_count?: number, flag_size_mb?: number, project?: string): Promise<object>
 
   /**
    * Report ~/.claude top-level state: history.jsonl size+mtime+line count if present, settings.json
    * existence and cleanupPeriodDays, .last-cleanup contents, plus a sorted list of every top-level dir
    * with its bytes (so bloated subtrees like file-history/ or plugins/ are visible).
    */
-  claude_code_global_status(): Promise<CallResult>
+  claude_code_global_status(): Promise<object>
 
   /**
    * Return the first or last N lines of a session JSONL at ~/.claude/projects/<project>/<session>. Use
@@ -173,7 +183,7 @@ export interface KitMcpClaudeHousekeepingTools {
    * @param project Project directory name under ~/.claude/projects/ (the encoded path).
    * @param tail? If true, return the last N lines; if false, the first N.
    */
-  claude_code_session_read(project: string, session: string, max_lines?: number, tail?: boolean): Promise<CallResult>
+  claude_code_session_read(project: string, session: string, max_lines?: number, tail?: boolean): Promise<object>
 
   /**
    * List .md files in ~/.claude/projects/<project>/memory/ with size and modified date, plus the full
@@ -181,26 +191,26 @@ export interface KitMcpClaudeHousekeepingTools {
    *
    * @param project Project directory name under ~/.claude/projects/ (the encoded path).
    */
-  claude_code_memory_list(project: string): Promise<CallResult>
+  claude_code_memory_list(project: string): Promise<object>
 
   /**
    * Read the contents of a single memory file at ~/.claude/projects/<project>/memory/<name>.
    *
    * @param project Project directory name under ~/.claude/projects/ (the encoded path).
    */
-  claude_code_memory_read(project: string, name: string): Promise<CallResult>
+  claude_code_memory_read(project: string, name: string): Promise<object>
 
   /**
    * List every workspaceStorage/<id>/chatSessions/ entry with the original workspace URI (from
    * workspace.json), session-file count, and size. Sorted by bytes descending.
    */
-  vscode_workspaces_list(): Promise<CallResult>
+  vscode_workspaces_list(): Promise<object>
 
   /**
    * Aggregate totals across every workspaceStorage/<id>/chatSessions/: workspace count, session count,
    * total chat bytes. Flags large size or session counts.
    */
-  vscode_storage_summary(flag_size_gb?: number, flag_session_count?: number): Promise<CallResult>
+  vscode_storage_summary(flag_size_gb?: number, flag_session_count?: number): Promise<object>
 
   /**
    * Find chat session .json/.jsonl files older than older_than_days (default 30) across all
@@ -208,7 +218,7 @@ export interface KitMcpClaudeHousekeepingTools {
    *
    * @param workspace? VSCode workspaceStorage subdir id (hex).
    */
-  vscode_sessions_obsolete(older_than_days?: number, flag_count?: number, flag_size_mb?: number, workspace?: string): Promise<CallResult>
+  vscode_sessions_obsolete(older_than_days?: number, flag_count?: number, flag_size_mb?: number, workspace?: string): Promise<object>
 
   /**
    * Return the first or last N lines of a chat session at
@@ -217,5 +227,5 @@ export interface KitMcpClaudeHousekeepingTools {
    *
    * @param workspace VSCode workspaceStorage subdir id (hex).
    */
-  vscode_session_read(workspace: string, session: string, max_lines?: number, tail?: boolean): Promise<CallResult>
+  vscode_session_read(workspace: string, session: string, max_lines?: number, tail?: boolean): Promise<object>
 }

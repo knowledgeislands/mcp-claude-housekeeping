@@ -12,7 +12,7 @@ launches.
 - Bun auto-loads `.env.${NODE_ENV}` from the CWD; Node needs the explicit `process.loadEnvFile()` call inside `loadConfig()` in
   [src/config/index.ts](./src/config/index.ts). The try/catch swallows the `TypeError` Bun raises (no `process.loadEnvFile`), so the same
   code works under both.
-- `NODE_ENV` is set to `development` only by `server:mcp:dev` and `server:mcp:inspect`. Claude Desktop doesn't set it, so `.env.*` is
+- `NODE_ENV` is set to `development` only by `ki:server:mcp:dev` and `ki:server:mcp:inspect`. Claude Desktop doesn't set it, so `.env.*` is
   ignored in production — `MCP_CLAUDE_HOUSEKEEPING_PATH` must come from the Claude Desktop config `env` block.
 
 Run `bun run` with no args for the full script list.

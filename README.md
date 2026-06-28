@@ -181,7 +181,7 @@ bun install
 | `MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_PATH`      | no       | Path to the JSONL audit log. Default `<MCP_CLAUDE_HOUSEKEEPING_PATH>/audit/audit.jsonl`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | `MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_MAX_BYTES` | no       | Size-based rotation threshold in bytes. Default `10485760` (10 MiB). Set to `0` to disable rotation.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | `MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_KEEP`      | no       | Number of rotated audit-log files to retain. Default `5`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| `NODE_ENV`                                    | no       | Dev convention. `server:mcp:dev`/`server:mcp:inspect` set this to `development`. [`loadConfig()`](./src/config/index.ts) hydrates `process.env` from the package root, highest precedence first: `.env.local`, then `.env.${NODE_ENV}` (only when `NODE_ENV` is set), then `.env`. A var already in the environment — e.g. the MCP client's `env` block — always wins over every file.                                                                                                                                                                                                       |
+| `NODE_ENV`                                    | no       | Dev convention. `ki:server:mcp:dev`/`ki:server:mcp:inspect` set this to `development`. [`loadConfig()`](./src/config/index.ts) hydrates `process.env` from the package root, highest precedence first: `.env.local`, then `.env.${NODE_ENV}` (only when `NODE_ENV` is set), then `.env`. A var already in the environment — e.g. the MCP client's `env` block — always wins over every file.                                                                                                                                                                                                 |
 
 The sessions root (`~/Library/Application Support/Claude/local-agent-mode-sessions`), Claude Code root (`~/.claude`), and VSCode
 workspaceStorage (`~/Library/Application Support/Code/User/workspaceStorage`) are computed defaults in
@@ -209,8 +209,8 @@ A starter is in [`claude-config-sample.json`](./claude-config-sample.json).
 
 ### Running From Source (Dev)
 
-Copy [`.env.example`](./.env.example) to `.env.development` and fill in `MCP_CLAUDE_HOUSEKEEPING_PATH`. The `server:mcp:dev` and
-`server:mcp:inspect` scripts run with `NODE_ENV=development`. [`loadConfig()`](./src/config/index.ts) hydrates `process.env` from the
+Copy [`.env.example`](./.env.example) to `.env.development` and fill in `MCP_CLAUDE_HOUSEKEEPING_PATH`. The `ki:server:mcp:dev` and
+`ki:server:mcp:inspect` scripts run with `NODE_ENV=development`. [`loadConfig()`](./src/config/index.ts) hydrates `process.env` from the
 package root, highest precedence first — `.env.local`, then `.env.${NODE_ENV}` (so `.env.development` here), then `.env` — and Bun
 auto-loads the same set. A var already in the environment always wins, so under Claude Desktop `MCP_CLAUDE_HOUSEKEEPING_PATH` comes from the
 config `env` block regardless of any file.
@@ -218,14 +218,14 @@ config `env` block regardless of any file.
 ```bash
 cp .env.example .env.development
 # edit .env.development, then:
-bun run server:mcp:dev
+bun run ki:server:mcp:dev
 ```
 
 You can also pass the vars inline if you'd rather skip `.env.development`:
 
 ```bash
 MCP_CLAUDE_HOUSEKEEPING_PATH=~/Documents/Claude/Projects/Claude\ Housekeeping \
-  bun run server:mcp:dev
+  bun run ki:server:mcp:dev
 ```
 
 ### Workspaces
@@ -242,14 +242,14 @@ single workspace with id `.` (back-compat with hard-coded inner-UUID configs).
 ## Development
 
 ```bash
-bun run server:mcp:dev      # bun --watch (NODE_ENV=development)
-bun run server:mcp:start    # build then run from dist/ under node
-bun run server:mcp:inspect  # MCP Inspector against TS source (NODE_ENV=development)
+bun run ki:server:mcp:dev      # bun --watch (NODE_ENV=development)
+bun run ki:server:mcp:start    # build then run from dist/ under node
+bun run ki:server:mcp:inspect  # MCP Inspector against TS source (NODE_ENV=development)
 bun run test           # vitest (use `bun run`, not `bun test`, since `bun test` invokes Bun's own runner)
-bun run lint:types     # tsc --noEmit
-bun run lint:check     # Biome lint + format check
-bun run lint:fix       # Biome auto-fix (uses --unsafe)
-bun run lint:md        # prettier + markdownlint for *.md
+bun run ki:lint:types     # tsc --noEmit
+bun run ki:lint:check     # Biome lint + format check
+bun run ki:lint:fix       # Biome auto-fix (uses --unsafe)
+bun run ki:lint:md        # prettier + markdownlint for *.md
 ```
 
 ## Security Model
@@ -290,8 +290,8 @@ bun run lint:md        # prettier + markdownlint for *.md
 
 **`MCP_CLAUDE_HOUSEKEEPING_PATH environment variable must be set`**
 
-Set it in the Claude Desktop config `env` block, or as a shell variable for `server:mcp:dev`. This is the only required env var; all target
-roots are hardcoded to their standard macOS locations.
+Set it in the Claude Desktop config `env` block, or as a shell variable for `ki:server:mcp:dev`. This is the only required env var; all
+target roots are hardcoded to their standard macOS locations.
 
 **Boot-time `CLAUDE_DESKTOP_ROOT_PATH: not accessible`**
 

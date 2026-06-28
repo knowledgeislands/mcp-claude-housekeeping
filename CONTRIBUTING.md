@@ -18,15 +18,15 @@ changes.
 ## Dev loop
 
 ```bash
-bun run server:mcp:dev      # bun --watch — runs the server from source
-bun run server:mcp:inspect  # MCP Inspector against the TS source
-bun run lint:types          # tsc --noEmit
+bun run ki:server:mcp:dev      # bun --watch — runs the server from source
+bun run ki:server:mcp:inspect  # MCP Inspector against the TS source
+bun run ki:lint:types          # tsc --noEmit
 bun run test                # vitest (use `bun run test`, not `bun test`)
 bun run test:watch          # vitest in watch mode
 bun run test:coverage       # vitest with v8 coverage report
-bun run lint:check          # Biome lint + format check
-bun run lint:fix            # Biome auto-fix
-bun run lint:md             # prettier + markdownlint for *.md
+bun run ki:lint:check          # Biome lint + format check
+bun run ki:lint:fix            # Biome auto-fix
+bun run ki:lint:md             # prettier + markdownlint for *.md
 ```
 
 ## Conventions
@@ -73,8 +73,8 @@ Add `!` for breaking changes (`feat!:` / `fix!:`) — bumps major.
 
 ## Before opening a PR
 
-- [ ] `bun run lint:check` passes
-- [ ] `bun run lint:types` passes
+- [ ] `bun run ki:lint:check` passes
+- [ ] `bun run ki:lint:types` passes
 - [ ] `bun run test:coverage` passes (no threshold failures)
 - [ ] Commit messages follow Conventional Commits
 - [ ] If you added/removed/renamed a tool, update `README.md` and `CLAUDE.md`

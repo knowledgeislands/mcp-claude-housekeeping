@@ -83,10 +83,11 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "clean": "rm -rf {dist,node_modules}",
-    "ki:conform": "bun run ki:deps:update && bun run ki:lint:package && bun run ki:lint:format && bun run ki:lint:fix && bun run ki:lint:md && bun run build && bun run test",
+    "ki:conform": "bun run ki:deps:refresh && bun run ki:lint:package && bun run ki:lint:format && bun run ki:lint:fix && bun run ki:lint:md && bun run build && bun run test",
     "ki:deps:check": "bunx knip --dependencies --no-config-hints",
     "ki:deps:fix": "bunx knip --dependencies --fix --no-config-hints",
-    "ki:deps:update": "bun update --latest",
+    "ki:deps:refresh": "bun update --force",
+    "ki:deps:update": "bun update --latest && bun install",
     "ki:generate:client": "mcporter emit-ts kit-mcp-claude-housekeeping --mode client --out src/generated/client.ts --types-out src/generated/types.d.ts && printf '// @ts-nocheck\\n' | cat - src/generated/client.ts > /tmp/gen-tmp.ts && mv /tmp/gen-tmp.ts src/generated/client.ts",
     "ki:knip": "bunx knip --no-config-hints",
     "ki:lint:check": "bunx @biomejs/biome check",

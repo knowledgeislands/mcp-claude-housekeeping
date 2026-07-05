@@ -1,15 +1,15 @@
-# Knowledge Islands repo config — read by the knowledgeislands-repo skill.
+# Knowledge Islands repo config — read by the ki-repo skill.
 # One [table] per skill that needs per-repo options.
-[knowledgeislands-repo]
+[ki-repo]
 visibility = "public"   # "public" | "private"
 # This repo fully conforms, so it declares no check overrides. To diverge, add a
-# [knowledgeislands-repo.checks] table with one boolean per check (true = enforce).
+# [ki-repo.checks] table with one boolean per check (true = enforce).
 
-# Read by the knowledgeislands-engineering skill (the common build/lint/test toolchain).
-[knowledgeislands-engineering]
+# Read by the ki-engineering skill (the common build/lint/test toolchain).
+[ki-engineering]
 # This repo fully conforms, so it declares no check overrides. To diverge, add a
-# [knowledgeislands-engineering.checks] table with one boolean per check (true = enforce).
+# [ki-engineering.checks] table with one boolean per check (true = enforce).
 
-# Read by the knowledgeislands-mcp skill (the workspace-MCP server standard).
+# Read by the ki-mcp skill (the workspace-MCP server standard).
 # Presence opts this repo into the MCP standard; it takes no per-repo keys today.
-[knowledgeislands-mcp]
+[ki-mcp]

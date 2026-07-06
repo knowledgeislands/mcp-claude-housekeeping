@@ -11,7 +11,7 @@
       "devDependencies": {
         "@biomejs/biome": "2.5.2",
         "@types/node": "^26.1.0",
-        "@vitest/coverage-v8": "^4.1.9",
+        "@vitest/coverage-v8": "^4.1.10",
         "husky": "^9.1.7",
         "knip": "^6.24.0",
         "lint-staged": "^17.0.8",
@@ -20,7 +20,7 @@
         "prettier": "^3.9.4",
         "syncpack": "^15.3.2",
         "typescript": "^6.0.3",
-        "vitest": "^4.1.9",
+        "vitest": "^4.1.10",
       },
     },
   },

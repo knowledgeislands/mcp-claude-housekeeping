@@ -106,7 +106,11 @@
     "prepare": "husky",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "ki:authoring:audit": "bun .claude/skills/ki-authoring/scripts/audit-authoring.ts .",
+    "ki:engineering:audit": "bun .claude/skills/ki-engineering/scripts/audit-engineering.ts .",
+    "ki:mcp:audit": "bun .claude/skills/ki-mcp/scripts/audit-mcp.ts .",
+    "ki:repo:audit": "bun .claude/skills/ki-repo/scripts/audit-repo.ts ."
   },
   "type": "module"
 }

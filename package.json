@@ -100,7 +100,7 @@
     "ki:server:mcp:dev": "NODE_ENV=development bun --watch src/mcp-server/index.ts",
     "ki:server:mcp:inspect": "NODE_ENV=development bunx @modelcontextprotocol/inspector bun src/mcp-server/index.ts",
     "ki:server:mcp:start": "bun run build && node dist/mcp-server/index.js",
-    "ki:skills:link:project": "bun $HOME/.claude/skills/knowledgeislands-bootstrap/scripts/link-skills.ts",
+    "ki:skills:link:project": "bun $HOME/.claude/skills/ki-bootstrap/scripts/link-skills.ts",
     "ki:test:smoke": "bun run build && bun scripts/smoke.ts",
     "ki:verify": "bun run ki:lint:check && bun run ki:lint:types && bun run ki:lint:md:check && bun run ki:knip && bun run build && bun run test:coverage",
     "prepare": "husky",
@@ -110,7 +110,8 @@
     "ki:authoring:audit": "bun .claude/skills/ki-authoring/scripts/audit-authoring.ts .",
     "ki:engineering:audit": "bun .claude/skills/ki-engineering/scripts/audit-engineering.ts .",
     "ki:mcp:audit": "bun .claude/skills/ki-mcp/scripts/audit-mcp.ts .",
-    "ki:repo:audit": "bun .claude/skills/ki-repo/scripts/audit-repo.ts ."
+    "ki:repo:audit": "bun .claude/skills/ki-repo/scripts/audit-repo.ts .",
+    "ki:repo:conform": "bun .claude/skills/ki-repo/scripts/conform-repo.ts ."
   },
   "type": "module"
 }

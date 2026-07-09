@@ -14,8 +14,8 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.5.2",
-    "@types/node": "^26.1.0",
+    "@biomejs/biome": "2.5.3",
+    "@types/node": "^26.1.1",
     "@vitest/coverage-v8": "^4.1.10",
     "husky": "^9.1.7",
     "knip": "^6.25.0",
@@ -24,7 +24,7 @@
     "mcporter": "^0.12.3",
     "prettier": "^3.9.4",
     "syncpack": "^15.3.2",
-    "typescript": "^6.0.3",
+    "typescript": "^7.0.2",
     "vitest": "^4.1.10"
   },
   "engines": {

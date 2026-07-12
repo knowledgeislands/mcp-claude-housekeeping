@@ -1,0 +1,7 @@
+#!/bin/sh
+# Vendored by ki-bootstrap — apply the mechanical fixes across the vendored set.
+# Usage: ./.ki-meta/bin/ki-conform
+set -eu
+root="$(cd "$(dirname "$0")/../.." && pwd)"
+cd "$root"
+exec bun ".ki-meta/bin/aggregate.ts" conform

@@ -5,6 +5,10 @@ visibility = "public"   # "public" | "private"
 # This repo fully conforms, so it declares no check overrides. To diverge, add a
 # [ki-repo.checks] table with one boolean per check (true = enforce).
 
+# The authoring standard (Markdown/TOML house style) is baseline for every KI repo —
+# declared explicitly, not assumed. Presence is the compliance marker.
+[ki-authoring]
+
 # Read by the ki-engineering skill (the common build/lint/test toolchain).
 [ki-engineering]
 # This repo fully conforms, so it declares no check overrides. To diverge, add a

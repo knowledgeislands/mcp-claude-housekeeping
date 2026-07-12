@@ -1,0 +1,22 @@
+#!/bin/sh
+# Vendored by ki-bootstrap — re-runs the remote INIT chain to refresh this repo's
+# vendored scripts. Usage: ./.ki-meta/bin/ki-init [--ref <ref>] [--dry-run] [--help]
+set -eu
+DEFAULT_REF="8240bc5629d40ca33f08f20d8141973b6984f93e"
+REPO="knowledgeislands/ki-agentic-harness"
+ref="$DEFAULT_REF"
+pass=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --ref) ref="$2"; shift 2 ;;
+    --help|-h)
+      echo "usage: ki-init [--ref <ref>] [--dry-run]"
+      echo "  re-runs the remote bootstrap chain against this repo at <ref> (default: the ref recorded in .ki-meta/manifest.json, 8240bc5629d40ca33f08f20d8141973b6984f93e)"
+      exit 0
+      ;;
+    *) pass="$pass $1"; shift ;;
+  esac
+done
+root="$(cd "$(dirname "$0")/../.." && pwd)"
+echo "re-bootstrapping $root from $REPO@$ref"
+curl -fsSL "https://raw.githubusercontent.com/$REPO/$ref/skills/ki-bootstrap/scripts/bootstrap.sh" | sh -s -- "$root" --ref "$ref"$pass

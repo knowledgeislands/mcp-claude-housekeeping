@@ -127,7 +127,7 @@ const BIOME_DEFAULT = `{
 `
 const PRETTIER_DEFAULT = `{
   "proseWrap": "never",
-  "printWidth": 140,
+  "printWidth": 160,
   "semi": false,
   "singleQuote": true,
   "trailingComma": "none",

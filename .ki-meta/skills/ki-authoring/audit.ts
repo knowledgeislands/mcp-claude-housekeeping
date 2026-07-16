@@ -18,16 +18,20 @@
  * No dependencies — Node/Bun builtins only; no cross-skill imports.
  */
 import { execSync } from 'node:child_process'
+import { createHash } from 'node:crypto'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { basename, join } from 'node:path'
 
 // Unified severity ladder — shared by every KI checker (enforcement-framework §2).
 type Level = 'FAIL' | 'WARN' | 'POLISH' | 'ADVISORY' | 'INFO' | 'NA' | 'PASS'
-type Finding = { level: Level; area: string; msg: string }
+// area is the rubric code (references/audit-rubric.md); ref is its reference-doc
+// pointer; file names the path a file-scoped finding concerns. ref/file are optional
+// and ride into --json for the aggregate to render (CHK-004/009/010).
+type Finding = { level: Level; area: string; msg: string; ref?: string; file?: string }
 const ORDER: Level[] = ['FAIL', 'WARN', 'POLISH', 'ADVISORY', 'INFO', 'NA', 'PASS']
-const ICON: Record<Level, string> = { FAIL: '❌', WARN: '⚠️ ', POLISH: '✨', ADVISORY: '🧭', INFO: 'ℹ️ ', NA: '⊘', PASS: '✅' }
+const ICON: Record<Level, string> = { FAIL: '❌', WARN: '⚠️', POLISH: '✨', ADVISORY: '🧭', INFO: 'ℹ️', NA: '🚫', PASS: '✅' }
 const findings: Finding[] = []
-const add = (level: Level, area: string, msg: string) => findings.push({ level, area, msg })
+const add = (level: Level, area: string, msg: string, ref?: string, file?: string) => findings.push({ level, area, msg, ref, file })
 
 const repo = process.argv[2]
 if (!repo || !existsSync(repo)) {
@@ -48,48 +52,118 @@ const read = (...p: string[]): string => {
 // Self-sufficient — no package.json / ki-engineering dependency. Mirrors the
 // the read-only Markdown gate — the same tools ki:authoring:conform runs with --write.
 const name = basename(repo)
-const MD_CHECK_CMD = 'bunx prettier --check "**/*.md" --ignore-path .gitignore && bunx markdownlint-cli2 "**/*.md"'
+// .ki-meta/ holds vendored/generated bootstrap artifacts — the harness owns their
+// formatting, so the target repo's Markdown gate must not judge them. Prettier gets the
+// exclusion inline; markdownlint's lives in the owned .markdownlint-cli2.jsonc below.
+const MD_CHECK_CMD = 'bunx prettier --check "**/*.md" "!.ki-meta/**" --ignore-path .gitignore && bunx markdownlint-cli2 "**/*.md"'
 
 try {
   execSync(MD_CHECK_CMD, { cwd: repo, stdio: ['pipe', 'pipe', 'pipe'], encoding: 'utf8' })
-  add('PASS', 'md-mech', 'Prettier + markdownlint clean (MD-mech)')
+  add('PASS', 'MD-mech', 'Prettier + markdownlint clean', 'references/markdown-authoring.md')
 } catch (err) {
   const out = (err as { stdout?: string; stderr?: string }).stdout ?? ''
   const detail = out.trim().split('\n').slice(0, 8).join('\n    ')
-  add('FAIL', 'md-mech', `Markdown mechanical check failed — run "bun run ki:authoring:conform" to fix (MD-mech)\n    ${detail}`)
+  add(
+    'FAIL',
+    'MD-mech',
+    `Markdown mechanical check failed — run "bun run ki:authoring:conform" to fix\n    ${detail}`,
+    'references/markdown-authoring.md'
+  )
 }
 
-// ── mechanical: .prettierrc.json printWidth ────────────────────────────────────
-// The table-reshape judgment depends on this value; surface it so ADVISORY
-// recipients know the threshold.
+// ── owns: .prettierrc.json / .editorconfig — hash-drift check ────────────────────
+// This skill owns both files wholly (SHAPE-16 `owns:`) — conform always corrects
+// drift unconditionally, so a mismatch here is WARN (informational: conform fixes
+// it), not FAIL. The table-reshape judgment below depends on printWidth; parse it
+// from whatever is on disk so ADVISORY recipients see the real threshold even when
+// the file is drifted.
+const sha256 = (content: string): string => createHash('sha256').update(content).digest('hex')
+
+const PRETTIER_DEFAULT = `{
+  "printWidth": 160,
+  "tabWidth": 2,
+  "useTabs": false,
+  "semi": false,
+  "singleQuote": true,
+  "proseWrap": "never",
+  "trailingComma": "none",
+  "overrides": [
+    {
+      "files": "*.md",
+      "options": {
+        "parser": "markdown"
+      }
+    }
+  ]
+}
+`
+
+const MARKDOWNLINT_DEFAULT = `{
+  // Base: enable all rules, then selectively adjust below.
+  "config": {
+    "default": true,
+
+    // MD013 - line length: disabled. Prettier owns line length via printWidth / proseWrap.
+    "MD013": false,
+
+    // MD024 - duplicate headings: allow in sibling sections only.
+    "MD024": { "siblings_only": true },
+
+    // MD025 - single H1: ignore the frontmatter title field.
+    "MD025": { "front_matter_title": "" },
+
+    // MD033 - inline HTML: disabled. <br> is used in table cells and skills use angle-bracket placeholders.
+    "MD033": false,
+
+    // MD036 - bold as heading: disabled. Bold labels are used intentionally in skill bodies.
+    "MD036": false
+  },
+
+  // Skill bodies, references, and repo docs are all markdown content.
+  "globs": ["**/*.md"],
+
+  // Never lint generated output, vendored/generated trees, or dependencies. The
+  // \`.ki-meta/\` vendored checkers + rendered help snapshots and the \`.claude/\` generated
+  // skill/agent symlinks are machine-generated (ADR-KI-HARNESS-TOOLCHAIN-005) — excluded
+  // like dist/, so their formatting is never a finding.
+  "ignores": ["dist/**", "node_modules/**", ".ki-meta/**", ".claude/**"]
+}
+`
+
+const EDITORCONFIG_DEFAULT = `root = true
+
+[*]
+indent_style = space
+indent_size = 2
+end_of_line = lf
+charset = utf-8
+trim_trailing_whitespace = true
+insert_final_newline = true
+
+[*.md]
+trim_trailing_whitespace = false
+`
+
+function checkOwned(name: string, canonical: string): void {
+  const current = read(name)
+  if (!current) {
+    add('WARN', 'OWNS', `missing — run ki:authoring:conform to scaffold it from the house template`, 'owns:', name)
+    return
+  }
+  if (sha256(current) === sha256(canonical)) {
+    add('PASS', 'OWNS', `matches the house template`, 'owns:', name)
+  } else {
+    add('WARN', 'OWNS', `has drifted from the house template — run ki:authoring:conform to correct it`, 'owns:', name)
+  }
+}
+
+checkOwned('.prettierrc.json', PRETTIER_DEFAULT)
+checkOwned('.editorconfig', EDITORCONFIG_DEFAULT)
+checkOwned('.markdownlint-cli2.jsonc', MARKDOWNLINT_DEFAULT)
+
 const prettier = read('.prettierrc.json')
-let printWidth = 140
-if (!prettier) {
-  add('WARN', 'toolchain', '.prettierrc.json missing — cannot confirm printWidth for MD-table threshold')
-} else {
-  const m = prettier.match(/"printWidth"\s*:\s*(\d+)/)
-  if (m) {
-    printWidth = Number(m[1])
-    add('PASS', 'toolchain', `.prettierrc.json printWidth = ${printWidth} (the MD-table reshape threshold)`)
-  } else {
-    add('WARN', 'toolchain', '.prettierrc.json has no printWidth — table-reshape threshold unknown')
-  }
-
-  // proseWrap is load-bearing for this skill's own conform: anything but "never"
-  // means the Prettier pass conform shells out to actively hard-wraps prose,
-  // contradicting references/markdown-authoring.md's line-wrapping convention.
-  const pw = prettier.match(/"proseWrap"\s*:\s*"(\w+)"/)
-  if (pw?.[1] === 'never') {
-    add('PASS', 'toolchain', '.prettierrc.json proseWrap = "never" (required — conform hard-wraps prose otherwise)')
-  } else {
-    add(
-      'FAIL',
-      'toolchain',
-      `.prettierrc.json proseWrap must be "never" (found ${pw ? `"${pw[1]}"` : 'unset'}) — ` +
-        'conform will hard-wrap prose lines, contradicting the house Markdown convention'
-    )
-  }
-}
+const pwMatch = prettier.match(/"printWidth"\s*:\s*(\d+)/)
+const printWidth = pwMatch ? Number(pwMatch[1]) : 140
 
 // ── judgment surface: Markdown [J] criteria ────────────────────────────────────
 // Each advisory names the criterion ID from references/audit-rubric.md and what
@@ -97,34 +171,35 @@ if (!prettier) {
 
 add(
   'ADVISORY',
-  'md-table',
-  `MD-table [J]: tables exceeding printWidth (${printWidth}) must be reshaped — descriptive matrix → subheadings or bullet list; ` +
-    'genuinely tabular data with one long column → keep table, move that column to footnotes with a one-char marker. ' +
-    '(references/markdown-authoring.md)'
+  'MD-table',
+  `tables exceeding printWidth (${printWidth}) must be reshaped — descriptive matrix → subheadings or bullet list; ` +
+    'genuinely tabular data with one long column → keep table, move that column to footnotes with a one-char marker.',
+  'references/markdown-authoring.md'
 )
 
 add(
   'ADVISORY',
-  'md-footnote',
-  'MD-footnote [J]: footnotes use the marker series † ‡ § ¶ ‖ (then doubled), reset per table; ' +
-    'a second series ※ ❡ ¤ ¥ where one table needs two. Each footnote separated by a blank line. ' +
-    '(references/markdown-authoring.md)'
+  'MD-footnote',
+  'footnotes use the marker series † ‡ § ¶ ‖ (then doubled), reset per table; ' +
+    'a second series ※ ❡ ¤ ¥ where one table needs two. Each footnote separated by a blank line.',
+  'references/markdown-authoring.md'
 )
 
 add(
   'ADVISORY',
-  'md-link',
-  "MD-link [J]: link text must be descriptive (words you'd skim for) beyond what MD059 enforces. " +
+  'MD-link',
+  "link text must be descriptive (words you'd skim for) beyond what MD059 enforces. " +
     'Use relative markdown links in house files (SKILL.md, repo docs) — wikilinks are correct only ' +
     'in KB note content and agent system prompts (scoped by ki-kb / ki-agents LINK-2). ' +
-    'Angle-bracket form for paths with spaces. (references/markdown-authoring.md)'
+    'Angle-bracket form for paths with spaces.',
+  'references/markdown-authoring.md'
 )
 
 add(
   'ADVISORY',
-  'md-cell-prose',
-  'MD-cell-prose [J]: table cells must not contain long descriptive prose — move prose to a footnote, ' +
-    'leave only a brief label + marker in the cell. (references/markdown-authoring.md)'
+  'MD-cell-prose',
+  'table cells must not contain long descriptive prose — move prose to a footnote, ' + 'leave only a brief label + marker in the cell.',
+  'references/markdown-authoring.md'
 )
 
 // ── judgment surface: TOML [J] criteria ───────────────────────────────────────
@@ -132,28 +207,25 @@ add(
 
 const hasKiConfig = has('.ki-config.toml')
 if (!hasKiConfig) {
-  add('NA', 'toml', 'no .ki-config.toml in repo — TOML criteria not applicable')
+  add('NA', 'TOML', 'no .ki-config.toml in repo — TOML criteria not applicable')
 } else {
   add(
     'ADVISORY',
-    'toml-keys',
-    'TOML-keys [J]: keys lowercase, snake_case for multi-word, named for the noun the value holds ' +
-      '(e.g. "visibility" not "repo_visibility_setting"). (references/toml-config.md)'
+    'TOML-keys',
+    'keys lowercase, snake_case for multi-word, named for the noun the value holds ' + '(e.g. "visibility" not "repo_visibility_setting").',
+    'references/toml-config.md'
   )
-  add('ADVISORY', 'toml-values', 'TOML-values [J]: strings double-quoted; short lists inline ["a", "b"]. (references/toml-config.md)')
-  add(
-    'ADVISORY',
-    'toml-tables',
-    'TOML-tables [J]: one table per skill, named for the skill, with sub-tables nested under it. ' + '(references/toml-config.md)'
-  )
-  add('ADVISORY', 'toml-comments', 'TOML-comments [J]: non-obvious keys carry a # line above with their why. (references/toml-config.md)')
+  add('ADVISORY', 'TOML-values', 'strings double-quoted; short lists inline ["a", "b"].', 'references/toml-config.md')
+  add('ADVISORY', 'TOML-tables', 'one table per skill, named for the skill, with sub-tables nested under it.', 'references/toml-config.md')
+  add('ADVISORY', 'TOML-comments', 'non-obvious keys carry a # line above with their why.', 'references/toml-config.md')
 }
 
 // ── judgment surface: sync criterion ──────────────────────────────────────────
 add(
   'ADVISORY',
-  'sync',
-  'sync [J]: the convention references, audit-rubric.md, and sources.md must agree; when a convention moves, all three move together (Mode REFRESH).'
+  'SYNC',
+  'the convention references, audit-rubric.md, and sources.md must agree; when a convention moves, all three move together (Mode REFRESH).',
+  'references/audit-rubric.md'
 )
 
 // ── report ────────────────────────────────────────────────────────────────────
@@ -182,7 +254,13 @@ function emit(items: Finding[], target: string, concern: string, title: string, 
     mkdirSync(reportDir, { recursive: true })
     const body = ORDER.flatMap((l) => {
       const rows = items.filter((f) => f.level === l)
-      return rows.length ? ['', `## ${ICON[l]} ${l} (${rows.length})`, ...rows.map((r) => `- [${r.area}] ${r.msg}`)] : []
+      return rows.length
+        ? [
+            '',
+            `## ${ICON[l]} ${l} (${rows.length})`,
+            ...rows.map((r) => `- [${r.area}]${r.file ? ` ${r.file}` : ''} ${r.msg}${r.ref ? ` (${r.ref})` : ''}`)
+          ]
+        : []
     })
     writeFileSync(join(reportDir, `${concern}.md`), [`# ${concern} audit — ${target}`, '', `_${stamp}_`, '', tally, ...body, ''].join('\n'))
     writeFileSync(
@@ -199,7 +277,7 @@ function emit(items: Finding[], target: string, concern: string, title: string, 
       const rows = items.filter((f) => f.level === l)
       if (!rows.length) continue
       console.log(`\n${ICON[l]} ${l} (${rows.length})`)
-      for (const r of rows) console.log(`   [${r.area}] ${r.msg}`)
+      for (const r of rows) console.log(`   [${r.area}]${r.file ? ` ${r.file}` : ''} ${r.msg}${r.ref ? ` (${r.ref})` : ''}`)
     }
     console.log(`\n${'─'.repeat(60)}\n${tally}`)
     if (footer) console.log(footer)
@@ -211,10 +289,10 @@ function emit(items: Finding[], target: string, concern: string, title: string, 
   process.exit(summary.fail ? 1 : 0)
 }
 
-add('INFO', 'scope', 'authoring conventions — Markdown mechanical gate + judgment criteria surface')
+add('INFO', 'SCOPE', 'authoring conventions — Markdown mechanical gate + judgment criteria surface')
 add(
   'ADVISORY',
-  'judgment',
+  'JUDGMENT',
   'mechanical half only for Markdown; TOML and all [J] criteria require human review — see references/audit-rubric.md'
 )
 

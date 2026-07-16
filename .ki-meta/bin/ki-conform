@@ -1,7 +1,15 @@
 #!/bin/sh
 # Vendored by ki-bootstrap — apply the mechanical fixes across the vendored set.
-# Usage: ./.ki-meta/bin/ki-conform
+# Usage: ./.ki-meta/bin/ki-conform [--dry-run]
 set -eu
+case "${1:-}" in
+  -h|--help)
+    echo "usage: ki-conform [--dry-run]"
+    echo "  applies each vendored skill's mechanical fixes across .ki-meta/skills/."
+    echo "  --dry-run  report what would change without writing."
+    exit 0
+    ;;
+esac
 root="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$root"
-exec bun ".ki-meta/bin/aggregate.ts" conform
+exec bun ".ki-meta/bin/aggregate.ts" conform "$@"

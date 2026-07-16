@@ -1,6 +1,6 @@
 # ki-engineering
 
-Use to audit our engineering standards, conform or scaffold a repo's toolchain, or check script-family / tsconfig / biome consistency.
+Use to audit our engineering standards, conform or scaffold a repo's toolchain, or check audit wiring, tsconfig, or Biome consistency.
 
 **Invoke:** `ki-engineering audit <repo> | conform <repo> | help | init <repo> | refresh`
 

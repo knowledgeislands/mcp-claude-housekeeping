@@ -14,7 +14,7 @@ Canonical themes and active execution plans.
 - **Title:** Adopt uniform governance modes and bootstrap
 - **Theme:** `foundation-tooling`
 - **Roadmap item:** `foundation-tooling/adopt-uniform-governance-modes-and-bootstrap`
-- **Status:** open
+- **Status:** in-progress
 - **Blocks:** —
 
 ## Dependency graph

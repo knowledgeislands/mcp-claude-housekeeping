@@ -17,3 +17,6 @@ visibility = "public"   # "public" | "private"
 # Read by the ki-mcp skill (the workspace-MCP server standard).
 # Presence opts this repo into the MCP standard; it takes no per-repo keys today.
 [ki-mcp]
+
+# The non-KB thematic roadmap and colocated execution-plan standard.
+[ki-project-roadmap]

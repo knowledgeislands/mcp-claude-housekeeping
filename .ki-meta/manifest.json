@@ -1,18 +1,21 @@
 {
-  "ref": "8240bc5629d40ca33f08f20d8141973b6984f93e",
+  "ref": "a173d31127732d9c32c718703bcaf5b1685705c9",
   "files": {
-    ".ki-meta/skills/ki-authoring/audit.ts": "748a34c86942dcfd5a4036aee30bafebd7aba8190ddef0b466b01a81934a9fc1",
-    ".ki-meta/skills/ki-authoring/conform.ts": "73ea8ebc371bc1307d8e5aa24cf924376ab575e95dede89b92fcc80add557fc1",
-    ".ki-meta/skills/ki-authoring/help.md": "e1754d4be0ddb8b2196489a831bade16f16cf6c8169da41fa7bd1af609cc1760",
-    ".ki-meta/skills/ki-engineering/audit.ts": "8f2834c6a86e500c595249fe7d81450fbb30c82e467496aca6f0517da1794f88",
-    ".ki-meta/skills/ki-engineering/conform.ts": "997575cc9a8b72155ee2f704e3803bc417524b701532672e870eef338194ce11",
-    ".ki-meta/skills/ki-engineering/help.md": "7aec5cf8cb035f0eac1ba798760ea7f1d0c856a788ead80475d98bbfd829310b",
-    ".ki-meta/skills/ki-mcp/audit.ts": "7ba2f333f5e726b031cc747593e5c84fb4b80f0ab4f2ffae0f45da9cbc44ddd6",
-    ".ki-meta/skills/ki-mcp/conform.ts": "555cc61424e5c23b0e9f8bbd98e8bf57b7259fe19ba7edffc7eddc16c86aa56b",
-    ".ki-meta/skills/ki-mcp/help.md": "5824728920f44b3a31ee805887a5bc1c95537f802de5c2494abe43b9cd10a066",
-    ".ki-meta/skills/ki-repo/audit.ts": "84cd3a5c85d1eed748bc2ac1b08256ec7337a6ea49c12a3b7376d9610f8c93b7",
-    ".ki-meta/skills/ki-repo/conform.ts": "2c9798ccfbe5069f0cf1d994e2fcb9770b3c4ed6186dba62c510f5426816ff52",
-    ".ki-meta/skills/ki-repo/help.md": "c9b59ceca65e73962b6fee1eb50411d45e08c37844f13dc33710df262d2b1a5f",
-    ".ki-meta/bin/aggregate.ts": "1e3d504d2aea9bcbd5dd299bb2ac5cdde1a098c24d83450e0f008723eda2e1bb"
+    ".ki-meta/skills/ki-authoring/audit.ts": "686be5f1c00e76ea76f494050eabb8fc4708ee92a741391b9dc346f7010aa41d",
+    ".ki-meta/skills/ki-authoring/conform.ts": "6d5232b279764152f68909b85f96518191e068f3108a75d57030ce5759bd3c93",
+    ".ki-meta/skills/ki-authoring/help.md": "c4dc6e5e37355acabbaa74289249c63ed40c4323c3ddd8957a591183638f8d7f",
+    ".ki-meta/skills/ki-engineering/audit.ts": "d4cc5b5c8754de2037d960a7a6b8df0c01cfaef8f768314f96532a363464218f",
+    ".ki-meta/skills/ki-engineering/conform.ts": "25add7f2fccecbc5e5f0f3eb5a05e672b26c101ae5b4466f6d2212aafa96a802",
+    ".ki-meta/skills/ki-engineering/help.md": "007e06e672074e470c88b44bb5b1d497faff8b8584308c661516daca74e68eaf",
+    ".ki-meta/skills/ki-mcp/audit.ts": "a0ef2d9d110c00230881c60c74135f9d3d04c6e7242d92f705a21c2909636e91",
+    ".ki-meta/skills/ki-mcp/conform.ts": "c2ef205f8ac80b6563889ce9be5be632b08b1c4853f622e76ded43f74539b0d1",
+    ".ki-meta/skills/ki-mcp/help.md": "83e0bb5973ec14598525b25788d9308e639b79dfd1170d90f6c027251344ca0a",
+    ".ki-meta/skills/ki-project-roadmap/audit.ts": "63638eea4d7c3a7fe577392875695bf99f35a47d9ae893989a6d88c6085024e6",
+    ".ki-meta/skills/ki-project-roadmap/conform.ts": "524135c4692fe04033ac4c4c19e56bfe725465ffb39969d5633bf2a77079b08b",
+    ".ki-meta/skills/ki-project-roadmap/help.md": "86feddb7d31ef53a73d0fb91530441f5de75304d9ed82d0641c360944ebcf497",
+    ".ki-meta/skills/ki-repo/audit.ts": "4127d0edae5ed467c4a4ab6b6bc877d2de10232e7984eb1d26f7afed6840e7ed",
+    ".ki-meta/skills/ki-repo/conform.ts": "6f3dcbe6064292d11999b7c768b63b5e29bb8f56cef431d59c3c0fd4ec3a4eef",
+    ".ki-meta/skills/ki-repo/help.md": "9bf94b66e47a72e59ca64fb8c5798d1d7f93633502fdf255849230aa8bb4ffc6",
+    ".ki-meta/bin/aggregate.ts": "51b9691ea7e0e12f3fa1f823fd6e093a5ebfae04b8c5afc9f514383f84d96f75"
   }
 }

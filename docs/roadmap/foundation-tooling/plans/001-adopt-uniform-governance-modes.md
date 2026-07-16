@@ -1,7 +1,7 @@
 ---
 id: '001'
 title: Adopt uniform governance modes and bootstrap
-status: open
+status: in-progress
 roadmap: foundation-tooling/adopt-uniform-governance-modes-and-bootstrap
 blocks: —
 blocked-by: —
@@ -13,18 +13,18 @@ This MCP repository is an early matched follow-up in the harness's uniform-mode 
 
 ## Current state
 
-On 2026-07-16, the repository was clean on `main`, declared `ki-repo`, `ki-authoring`, `ki-engineering`, and `ki-mcp`, and carried the pre-rollout vendor reference `8240bc5629d40ca33f08f20d8141973b6984f93e`. Its `ki:audit` command still calls the historical `scripts/ki/aggregate.ts` and unavailable `.claude/skills/*/scripts` paths.
+On 2026-07-16, the repository adopted the current five-skill governance baseline: `ki-authoring`, `ki-engineering`, `ki-mcp`, `ki-project-roadmap`, and `ki-repo`. The generated `.ki-meta/` payload now supplies the canonical aggregate commands; the historical checked-in `scripts/ki/` wrappers have been removed. `bun run ki:audit`, `bun run test` (307 passing tests), `bun run ki:test:smoke` (39 tools and schemas), and the bootstrap audit all pass.
 
 ## Steps
 
-1. Add the `ki-project-roadmap` coverage declaration and re-bootstrap from the current harness, publishing only the declared generated runtime payloads.
-2. Reconcile `package.json` and CI with the canonical generated aggregate and per-skill commands, preserving MCP-specific server, generator, and smoke-test commands.
-3. Run the focused bootstrap, project-roadmap, engineering, authoring, MCP, test, and aggregate gates; classify every failure as repository drift or a harness defect.
-4. Commit the validated migration and report the observed recipe variant, if any, to the harness coordinating plan.
+1. [x] Add the `ki-project-roadmap` coverage declaration and re-bootstrap from the current harness, publishing only the declared generated runtime payloads.
+2. [x] Reconcile `package.json` and CI with the canonical generated aggregate and per-skill commands, preserving MCP-specific server, generator, and smoke-test commands.
+3. [x] Run the focused bootstrap, project-roadmap, engineering, authoring, MCP, test, and aggregate gates; classify every failure as repository drift or a harness defect.
+4. [ ] Commit the validated migration and report the observed recipe variant, if any, to the harness coordinating plan.
 
 ## Files touched
 
-`.ki-config.toml`, `.ki-meta/`, generated project-local runtime payloads, `package.json`, `.github/workflows/ci.yml`, legacy `scripts/ki/` wrappers, `ROADMAP.md`, and `docs/roadmap/`.
+`.ki-config.toml`, `.ki-meta/`, `.markdownlint-cli2.jsonc`, `knip.json`, `package.json`, `.github/workflows/ci.yml`, retired `scripts/ki/` wrappers, `ROADMAP.md`, and `docs/roadmap/`.
 
 ## Verify
 

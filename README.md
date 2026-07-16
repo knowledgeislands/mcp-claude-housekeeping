@@ -154,15 +154,15 @@ bun install
 
 ### Environment Variables
 
-| Name | Required | Description |
-| --- | --- | --- |
-| `MCP_CLAUDE_HOUSEKEEPING_PATH` | yes | Absolute path or `~/...` to the directory where audit reports are written. |
-| `MCP_CLAUDE_HOUSEKEEPING_ACCESS_LEVEL` | no | Maximum tool access level to register.† |
-| `MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG` | no | Audit-log scope.‡ |
-| `MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_PATH` | no | Path to the JSONL audit log. Default `<MCP_CLAUDE_HOUSEKEEPING_PATH>/audit/audit.jsonl`. |
-| `MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_MAX_BYTES` | no | Size-based rotation threshold in bytes.§ |
-| `MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_KEEP` | no | Number of rotated audit-log files to retain. Default `5`. |
-| `NODE_ENV` | no | Dev convention; controls which `.env` files [`loadConfig()`](./src/config/index.ts) loads.¶ |
+| Name                                          | Required | Description                                                                                 |
+| --------------------------------------------- | -------- | ------------------------------------------------------------------------------------------- |
+| `MCP_CLAUDE_HOUSEKEEPING_PATH`                | yes      | Absolute path or `~/...` to the directory where audit reports are written.                  |
+| `MCP_CLAUDE_HOUSEKEEPING_ACCESS_LEVEL`        | no       | Maximum tool access level to register.†                                                     |
+| `MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG`           | no       | Audit-log scope.‡                                                                           |
+| `MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_PATH`      | no       | Path to the JSONL audit log. Default `<MCP_CLAUDE_HOUSEKEEPING_PATH>/audit/audit.jsonl`.    |
+| `MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_MAX_BYTES` | no       | Size-based rotation threshold in bytes.§                                                    |
+| `MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_KEEP`      | no       | Number of rotated audit-log files to retain. Default `5`.                                   |
+| `NODE_ENV`                                    | no       | Dev convention; controls which `.env` files [`loadConfig()`](./src/config/index.ts) loads.¶ |
 
 † Maximum tool access level to register. One of: `read` (default — read-only tools only, least privilege), `write` (reserved — no such tools today), `destructive` (adds prune/relocate/delete). Levels nest. Each tool's level is derived from its MCP annotations (`readOnlyHint: true` → `read`; `destructiveHint: true` → `destructive`; missing annotations → `destructive` fail-safe); a tool registers when its derived level ≤ the configured level. The `dry_run: true` default on destructive tools controls _effect_; the gate controls _visibility_. Unknown values abort startup.
 

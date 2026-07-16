@@ -10,7 +10,6 @@ Actively broken, or blocking the `Next` horizon: takes priority over everything 
 
 Scoped and ready to start — the immediate queue, picked up before anything in **Soon** or **Future**.
 
-- [Foundation Tooling: Adopt uniform governance modes and bootstrap](docs/roadmap/foundation-tooling/ROADMAP.md#adopt-uniform-governance-modes-and-bootstrap)
 - [Operations: Add destructive cleanup tools for Claude Desktop sessions and outputs](docs/roadmap/operations/ROADMAP.md#add-destructive-cleanup-tools-for-claude-desktop-sessions-and-outputs)
 - [Operations: Make orphan detection path-safe](docs/roadmap/operations/ROADMAP.md#make-orphan-detection-path-safe)
 

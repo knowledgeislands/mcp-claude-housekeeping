@@ -8,10 +8,6 @@ Actively broken, or blocking the `Next` horizon: takes priority over everything 
 
 Scoped and ready to start — the immediate queue, picked up before anything in **Soon** or **Future**.
 
-### Adopt uniform governance modes and bootstrap
-
-Replace the stale project-local skill command paths with the current coverage-scoped bootstrap and aggregate command model. Preserve the working MCP test baseline and record the outcome in the harness-level MCP rollout plan.
-
 ## Soon
 
 Understood and roughly scoped but not yet started — worth doing once the **Next** queue clears, ahead of anything still speculative.

@@ -214,7 +214,7 @@ function treePaths(nwo: string, branch: string): Set<string> {
 
 // `.ki-config.toml` is a shared per-repo file; each skill reads its own [table].
 // This skill owns the [ki-repo] table. The default block
-// (written by `--init`) is the authoritative key list — authoring a repo emits it.
+// (written by `--educate`) is the authoritative key list — authoring a repo emits it.
 const KI_SECTION = 'ki-repo'
 const KI_REPO_DEFAULT = `[${KI_SECTION}]
 visibility = "private"   # "public" | "private" — must match the repo's actual GitHub visibility
@@ -435,7 +435,7 @@ function auditRepo(r: Repo, files: Set<string>, ki: KiConfig | null, kiText: str
   // installed (ADR-007). A marker-only repo with neither runner is a FAIL.
   if (files.has(KI_CONFIG)) {
     if (!declaresRootTable(kiText ?? '', 'ki-authoring'))
-      fail('FILES-3', `${KI_CONFIG} does not declare [ki-authoring] — the authoring standard is baseline (run --init)`, KI_CONFIG)
+      fail('FILES-3', `${KI_CONFIG} does not declare [ki-authoring] — the authoring standard is baseline (run --educate)`, KI_CONFIG)
     const hasRunner = signals.tree.has('.ki-meta/bin/aggregate.ts') || signals.tree.has('.ki-meta/bin/ki-audit')
     if (!hasRunner)
       fail(
@@ -532,7 +532,7 @@ function auditRepo(r: Repo, files: Set<string>, ki: KiConfig | null, kiText: str
 
   // VIS-1: visibility declared in .ki-config.toml, checked against live GitHub
   const declared = ki?.visibility?.toUpperCase()
-  if (!ki) fail('VIS-1', `cannot verify visibility — ${KI_CONFIG} has no [${KI_SECTION}] table (run --init)`)
+  if (!ki) fail('VIS-1', `cannot verify visibility — ${KI_CONFIG} has no [${KI_SECTION}] table (run --educate)`)
   else if (declared !== 'PUBLIC' && declared !== 'PRIVATE')
     fail('VIS-1', `${KI_CONFIG} does not declare a valid \`visibility\` (got ${JSON.stringify(ki.visibility)})`)
   else if (declared !== r.visibility) fail('VIS-1', `visibility is ${r.visibility} but ${KI_CONFIG} declares ${declared}`)
@@ -701,7 +701,7 @@ function localIntegrityFindings(dir: string): Finding[] {
   if (!existsSync(metaDir)) return f // no vendored surface — nothing to check
   const manifestPath = join(metaDir, 'manifest.json')
   if (!existsSync(manifestPath)) {
-    warn('VENDOR-1', '.ki-meta/ present but no manifest.json — re-bootstrap (ki-init) to migrate to the manifest-based drift contract')
+    warn('VENDOR-1', '.ki-meta/ present but no manifest.json — re-bootstrap (ki-educate) to migrate to the manifest-based drift contract')
     return f
   }
   let manifest: { ref?: string; files?: Record<string, string> }
@@ -722,11 +722,12 @@ function localIntegrityFindings(dir: string): Finding[] {
     const actual = createHash('sha256').update(readFileSync(abs)).digest('hex')
     if (actual !== expected) mismatched.push(rel)
   }
-  if (missing.length) fail('VENDOR-1', `manifest file(s) missing on disk: ${missing.join(', ')} — re-run ./.ki-meta/bin/ki-init to restore`)
+  if (missing.length)
+    fail('VENDOR-1', `manifest file(s) missing on disk: ${missing.join(', ')} — re-run ./.ki-meta/bin/ki-educate to restore`)
   if (mismatched.length)
     fail(
       'VENDOR-1',
-      `vendored file(s) do not match the manifest hash (tampered or partially re-vendored): ${mismatched.join(', ')} — re-run ./.ki-meta/bin/ki-init to restore`
+      `vendored file(s) do not match the manifest hash (tampered or partially re-vendored): ${mismatched.join(', ')} — re-run ./.ki-meta/bin/ki-educate to restore`
     )
   return f
 }
@@ -821,9 +822,9 @@ function orgTargets(org: string): Target[] {
 
 // ── run ────────────────────────────────────────────────────────────────────
 const argv = process.argv.slice(2)
-// `--init` prints the default [ki-repo] block for a new repo's
+// `--educate` prints the default [ki-repo] block for a new repo's
 // .ki-config.toml (authoring creates the keys; the author edits the values).
-if (argv.includes('--init')) {
+if (argv.includes('--educate')) {
   process.stdout.write(KI_DEFAULT)
   process.exit(0)
 }

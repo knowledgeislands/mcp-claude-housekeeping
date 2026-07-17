@@ -1,6 +1,6 @@
 #!/bin/sh
-# Vendored by ki-bootstrap — re-runs the remote INIT chain to refresh this repo's
-# vendored scripts. Usage: ./.ki-meta/bin/ki-init [--ref <ref>] [--dry-run] [--help]
+# Vendored by ki-bootstrap — re-runs the remote EDUCATE chain to refresh this repo's
+# vendored scripts. Usage: ./.ki-meta/bin/ki-educate [--ref <ref>] [--dry-run] [--help]
 set -eu
 DEFAULT_REF="main"
 REPO="knowledgeislands/ki-agentic-harness"
@@ -10,7 +10,7 @@ while [ $# -gt 0 ]; do
   case "$1" in
     --ref) ref="$2"; shift 2 ;;
     --help|-h)
-      echo "usage: ki-init [--ref <ref>] [--dry-run]"
+      echo "usage: ki-educate [--ref <ref>] [--dry-run]"
       echo "  re-runs the remote bootstrap chain against this repo at <ref> (default: main — the latest harness)."
       echo "  the exact commit last applied is recorded in .ki-meta/manifest.json."
       exit 0

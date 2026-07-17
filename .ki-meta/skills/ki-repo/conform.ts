@@ -36,7 +36,7 @@
  * Scaffolds locally (only when absent, never overwritten):
  *   - .gitignore — from this skill's own template.
  *   - .ki-config.toml's missing [ki-repo] / [ki-authoring] root markers —
- *     audit.ts's `--init` template, appended without rewriting existing bytes.
+ *     audit.ts's `--educate` template, appended without rewriting existing bytes.
  * `.editorconfig` is owned by ki-authoring (it backs that skill's own Markdown
  * conform pass), not this skill.
  *

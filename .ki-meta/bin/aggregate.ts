@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 // Vendored by ki-bootstrap. Runs each vendored skill checker under ../skills/ in
 // sequence for the given verb — no package.json required.
-// Usage: bun .ki-meta/bin/aggregate.ts <audit|conform|init|help>
+// Usage: bun .ki-meta/bin/aggregate.ts <audit|conform|educate|help>
 import { execFileSync, spawnSync } from 'node:child_process'
 import { existsSync, readdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
@@ -9,14 +9,14 @@ import { fileURLToPath } from 'node:url'
 
 const verb = process.argv[2]
 if (!verb) {
-  console.error('usage: aggregate.ts <audit|conform|init|help>')
+  console.error('usage: aggregate.ts <audit|conform|educate|help>')
   process.exit(2)
 }
 const binDir = dirname(fileURLToPath(import.meta.url))
-if (verb === 'init' || verb === 'help') {
-  // init: the local re-sync prompt (re-run the remote chain at the manifest's ref).
+if (verb === 'educate' || verb === 'help') {
+  // educate: the local re-sync prompt (re-run the remote chain at the manifest's ref).
   // help: the vendored HELP snapshots. Both exec the sibling wrapper.
-  execFileSync(join(binDir, verb === 'init' ? 'ki-init' : 'ki-help'), process.argv.slice(3), { stdio: 'inherit' })
+  execFileSync(join(binDir, verb === 'educate' ? 'ki-educate' : 'ki-help'), process.argv.slice(3), { stdio: 'inherit' })
   process.exit(0)
 }
 if (verb === 'refresh') {

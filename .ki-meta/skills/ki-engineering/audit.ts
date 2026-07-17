@@ -306,7 +306,7 @@ runCheck('KNIP-2', 'knip', 'bunx knip --no-config-hints', STD)
 // ── core: the aggregate entrypoints + retired-key drift ───────────────────────
 // Every governed repo exposes the two aggregate entrypoints that fan out over the
 // vendored per-skill modes in .ki-meta: ki:audit (read-only gate) and ki:conform (write
-// pass), plus ki:init/ki:help. The per-tool ki:lint:*/ki:deps:*/ki:knip families,
+// pass), plus ki:educate/ki:help. The per-tool ki:lint:*/ki:deps:*/ki:knip families,
 // ki:verify, and any per-skill ki:<x>:lint are retired — flag them as drift.
 for (const [key, label] of [
   ['ki:audit', 'aggregate read-only gate'],

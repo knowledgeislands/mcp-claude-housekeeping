@@ -26,7 +26,7 @@
  *
  * Fixes:
  *   - package.json: `type`, `packageManager`, `engines.node`, the exact
- *     the aggregate `ki:audit`/`ki:conform`/`ki:init`/`ki:help` entrypoints + derived
+ *     the aggregate `ki:audit`/`ki:conform`/`ki:educate`/`ki:help` entrypoints + derived
  *     per-skill keys, `clean`, `prepare`, and running the write toolchain directly,
  *     missing toolchain devDependencies, and a missing/incomplete
  *     `lint-staged` block — all set/overwritten to the standard's exact value.
@@ -76,7 +76,7 @@ const REQUIRED_DEV = ['@biomejs/biome', 'knip', 'prettier', 'husky', 'lint-stage
 const CANON: Record<string, string> = {
   'ki:audit': 'bun .ki-meta/bin/aggregate.ts audit',
   'ki:conform': 'bun .ki-meta/bin/aggregate.ts conform',
-  'ki:init': 'bun .ki-meta/bin/aggregate.ts init',
+  'ki:educate': 'bun .ki-meta/bin/aggregate.ts educate',
   'ki:help': 'bun .ki-meta/bin/aggregate.ts help'
 }
 // Retired keys removed on sight (folded into ki:engineering:audit/conform + ki-authoring).

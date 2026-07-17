@@ -225,7 +225,7 @@ async function main() {
   const kiPath = join(target, KI_CONFIG)
   const kiText = existsSync(kiPath) ? readFileSync(kiPath, 'utf8') : null
   if (kiText === null) {
-    rec('ADVISORY', 'KI-CONFIG', `${KI_CONFIG} missing entirely — ki-repo owns the contract; run its INIT/CONFORM first`, STD, KI_CONFIG)
+    rec('ADVISORY', 'KI-CONFIG', `${KI_CONFIG} missing entirely — ki-repo owns the contract; run its EDUCATE/CONFORM first`, STD, KI_CONFIG)
     say(`  ${paint(C.dim, 'no .ki-config.toml — see manual TODOs')}`)
   } else if (/^\[ki-mcp\]/m.test(kiText)) {
     rec('PASS', 'KI-CONFIG', `[${KI_SECTION}] table already present`, STD, KI_CONFIG)

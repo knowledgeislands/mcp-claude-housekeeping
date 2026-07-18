@@ -5,7 +5,6 @@
  *
  *   bun scripts/conform.ts [path]   # default: cwd
  *   --dry-run                                  # check-mode only, write nothing
- *   --json                                     # emit the CHK-004 wrapper instead of prose
  *
  * Owns `.prettierrc.json` and `.editorconfig` wholly (SHAPE-16 `owns:` —
  * this skill backs its own Markdown conform pass with Prettier, so it is the
@@ -19,43 +18,41 @@
  * is out of scope for this script — see SKILL.md Mode CONFORM step 1, which
  * is a human/model task, not a mechanical one.
  *
- * `--json` reports the same finding wrapper audit emits (CHK-004/010), so the
- * aggregate renders conform and audit identically: each action becomes a finding
- * on the shared ladder (file written/overwritten → POLISH, already-canonical →
- * PASS, gate still failing → FAIL, judgment handoff → always-on ADVISORY).
- * `--json` governs *reporting*; `--dry-run` governs *writing* — the two compose.
- *
- * Exit code is non-zero only on an unrecoverable error (target path missing);
- * never because Prettier/markdownlint reported changes or findings.
+ * It emits the canonical JSONL checker reporter stream. `--dry-run` governs
+ * writing only; each action becomes a typed record on the shared severity ladder.
  */
 import { execSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
-
-const C = { reset: '\x1b[0m', dim: '\x1b[2m', green: '\x1b[32m', yellow: '\x1b[33m', red: '\x1b[31m', cyan: '\x1b[36m' }
-const paint = (c: string, s: string): string => `${c}${s}${C.reset}`
+import { basename, dirname, join, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import {
+  type CheckerFinding,
+  type CheckerLevel,
+  checkerReporterExitCode,
+  emitCheckerReporter,
+  judgmentFindingsFromRubric
+} from './vendored/ki-skills/checker-reporter.ts'
 
 const argv = process.argv.slice(2)
 const dryRun = argv.includes('--dry-run')
-const json = argv.includes('--json')
-const target = argv.find((a) => !a.startsWith('-')) ?? '.'
-
-if (!existsSync(target)) {
-  console.error(paint(C.red, `${target}: no such path`))
-  process.exit(2)
+const target = resolve(argv.find((arg) => !arg.startsWith('-')) ?? '.')
+const findings: CheckerFinding[] = []
+const rec = (level: CheckerLevel, code: string, message: string, ref?: string, file?: string): void =>
+  void findings.push({ type: 'M', level, code, message, ref, file })
+function localRubricPath(): string {
+  const scriptDir = dirname(fileURLToPath(import.meta.url))
+  const skillRoot = basename(scriptDir) === 'scripts' ? dirname(scriptDir) : scriptDir
+  return join(skillRoot, 'references', 'rubric.md')
 }
 
-// Collect-then-emit harness (mirrors audit.ts). Each action records a finding; `say`
-// prints the human line only when not in --json mode, so a direct run streams prose
-// while the aggregate consumes the wrapper. area is the rubric code, ref its
-// reference-doc pointer, file the path an action concerns (CHK-004/009/010).
-type Level = 'FAIL' | 'WARN' | 'POLISH' | 'ADVISORY' | 'INFO' | 'NA' | 'PASS'
-type Finding = { level: Level; area: string; msg: string; ref?: string; file?: string }
-const findings: Finding[] = []
-const rec = (level: Level, area: string, msg: string, ref?: string, file?: string) => findings.push({ level, area, msg, ref, file })
-const say = (line: string): void => {
-  if (!json) console.log(line)
+const rubricPath = localRubricPath()
+
+if (!existsSync(target)) {
+  rec('FAIL', 'MD-mech', 'conform target does not exist', 'references/markdown-authoring.md', target)
+  findings.push(...judgmentFindingsFromRubric(rubricPath))
+  emitCheckerReporter({ mode: 'conform', concern: 'authoring', target, findings })
+  process.exit(checkerReporterExitCode(findings))
 }
 
 // ── owns: .prettierrc.json / .editorconfig — scaffold + unconditional overwrite on drift ──
@@ -121,10 +118,11 @@ const MARKDOWNLINT_DEFAULT = `{
   "globs": ["**/*.md"],
 
   // Never lint generated output, vendored/generated trees, or dependencies. The
-  // \`.ki-meta/\` vendored checkers + rendered help snapshots and the \`.claude/\` generated
-  // skill/agent symlinks are machine-generated (ADR-KI-HARNESS-TOOLCHAIN-005) — excluded
-  // like dist/, so their formatting is never a finding.
-  "ignores": ["dist/**", "node_modules/**", ".ki-meta/**", ".claude/**"]
+  // \`.ki-meta/\` vendored checkers, generated source, and generated runtime payloads are
+  // machine-produced (ADR-KI-HARNESS-TOOLCHAIN-005) — excluded like dist/, so their
+  // formatting is never a finding. Command files are frontmatter-first runtime definitions,
+  // while authored \`.claude/\` siblings such as workflows remain in scope.
+  "ignores": ["dist/**", "node_modules/**", ".ki-meta/**", "src/generated/**", ".claude/commands/**", ".claude/skills/**", ".claude/agents/**", ".agents/skills/**"]
 }
 `
 
@@ -132,26 +130,21 @@ function syncOwned(name: string, canonical: string): void {
   const path = join(target, name)
   if (!existsSync(path)) {
     rec('POLISH', 'OWNS', `${name} scaffolded from the house template (was missing)`, 'owns:', name)
-    say(`  ${paint(C.green, 'write')} ${name} (was missing — scaffolded from house template)`)
     if (!dryRun) writeFileSync(path, canonical)
     return
   }
   const current = readFileSync(path, 'utf8')
   if (sha256(current) === sha256(canonical)) {
     rec('PASS', 'OWNS', `${name} already canonical`, 'owns:', name)
-    say(`  ${paint(C.dim, 'ok')}    ${name} already canonical`)
     return
   }
   rec('POLISH', 'OWNS', `${name} drifted from the house template — ${dryRun ? 'would overwrite' : 'overwritten'}`, 'owns:', name)
-  say(`  ${paint(C.yellow, 'update')} ${name} (drifted from house standard — overwritten)`)
   if (!dryRun) writeFileSync(path, canonical)
 }
 
-say(`${paint(C.cyan, 'owned files')}`)
 syncOwned('.prettierrc.json', PRETTIER_DEFAULT)
 syncOwned('.editorconfig', EDITORCONFIG_DEFAULT)
 syncOwned('.markdownlint-cli2.jsonc', MARKDOWNLINT_DEFAULT)
-say('')
 
 // The Markdown gate tools, run directly (ki:lint:md is retired, TOOLCHAIN-001) — write mode
 // runs --write/--fix; dry-run runs the check-mode twins and reports only.
@@ -159,68 +152,28 @@ say('')
 // formatting, so the target repo's Markdown gate must not touch them. Prettier gets the
 // exclusion inline; markdownlint's lives in the owned .markdownlint-cli2.jsonc (mirrors audit.ts).
 const PRETTIER = dryRun
-  ? 'bunx prettier --check "**/*.md" "!.ki-meta/**" --ignore-path .gitignore'
-  : 'bunx prettier --write "**/*.md" "!.ki-meta/**" --ignore-path .gitignore'
+  ? 'bunx prettier --check "**/*.md" "!.ki-meta/**" "!src/generated/**" "!.claude/commands/**" "!.claude/skills/**" "!.claude/agents/**" "!.agents/skills/**" --ignore-path .gitignore'
+  : 'bunx prettier --write "**/*.md" "!.ki-meta/**" "!src/generated/**" "!.claude/commands/**" "!.claude/skills/**" "!.claude/agents/**" "!.agents/skills/**" --ignore-path .gitignore'
 const MARKDOWNLINT = dryRun ? 'bunx markdownlint-cli2' : 'bunx markdownlint-cli2 --fix'
 const cmd = `${PRETTIER} && ${MARKDOWNLINT}`
 
-say(paint(C.dim, `target: ${target}${dryRun ? '   (dry run — check mode, no writes)' : ''}\n`))
-say(`${paint(C.cyan, 'markdown')}`)
-say(`  ${paint(C.dim, '$')} ${cmd}`)
-
 try {
-  const out = execSync(cmd, { cwd: target, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] })
-  if (out.trim()) say(out.trim())
+  execSync(cmd, { cwd: target, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] })
   rec(
     'PASS',
     'MD-mech',
     `Markdown ${dryRun ? 'already conforms' : 'conformed'} (Prettier + markdownlint-cli2)`,
     'references/markdown-authoring.md'
   )
-  say(`  ${paint(C.green, 'ok')}    Markdown ${dryRun ? 'already conforms' : 'conformed'} (Prettier + markdownlint-cli2)`)
-} catch (e) {
-  const out = ((e as { stdout?: string }).stdout ?? '').trim()
-  const err = ((e as { stderr?: string }).stderr ?? '').trim()
-  if (out) say(out)
-  if (err) say(err)
+} catch {
   rec(
     dryRun ? 'WARN' : 'FAIL',
     'MD-mech',
     `Markdown ${dryRun ? 'has findings — run without --dry-run to fix' : 'conform pass reported issues (see above)'}`,
     'references/markdown-authoring.md'
   )
-  say(
-    `  ${paint(C.red, dryRun ? 'diff' : 'fail')}  Markdown ${dryRun ? 'has findings — run without --dry-run to fix' : 'conform pass reported issues (see above)'}`
-  )
 }
 
-say(`\n${paint(C.cyan, 'toml')}`)
-rec('ADVISORY', 'TOML', 'no TOML formatter in the toolchain — .ki-config.toml style is judgment-only', 'references/toml-config.md')
-say(`  ${paint(C.dim, 'skip')}  no TOML formatter in the toolchain — .ki-config.toml style is judgment-only (references/toml-config.md)`)
-
-// Judgment handoff — always-on ADVISORY: the [J] criteria conform cannot mechanically
-// fix, routed to a human/model pass (SKILL.md Mode CONFORM step 1).
-rec(
-  'ADVISORY',
-  'JUDGMENT',
-  'wide tables, link text, and TOML style are not scripted — apply the [J] criteria by reading (SKILL.md Mode CONFORM step 1)',
-  'references/audit-rubric.md'
-)
-say(
-  `\n${paint(C.dim, `mechanical layer applied — re-run \`bun scripts/audit.ts ${target}\` (or \`ki:authoring:audit\`) to confirm findings clear.`)}`
-)
-say(paint(C.dim, 'Judgment criteria (wide tables, link text, TOML style) are not scripted — see SKILL.md Mode CONFORM step 1.'))
-
-if (json) {
-  const n = (l: Level): number => findings.filter((f) => f.level === l).length
-  const summary = {
-    fail: n('FAIL'),
-    warn: n('WARN'),
-    polish: n('POLISH'),
-    advisory: n('ADVISORY'),
-    info: n('INFO'),
-    na: n('NA'),
-    pass: n('PASS')
-  }
-  process.stdout.write(JSON.stringify({ concern: 'authoring', target, generatedAt: new Date().toISOString(), summary, findings }))
-}
+findings.push(...judgmentFindingsFromRubric(rubricPath))
+emitCheckerReporter({ mode: 'conform', concern: 'authoring', target, findings })
+process.exit(checkerReporterExitCode(findings))

@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 /**
  * Mechanical CONFORM for the Knowledge Islands repo standard — the [M] half of
- * references/repo-standard.md's "Applying it" recipe, scripted so it needn't be
+ * references/standards.md's "Applying it" recipe, scripted so it needn't be
  * copy-pasted by hand per repo.
  *
  * Scope: a single target repo (default cwd), matching how ki-bootstrap scaffolds
@@ -9,13 +9,12 @@
  * audit.ts's `--org`, since conforming mutates and should be reviewed per-repo.
  *
  *   bun scripts/conform.ts [path]      # default: cwd
- *   --dry-run                                # print the plan, run nothing
- *   --json                                   # emit the cited-finding wrapper (audit's shape)
+ *   --dry-run                                # report the plan, run nothing
  *
  * Each action records a cited finding on the shared ladder — written/enabled/set → POLISH,
- * already-conformant → PASS, action failed → FAIL, judgment manual-TODO → ADVISORY — so the
- * aggregate renders conform and audit identically. `--json` governs *reporting*, `--dry-run`
- * governs *writing*; the two compose. A single atomic `gh` call that satisfies several fine
+ * already-conformant → PASS, action failed → FAIL — so the aggregate renders conform and audit
+ * identically. The canonical JSONL reporter governs output; `--dry-run` governs *writing* only.
+ * A single atomic `gh` call that satisfies several fine
  * audit checks (merge+delete-branch, secret-scanning+push-protection) cites the parent code
  * and enumerates the covered checks; audit still emits each fine check with its own code.
  *
@@ -40,7 +39,7 @@
  * `.editorconfig` is owned by ki-authoring (it backs that skill's own Markdown
  * conform pass), not this skill.
  *
- * Deliberately NEVER touches (judgment — printed as manual TODOs instead):
+ * Deliberately NEVER touches (judgment is surfaced as canonical advisory findings instead):
  *   - README.md content, LICENSE content.
  *   - The GitHub description text, and whether visibility is the right call.
  *   - Whether a [ki-repo.checks] override is warranted for this repo.
@@ -71,17 +70,22 @@ import {
   unlinkSync,
   writeFileSync
 } from 'node:fs'
-import { basename, join, resolve } from 'node:path'
+import { basename, dirname, join, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import {
+  type CheckerFinding,
+  type CheckerLevel,
+  checkerReporterExitCode,
+  emitCheckerReporter,
+  judgmentFindingsFromRubric
+} from './vendored/ki-skills/checker-reporter.ts'
 
-// ── the standard (kept in sync with audit.ts / references/repo-standard.md) ──
+// ── the standard (kept in sync with audit.ts / references/standards.md) ──
 const TOPICS = ['mcp', 'model-context-protocol', 'claude', 'typescript', 'bun']
 const REQUIRED_CHECK = 'build'
 const ALLOWED_ACTIONS = 'all'
-// Reference-doc pointers carried on every finding — identical to audit.ts, so a criterion
-// cites the same (area, ref) in both. STD is the standard a mechanical action applies;
-// RUBRIC is where the judgment (manual-TODO) criteria live.
-const STD = 'references/repo-standard.md'
-const RUBRIC = 'references/audit-rubric.md'
+// Reference-doc pointer carried on every mechanical finding.
+const STD = 'references/standards.md'
 const CHECK_DEFAULTS: Record<string, boolean> = {
   'branch-protection': false,
   wiki: true,
@@ -607,30 +611,35 @@ function publishPreparedLeaves(root: string, rootIdentity: Identity, plans: Leaf
   cleanupTransaction(transaction)
 }
 
-const C = { reset: '\x1b[0m', dim: '\x1b[2m', green: '\x1b[32m', yellow: '\x1b[33m', red: '\x1b[31m', cyan: '\x1b[36m' }
-const paint = (c: string, s: string): string => `${c}${s}${C.reset}`
-
 const argv = process.argv.slice(2)
 if (process.env.NODE_ENV === 'test' && process.env.KI_REPO_TEST_UMASK) {
   process.umask(Number.parseInt(process.env.KI_REPO_TEST_UMASK, 8))
 }
 const dryRun = argv.includes('--dry-run')
-const json = argv.includes('--json')
 const scaffoldConfigOnly = argv.includes('--scaffold-config-only')
-const say = (line: string): void => {
-  if (!json) console.log(line)
+
+// Collect findings first; terminal presentation belongs only to the aggregate.
+const findings: CheckerFinding[] = []
+const rec = (level: CheckerLevel, code: string, message: string, ref?: string, file?: string): void =>
+  void findings.push({ type: 'M', level, code, message, ref, file })
+
+function localRubricPath(): string {
+  const scriptDir = dirname(fileURLToPath(import.meta.url))
+  const skillRoot = basename(scriptDir) === 'scripts' ? dirname(scriptDir) : scriptDir
+  return join(skillRoot, 'references', 'rubric.md')
 }
 
-// Collect-then-emit harness (mirrors audit.ts / ki-authoring conform). Each action records
-// a cited finding; `say` prints the human line only when not in --json mode, so a direct run
-// streams prose while the aggregate consumes the JSON wrapper. `--json` governs *reporting*;
-// `--dry-run` governs *writing* — the two compose. Level ladder: written/enabled/set → POLISH,
-// already-conformant → PASS, action failed → FAIL, judgment/manual-TODO → ADVISORY.
-type Level = 'FAIL' | 'WARN' | 'POLISH' | 'ADVISORY' | 'INFO' | 'NA' | 'PASS'
-type Finding = { level: Level; area: string; msg: string; ref?: string; file?: string }
-const findings: Finding[] = []
-const rec = (level: Level, area: string, msg: string, ref?: string, file?: string): void =>
-  void findings.push({ level, area, msg, ref, file })
+function finishConform(target: string): never {
+  findings.push(...judgmentFindingsFromRubric(localRubricPath()))
+  emitCheckerReporter({ mode: 'conform', concern: 'repo', target, findings })
+  process.exit(checkerReporterExitCode(findings))
+}
+
+// The existing mutation routine has detailed narration calls; status now travels
+// only as findings while that routine remains otherwise unchanged.
+const say = (_line: string): void => {}
+const C = { cyan: '', dim: '', green: '', red: '' }
+const paint = (_colour: string, text: string): string => text
 
 // `gh()` applies one GitHub setting. `area` is the rubric code it satisfies; when a single
 // atomic `gh` call covers several fine audit checks (e.g. merge + delete-branch), `covers`
@@ -644,7 +653,7 @@ const gh = (args: string[], area: string, label: string, covers?: string): void 
     return
   }
   try {
-    execFileSync('gh', args, { encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 })
+    execFileSync('gh', args, { encoding: 'utf8', maxBuffer: 16 * 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe'] })
     say(`  ${paint(C.green, 'ok')}    ${label}`)
     rec('POLISH', area, detail, STD)
   } catch (e) {
@@ -653,10 +662,11 @@ const gh = (args: string[], area: string, label: string, covers?: string): void 
     rec('FAIL', area, `${detail} — ${m}`, STD)
   }
 }
-const ghJSON = (apiPath: string): unknown => JSON.parse(execFileSync('gh', ['api', apiPath], { encoding: 'utf8' }))
+const ghJSON = (apiPath: string): unknown =>
+  JSON.parse(execFileSync('gh', ['api', apiPath], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }))
 const ghOk = (apiPath: string): boolean => {
   try {
-    execFileSync('gh', ['api', apiPath], { encoding: 'utf8' })
+    execFileSync('gh', ['api', apiPath], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] })
     return true
   } catch {
     return false
@@ -775,7 +785,7 @@ function scaffold(name: string, area: string, snapshot: LeafSnapshot): void {
 
 function gitOrigin(dir: string): string | null {
   try {
-    return execFileSync('git', ['-C', dir, 'remote', 'get-url', 'origin'], { encoding: 'utf8' }).trim()
+    return execFileSync('git', ['-C', dir, 'remote', 'get-url', 'origin'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim()
   } catch {
     return null
   }
@@ -783,7 +793,14 @@ function gitOrigin(dir: string): string | null {
 const GH_REMOTE = /github\.com[:/]([^/]+)\/(.+?)(?:\.git)?$/
 
 // ── entry ──
-const boundTarget = bindPhysicalTarget(argv.find((a) => !a.startsWith('-')) ?? '.')
+const requestedTarget = argv.find((a) => !a.startsWith('-')) ?? '.'
+let boundTarget: { path: string; identity: Identity }
+try {
+  boundTarget = bindPhysicalTarget(requestedTarget)
+} catch (error) {
+  rec('FAIL', 'ACCESS-1', `could not bind a safe local conform target: ${(error as Error).message}`, STD)
+  finishConform(resolve(requestedTarget))
+}
 const target = boundTarget.path
 const kiPath = join(target, KI_CONFIG)
 const kiSnapshot = snapshotLeaf(kiPath)
@@ -830,13 +847,13 @@ publishPreparedLeaves(
   dryRun
 )
 
-if (scaffoldConfigOnly) process.exit(0)
+if (scaffoldConfigOnly) finishConform(target)
 
 const origin = gitOrigin(target)
 const m = origin?.match(GH_REMOTE)
 if (!m) {
-  console.error(paint(C.red, `${target}: origin is not on github.com (${origin ?? 'no origin'}) — nothing to conform`))
-  process.exit(1)
+  rec('NA', 'ACCESS-1', `origin is not on github.com (${origin ?? 'no origin'}) — GitHub settings skipped`, STD)
+  finishConform(target)
 }
 const nwo = `${m[1]}/${m[2]}`
 
@@ -862,8 +879,8 @@ let repoInfo: RepoInfo
 try {
   repoInfo = ghJSON(`repos/${nwo}`) as RepoInfo
 } catch {
-  console.error(paint(C.red, `could not read repos/${nwo} via gh — is gh authenticated? (gh auth status)`))
-  process.exit(1)
+  rec('NA', 'ACCESS-1', `could not read repos/${nwo} via gh — GitHub settings skipped (network or authentication)`, STD)
+  finishConform(target)
 }
 const isPublic = !repoInfo.private
 
@@ -931,7 +948,11 @@ if (enforced('branch-protection') && branchProtectionOn) {
     rec('POLISH', 'BP-1', `would set branch protection on main (opted in via [${CHECKS_SECTION}])`, STD)
   } else {
     try {
-      execFileSync('gh', ['api', '-X', 'PUT', `repos/${nwo}/branches/main/protection`, '--input', '-'], { input: body, encoding: 'utf8' })
+      execFileSync('gh', ['api', '-X', 'PUT', `repos/${nwo}/branches/main/protection`, '--input', '-'], {
+        input: body,
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'pipe']
+      })
       say(`  ${paint(C.green, 'ok')}    branch protection on main (opted in via [${CHECKS_SECTION}])`)
       rec('POLISH', 'BP-1', `branch protection on main (opted in via [${CHECKS_SECTION}])`, STD)
     } catch (e) {
@@ -945,7 +966,10 @@ if (enforced('branch-protection') && branchProtectionOn) {
   rec('POLISH', 'BP-1', 'would strip any leftover branch protection (default: off)', STD)
 } else {
   try {
-    execFileSync('gh', ['api', '-X', 'DELETE', `repos/${nwo}/branches/main/protection`], { encoding: 'utf8' })
+    execFileSync('gh', ['api', '-X', 'DELETE', `repos/${nwo}/branches/main/protection`], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe']
+    })
     say(`  ${paint(C.green, 'ok')}    strip any leftover branch protection (default: off)`)
     rec('POLISH', 'BP-1', 'stripped leftover branch protection (default: off)', STD)
   } catch (e) {
@@ -1006,7 +1030,11 @@ if (isPublic && (enforced('secret-scanning') || enforced('push-protection'))) {
     rec('POLISH', 'SEC-1', `would set secret scanning / push protection (covers: ${covers})`, STD)
   } else {
     try {
-      execFileSync('gh', ['api', '-X', 'PATCH', `repos/${nwo}`, '--input', '-'], { input: body, encoding: 'utf8' })
+      execFileSync('gh', ['api', '-X', 'PATCH', `repos/${nwo}`, '--input', '-'], {
+        input: body,
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'pipe']
+      })
       say(`  ${paint(C.green, 'ok')}    secret scanning / push protection`)
       rec('POLISH', 'SEC-1', `secret scanning / push protection (covers: ${covers})`, STD)
     } catch (e) {
@@ -1031,38 +1059,4 @@ ghIfNeeded(
   `Actions allowed_actions=${ALLOWED_ACTIONS}`
 )
 
-// ── judgment items — never guessed, always surfaced as ADVISORY (the [J] criteria conform
-// cannot mechanically settle, routed to a human/model reading). Cite the rubric's Judgment
-// section (RUBRIC); audit emits none of these areas, so there is no cross-file conflict.
-say(`\n${paint(C.cyan, 'manual TODOs (judgment — not scripted)')}`)
-rec('ADVISORY', 'FILES-J1', `README.md / LICENSE content: accurate and current for ${nwo}?`, RUBRIC, 'README.md')
-rec(
-  'ADVISORY',
-  'DESCFIT-1',
-  `GitHub description: does it actually describe ${nwo}'s purpose? (sync with package.json "description")`,
-  RUBRIC
-)
-rec(
-  'ADVISORY',
-  'OVR-J1',
-  `[${CHECKS_SECTION}] overrides: genuinely warranted per-repo, not waving off real drift (e.g. branch-protection)?`,
-  RUBRIC
-)
-say(`  - README.md content: is it accurate and current for ${nwo}?`)
-say(`  - GitHub description text: does it actually describe the repo's purpose? (sync with package.json's "description" once set)`)
-say(`  - [${CHECKS_SECTION}] overrides: does this repo genuinely need to diverge from an org default (e.g. branch-protection)?`)
-say(`\n${paint(C.dim, 'mechanical layer applied — re-run `bun scripts/audit.ts .` (or `ki:repo:audit`) to confirm findings clear.')}`)
-
-if (json) {
-  const n = (l: Level): number => findings.filter((f) => f.level === l).length
-  const summary = {
-    fail: n('FAIL'),
-    warn: n('WARN'),
-    polish: n('POLISH'),
-    advisory: n('ADVISORY'),
-    info: n('INFO'),
-    na: n('NA'),
-    pass: n('PASS')
-  }
-  process.stdout.write(JSON.stringify({ concern: 'repo', target, generatedAt: new Date().toISOString(), summary, findings }))
-}
+finishConform(target)

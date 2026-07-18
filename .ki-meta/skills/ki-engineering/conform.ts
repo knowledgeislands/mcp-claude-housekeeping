@@ -12,17 +12,16 @@
  * standalone per the composition-only rule.
  *
  *   bun scripts/conform.ts [path]   # default: cwd
- *   --dry-run                                    # print the plan, mutate nothing
- *   --json                                       # emit the cited-finding wrapper instead of prose
+ *   --dry-run                                    # report the planned actions, mutate nothing
  *
- * `--json` reports the same finding wrapper audit emits (minted code + ref + file):
- * each action becomes a finding on the shared ladder — file written/scaffolded or a
+ * Every invocation emits the canonical JSONL checker stream (minted code + ref + file):
+ * each action becomes a typed finding on the shared ladder — file written/scaffolded or a
  * fix/tool run → POLISH, already-canonical → PASS, a tool that exited non-zero → FAIL,
  * a judgment/manual-TODO the write pass cannot make → ADVISORY. A single audit area
  * fans into several sections, and the toolchain write pass bundles biome + syncpack +
  * knip + deps — each emitted line cites ITS OWN criterion code (BIO-1 / SYNC-1 / KNIP-2 /
- * DEPS-1), regardless of the section header it prints under. `--json` governs
- * *reporting*; `--dry-run` governs *writing* — the two compose.
+ * DEPS-1), regardless of the section where it originates. `--dry-run` governs
+ * *writing* only.
  *
  * Fixes:
  *   - package.json: `type`, `packageManager`, `engines.node`, the exact
@@ -58,15 +57,20 @@
  */
 import { execSync } from 'node:child_process'
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
-import { basename, join, resolve } from 'node:path'
-
-const C = { reset: '\x1b[0m', dim: '\x1b[2m', green: '\x1b[32m', yellow: '\x1b[33m', red: '\x1b[31m', cyan: '\x1b[36m' }
-const paint = (c: string, s: string): string => `${c}${s}${C.reset}`
+import { basename, dirname, join, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import {
+  type CheckerFinding,
+  type CheckerLevel,
+  checkerReporterExitCode,
+  emitCheckerReporter,
+  judgmentFindingsFromRubric
+} from './vendored/ki-skills/checker-reporter.ts'
 
 // Reference-doc pointers — same strings audit.ts cites, so a given criterion maps to
 // the same (code, ref) in both files.
-const STD = 'references/engineering-standard.md'
-const RUBRIC = 'references/audit-rubric.md'
+const STD = 'references/standards.md'
+const RUBRIC = 'references/rubric.md'
 
 // ── kept in lockstep with audit.ts ──
 const REQUIRED_DEV = ['@biomejs/biome', 'knip', 'prettier', 'husky', 'lint-staged', 'markdownlint-cli2', 'syncpack', 'typescript']
@@ -153,47 +157,53 @@ const KNIP_DEFAULT = `{
 const KI_CONFIG = '.ki-config.toml'
 const KI_MARKER = `[ki-engineering]\n`
 
-// ── collect-then-emit harness (mirrors audit.ts / ki-authoring conform.ts) ──
-// Each action records a finding carrying its minted rubric code, ref pointer, and (when
-// file-scoped) path; `say` prints the human line only when not in --json, so a direct
-// run streams prose while the aggregate consumes the wrapper.
-type Level = 'FAIL' | 'WARN' | 'POLISH' | 'ADVISORY' | 'INFO' | 'NA' | 'PASS'
-type Finding = { level: Level; area: string; msg: string; ref?: string; file?: string }
-const findings: Finding[] = []
-const rec = (level: Level, area: string, msg: string, ref?: string, file?: string) => findings.push({ level, area, msg, ref, file })
+// ── collect-then-emit harness ─────────────────────────────────────────────────
+// Each action records a mechanical finding. The local vendored reporter supplies
+// the JSONL transport and turns the rubric's [J] items into advisory review prompts.
+const findings: CheckerFinding[] = []
+const rec = (level: CheckerLevel, code: string, message: string, ref?: string, file?: string): void =>
+  void findings.push({ type: 'M', level, code, message, ref, file })
+
+function localRubricPath(): string {
+  const scriptDir = dirname(fileURLToPath(import.meta.url))
+  const skillRoot = basename(scriptDir) === 'scripts' ? dirname(scriptDir) : scriptDir
+  return join(skillRoot, 'references', 'rubric.md')
+}
+
+function finishConform(target: string): never {
+  findings.push(...judgmentFindingsFromRubric(localRubricPath(), RUBRIC))
+  emitCheckerReporter({ mode: 'conform', concern: 'engineering', target, findings })
+  process.exit(checkerReporterExitCode(findings))
+}
 
 // ── entry ──
 const argv = process.argv.slice(2)
 const dryRun = argv.includes('--dry-run')
-const json = argv.includes('--json')
 const target = resolve(argv.find((a) => !a.startsWith('-')) ?? '.')
 
-const say = (line: string): void => {
-  if (!json) console.log(line)
-}
-function log(kind: 'fix' | 'write' | 'append' | 'skip' | 'run', label: string) {
-  const tag = kind === 'skip' ? paint(C.dim, 'skip') : paint(C.green, kind)
-  say(`  ${tag}   ${label}`)
-}
+// Status is represented by findings, not terminal prose. Keep these no-op calls
+// until the mechanical procedure is split from its former narration.
+const say = (_line: string): void => {}
+const log = (_kind: 'fix' | 'write' | 'append' | 'skip' | 'run', _label: string): void => {}
+const C = { cyan: '', dim: '' }
+const paint = (_colour: string, text: string): string => text
 
 if (!existsSync(target)) {
-  console.error(paint(C.red, `${target}: not found`))
-  process.exit(1)
+  rec('FAIL', 'SCOPE', 'conform target does not exist', STD, target)
+  finishConform(target)
 }
 const pkgPath = join(target, 'package.json')
 if (!existsSync(pkgPath)) {
-  console.error(paint(C.red, `${target}: no package.json — not a TypeScript/Bun repo, nothing to conform`))
-  process.exit(1)
+  rec('NA', 'SCOPE', 'no package.json — not a TypeScript/Bun repo; the engineering standard does not apply', STD)
+  finishConform(target)
 }
 let pkg: Record<string, unknown>
 try {
   pkg = JSON.parse(readFileSync(pkgPath, 'utf8'))
 } catch (e) {
-  console.error(paint(C.red, `${pkgPath}: unparseable — ${String((e as Error).message ?? e)}`))
-  process.exit(1)
+  rec('FAIL', 'PKG-4', `package.json is unparseable: ${String((e as Error).message ?? e)}`, STD, 'package.json')
+  finishConform(target)
 }
-
-say(paint(C.dim, `target: ${basename(target)}   (${target})${dryRun ? '   (dry run)' : ''}\n`))
 
 let pkgChanged = false
 const manualTodos: Array<{ code: string; msg: string }> = []
@@ -499,17 +509,4 @@ for (const todo of manualTodos) {
 say(
   `\n${paint(C.dim, 'mechanical layer applied — re-run `bun scripts/audit.ts .` (or `ki:engineering:audit`) to confirm findings clear.')}`
 )
-
-if (json) {
-  const n = (l: Level): number => findings.filter((f) => f.level === l).length
-  const summary = {
-    fail: n('FAIL'),
-    warn: n('WARN'),
-    polish: n('POLISH'),
-    advisory: n('ADVISORY'),
-    info: n('INFO'),
-    na: n('NA'),
-    pass: n('PASS')
-  }
-  process.stdout.write(JSON.stringify({ concern: 'engineering', target, generatedAt: new Date().toISOString(), summary, findings }))
-}
+finishConform(target)

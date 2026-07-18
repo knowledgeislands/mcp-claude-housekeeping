@@ -26,5 +26,5 @@
   // `.ki-meta/` vendored checkers + rendered help snapshots and the `.claude/` generated
   // skill/agent symlinks are machine-generated (ADR-KI-HARNESS-TOOLCHAIN-005) — excluded
   // like dist/, so their formatting is never a finding.
-  "ignores": ["dist/**", "node_modules/**", ".ki-meta/**", ".claude/**"]
+  "ignores": ["dist/**", "node_modules/**", ".ki-meta/**", "src/generated/**", ".claude/**"]
 }

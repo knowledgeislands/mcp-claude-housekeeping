@@ -11,7 +11,7 @@
  * mode reads each dir's `origin` and audits the github.com ones under their real
  * GitHub identity; `--org` lists the org (and so catches repos not cloned locally).
  *
- * The standard has three layers (see references/repo-standard.md):
+ * The standard has three layers (see references/standards.md):
  *   1. FILES   — README, LICENSE, .gitignore, and .ki-config.toml
  *                (the repo's declared config), all present on the default branch.
  *                .ki-config.toml is also the GATE of the coverage cascade: once a
@@ -40,15 +40,23 @@
  * actually match the repo's purpose — is left to the skill's AUDIT mode; that it is
  * SYNCED with package.json is now checked mechanically (description-sync).
  *
- * Requires `gh` authenticated against the org. No npm dependencies — Bun/Node only.
- * Exit code is non-zero if any repo has a FAIL.
+ * The canonical JSONL reporter is the only checker output transport. `gh` is
+ * optional: unauthenticated and unavailable GitHub checks become canonical NA
+ * findings while offline local checks still run.
  */
 import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
-import { join, resolve } from 'node:path'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
+import { basename, dirname, join, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import {
+  type CheckerFinding,
+  checkerReporterExitCode,
+  emitCheckerReporter,
+  judgmentFindingsFromRubric
+} from './vendored/ki-skills/checker-reporter.ts'
 
-// ── the standard (keep in sync with references/repo-standard.md) ──────
+// ── the standard (keep in sync with references/standards.md) ──────
 const DEFAULT_BRANCH = 'main'
 // The declared license defaults to MIT when `[ki-repo] license` is unset. Decoupled
 // from visibility (a private repo may be MIT; a public repo may be proprietary).
@@ -56,10 +64,8 @@ const DEFAULT_LICENSE = 'MIT'
 const TOPICS = ['mcp', 'model-context-protocol', 'claude', 'typescript', 'bun']
 const REQUIRED_CHECK = 'build'
 const ALLOWED_ACTIONS = 'all'
-// Reference-doc pointers carried on every finding (the cited-finding standard): STD is
-// the standard each mechanical criterion verifies; RUBRIC is where the judgment criteria
-// live. Kept identical to conform.ts so a given criterion cites the same (area, ref) in both.
-const STD = 'references/repo-standard.md'
+// Reference-doc pointer carried on every mechanical finding.
+const STD = 'references/standards.md'
 // Overridable checks and the org default for each — `true` = enforced by default.
 // A repo overrides any of these per-repo in [ki-repo.checks];
 // a check it omits takes the default here, so a fully-conforming repo writes none.
@@ -77,6 +83,12 @@ const CHECK_DEFAULTS: Record<string, boolean> = {
   structure: true //            declares at least one repo-structure table
 }
 const KI_CONFIG = '.ki-config.toml'
+
+function localRubricPath(): string {
+  const scriptDir = dirname(fileURLToPath(import.meta.url))
+  const skillRoot = basename(scriptDir) === 'scripts' ? dirname(scriptDir) : scriptDir
+  return join(skillRoot, 'references', 'rubric.md')
+}
 // Required root files. Each entry is one or more acceptable paths (first found wins).
 const REQUIRED_FILES: [id: string, paths: string[]][] = [
   ['readme', ['README.md']],
@@ -86,15 +98,10 @@ const REQUIRED_FILES: [id: string, paths: string[]][] = [
   ['ki-config', [KI_CONFIG]]
 ]
 
-const C = { reset: '\x1b[0m', dim: '\x1b[2m', green: '\x1b[32m', yellow: '\x1b[33m', red: '\x1b[31m', cyan: '\x1b[36m' }
-const paint = (c: string, s: string): string => `${c}${s}${C.reset}`
-
-// `note` is informational (a per-repo override in effect) — printed, never counted.
+// `note` is informational (a per-repo override in effect), never a failure.
 // Unified severity ladder — shared by every KI checker (enforcement-framework §2).
 type Level = 'FAIL' | 'WARN' | 'POLISH' | 'ADVISORY' | 'INFO' | 'NA' | 'PASS'
-const LADDER: Level[] = ['FAIL', 'WARN', 'POLISH', 'ADVISORY', 'INFO', 'NA', 'PASS']
-const ICON: Record<Level, string> = { FAIL: '❌', WARN: '⚠️', POLISH: '✨', ADVISORY: '🧭', INFO: 'ℹ️', NA: '🚫', PASS: '✅' }
-// Cited-finding shape: `area` is the rubric code (references/audit-rubric.md), `ref` the
+// Cited-finding shape: `area` is the rubric code (references/rubric.md), `ref` the
 // reference-doc pointer (defaults to the standard STD; the rare judgment finding overrides
 // it), `file` the in-repo path a file-scoped finding concerns. Arg order (area, msg, file?,
 // ref?) puts the often-set `file` before the usually-defaulted `ref`, so most call sites
@@ -118,7 +125,7 @@ const mk = () => {
 }
 
 function gh(args: string[]): string {
-  return execFileSync('gh', args, { encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 })
+  return execFileSync('gh', args, { encoding: 'utf8', maxBuffer: 16 * 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe'] })
 }
 // gh authentication is a precondition for every GitHub-touching check. In CI there is
 // no token (the workflow runs this gate for its offline vendor-integrity value only —
@@ -789,7 +796,7 @@ type Target = { label: string; nameWithOwner: string | null; dir?: string; note?
 const GH_REMOTE = /github\.com[:/]([^/]+)\/(.+?)(?:\.git)?$/
 const gitOrigin = (dir: string): string | null => {
   try {
-    return execFileSync('git', ['-C', dir, 'remote', 'get-url', 'origin'], { encoding: 'utf8' }).trim()
+    return execFileSync('git', ['-C', dir, 'remote', 'get-url', 'origin'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim()
   } catch {
     return null
   }
@@ -805,10 +812,7 @@ function repoDirsUnder(path: string): string[] {
 function localTargets(path: string): Target[] {
   const abs = resolve(path)
   const dirs = repoDirsUnder(abs)
-  if (dirs.length === 0) {
-    console.error(paint(C.red, `no git repos found at ${abs}`))
-    process.exit(2)
-  }
+  if (dirs.length === 0) throw new Error(`no git repos found at ${abs}`)
   return dirs.map((dir) => {
     const label = dir.split('/').pop() ?? dir
     const m = gitOrigin(dir)?.match(GH_REMOTE)
@@ -830,84 +834,52 @@ if (argv.includes('--educate')) {
 }
 const orgIdx = argv.indexOf('--org')
 let targets: Target[]
-let scope: string
 try {
   if (orgIdx !== -1) {
     const org = argv[orgIdx + 1]
-    if (!org) {
-      console.error('usage: audit.ts --org <org>')
-      process.exit(2)
-    }
-    scope = `org ${org}`
+    if (!org) throw new Error('usage: audit.ts --org <org>')
     targets = orgTargets(org)
   } else {
     const path = argv.find((a) => !a.startsWith('-')) ?? '.'
-    scope = `tree ${resolve(path)}`
     targets = localTargets(path)
   }
 } catch (e) {
-  console.error(paint(C.red, 'failed to enumerate repos — is gh installed and authenticated? (gh auth status)'))
-  console.error(String((e as Error).message ?? e).split('\n')[0])
-  process.exit(2)
+  const findings: CheckerFinding[] = [
+    {
+      type: 'M',
+      level: 'FAIL',
+      code: 'ACCESS-1',
+      message: `could not enumerate audit targets: ${String((e as Error).message ?? e).split('\n')[0]}`,
+      ref: STD
+    },
+    ...judgmentFindingsFromRubric(localRubricPath())
+  ]
+  emitCheckerReporter({ mode: 'audit', concern: 'repo', target: resolve('.'), findings })
+  process.exit(checkerReporterExitCode(findings))
 }
 
-// Output flags + unified-ladder aggregation across every audited repo (enforcement-framework §2/§5).
-const jsonOut = process.argv.slice(2).includes('--json')
-const reportOut = process.argv.slice(2).includes('--report')
 const reportTarget = resolve('.')
-const reportDir = join(reportTarget, '.ki-meta', 'audits')
 const all: { level: Level; area: string; msg: string; ref?: string; file?: string }[] = []
 // Fold the repo identity into `file` for the aggregate/JSON: `area` stays the bare rubric
 // code (so it reads as a rubric code, not `nwo:code`), and the nwo — plus any in-repo path
 // the finding carried — disambiguates findings across a multi-repo sweep.
 const scoped = (nwo: string, f: Finding): string => `${nwo}${f.file ? `/${f.file}` : ''}`
-// Shared human render for a per-repo finding line (mirrors the report/JSON builder).
-const line = (colored: string, f: Finding): string =>
-  `  ${colored} ${paint(C.dim, `[${f.area}]`)}${f.file ? ` ${f.file}` : ''} ${f.msg}${f.ref ? paint(C.dim, ` (${f.ref})`) : ''}`
-
-if (!jsonOut) {
-  console.log(paint(C.dim, `scope: ${scope}`))
-  console.log(
-    paint(
-      C.dim,
-      `standard: files(README,LICENSE,.gitignore,${KI_CONFIG}) · github(main,license,squash-only,del-branch,update-branch,issues,no-wiki/projects,desc,visibility) · public+(topics) · deeper(dependabot;secret-scanning;actions=all) · coverage[ki-repo→](${COVERAGE.map((c) => c.skill).join(',')}) · overridable via [..checks]: ${Object.keys(CHECK_DEFAULTS).join(',')},coverage-<skill>`
-    )
-  )
-}
-
-let totalFails = 0
-let totalWarns = 0
-let ghSkipped = 0
 for (const t of targets) {
   // Offline, local-disk vendor-integrity check — independent of GitHub reachability,
   // so it still runs for a target with no github.com origin (or none at all).
   const localFindings = t.dir ? [...localIntegrityFindings(t.dir), ...localConfigFindings(t.dir)] : []
   if (!t.nameWithOwner) {
-    ghSkipped++
-    all.push({ level: 'NA', area: 'access', msg: t.note ?? '', file: t.label })
+    all.push({ level: 'NA', area: 'ACCESS-1', msg: t.note ?? 'GitHub checks skipped', ref: STD, file: t.label })
     for (const x of localFindings) all.push({ level: x.level, area: x.area, msg: x.msg, ref: x.ref, file: scoped(t.label, x) })
-    totalFails += localFindings.filter((x) => x.level === 'FAIL').length
-    totalWarns += localFindings.filter((x) => x.level === 'WARN').length
-    if (!jsonOut) {
-      console.log(`\n${paint(C.dim, 'NA')}  ${paint(C.cyan, t.label)} ${paint(C.dim, `— ${t.note}`)}`)
-      for (const x of localFindings) console.log(line(paint(x.level === 'FAIL' ? C.red : C.yellow, x.level.toLowerCase()), x))
-    }
     continue
   }
   // gh unauthenticated (typically CI): every GitHub-touching check is impossible, so skip
   // them as NA rather than emitting a spurious access-FAIL. The offline vendor-integrity
   // findings above still count — that is the value this gate carries in CI (see ci.yml).
   if (!ghAuthed()) {
-    ghSkipped++
-    const note = `${t.nameWithOwner}: gh not authenticated — GitHub checks skipped (gh auth login)`
-    all.push({ level: 'NA', area: 'access', msg: note, file: t.nameWithOwner })
+    const note = 'gh not authenticated — GitHub checks skipped (gh auth login)'
+    all.push({ level: 'NA', area: 'ACCESS-1', msg: note, ref: STD, file: t.nameWithOwner })
     for (const x of localFindings) all.push({ level: x.level, area: x.area, msg: x.msg, ref: x.ref, file: scoped(t.nameWithOwner, x) })
-    totalFails += localFindings.filter((x) => x.level === 'FAIL').length
-    totalWarns += localFindings.filter((x) => x.level === 'WARN').length
-    if (!jsonOut) {
-      console.log(`\n${paint(C.dim, 'NA')}  ${paint(C.cyan, t.nameWithOwner)} ${paint(C.dim, '— gh not authenticated')}`)
-      for (const x of localFindings) console.log(line(paint(x.level === 'FAIL' ? C.red : C.yellow, x.level.toLowerCase()), x))
-    }
     continue
   }
   let findings: Finding[]
@@ -923,70 +895,21 @@ for (const t of targets) {
     findings = [...auditRepo(r, files, ki, kiText, signals), ...localFindings]
   } catch {
     findings = [
-      { level: 'FAIL', area: 'ACCESS-1', msg: `could not read ${t.nameWithOwner} via gh (missing repo or insufficient scope)` },
+      {
+        level: 'NA',
+        area: 'ACCESS-1',
+        msg: 'Could not read the repository via gh — GitHub checks skipped (network or insufficient scope).',
+        ref: STD
+      },
       ...localFindings
     ]
   }
-  const fails = findings.filter((x) => x.level === 'FAIL')
-  const warns = findings.filter((x) => x.level === 'WARN')
-  const notes = findings.filter((x) => x.level === 'INFO')
-  totalFails += fails.length
-  totalWarns += warns.length
   for (const x of findings) all.push({ level: x.level, area: x.area, msg: x.msg, ref: x.ref, file: scoped(t.nameWithOwner, x) })
-  if (!jsonOut) {
-    const stamp = fails.length ? paint(C.red, 'FAIL') : warns.length ? paint(C.yellow, 'WARN') : paint(C.green, 'PASS')
-    console.log(`\n${stamp}  ${paint(C.cyan, t.nameWithOwner)}`)
-    for (const x of fails) console.log(line(paint(C.red, 'fail'), x))
-    for (const x of warns) console.log(line(paint(C.yellow, 'warn'), x))
-    for (const x of notes) console.log(line(paint(C.dim, 'info'), x))
-    if (fails.length + warns.length === 0) console.log(paint(C.dim, '  conforms'))
-  }
 }
 
-const summary = {
-  fail: totalFails,
-  warn: totalWarns,
-  polish: all.filter((f) => f.level === 'POLISH').length,
-  advisory: all.filter((f) => f.level === 'ADVISORY').length,
-  info: all.filter((f) => f.level === 'INFO').length,
-  na: all.filter((f) => f.level === 'NA').length,
-  pass: all.filter((f) => f.level === 'PASS').length
-}
-const stampIso = new Date().toISOString()
-
-if (reportOut) {
-  mkdirSync(reportDir, { recursive: true })
-  const body = LADDER.flatMap((l) => {
-    const rows = all.filter((f) => f.level === l)
-    return rows.length
-      ? [
-          '',
-          `## ${ICON[l]} ${l} (${rows.length})`,
-          ...rows.map((r) => `- [${r.area}]${r.file ? ` ${r.file}` : ''} ${r.msg}${r.ref ? ` (${r.ref})` : ''}`)
-        ]
-      : []
-  })
-  const tally = `${targets.length} repo(s) · FAIL=${summary.fail} WARN=${summary.warn} INFO=${summary.info} NA=${summary.na}`
-  writeFileSync(join(reportDir, 'repo.md'), [`# repo audit — ${reportTarget}`, '', `_${stampIso}_`, '', tally, ...body, ''].join('\n'))
-  writeFileSync(
-    join(reportDir, 'repo.json'),
-    `${JSON.stringify({ concern: 'repo', target: reportTarget, generatedAt: stampIso, summary, findings: all }, null, 2)}\n`
-  )
-}
-
-if (jsonOut) {
-  process.stdout.write(JSON.stringify({ concern: 'repo', target: reportTarget, generatedAt: stampIso, summary, findings: all }))
-} else {
-  console.log(
-    `\n${paint(C.cyan, 'summary')}: ${targets.length} repo(s) · FAIL=${totalFails} WARN=${totalWarns}${ghSkipped ? paint(C.dim, ` · ${ghSkipped} skipped (no github.com origin or gh unauthenticated)`) : ''}`
-  )
-  if (reportOut) console.log(paint(C.dim, `report → ${join(reportDir, 'repo.{md,json}')}`))
-  if (totalFails + totalWarns > 0) console.log('→ to address: run /ki-repo CONFORM   (judgment criteria: references/audit-rubric.md)')
-  console.log(
-    paint(
-      C.dim,
-      'mechanical checks only — the one remaining judgment item (does the description match the repo’s purpose) is the skill’s AUDIT mode.'
-    )
-  )
-}
-process.exit(totalFails > 0 ? 1 : 0)
+const canonicalFindings: CheckerFinding[] = [
+  ...all.map(({ level, area, msg, ref, file }) => ({ type: 'M' as const, level, code: area, message: msg, ref, file })),
+  ...judgmentFindingsFromRubric(localRubricPath())
+]
+emitCheckerReporter({ mode: 'audit', concern: 'repo', target: reportTarget, findings: canonicalFindings })
+process.exit(checkerReporterExitCode(canonicalFindings))

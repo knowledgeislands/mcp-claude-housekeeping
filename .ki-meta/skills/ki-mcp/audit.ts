@@ -11,33 +11,45 @@
  * the `bun test` trap, .env, and the cli-chmod rule) is the `ki-engineering` layer — run audit.ts
  * first; it is not re-checked here. This script also does NOT judge tool-naming quality,
  * layer purity, or the security invariants — those need a human/agent read of the code
- * (see references/audit-rubric.md). Output is grouped pass/warn/fail; exit non-zero if any FAIL.
+ * (see references/rubric.md). Emits canonical checker-reporter JSONL; exits non-zero
+ * if any mechanical FAIL finding exists.
  *
  * No dependencies — Node/Bun builtins only.
  */
 import { execSync } from 'node:child_process'
-import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
-import { basename, join } from 'node:path'
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
+import { dirname, join, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import {
+  type CheckerFinding,
+  checkerReporterExitCode,
+  emitCheckerReporter,
+  judgmentFindingsFromRubric
+} from './vendored/ki-skills/checker-reporter.ts'
 
 // Unified severity ladder — shared by every KI checker (enforcement-framework §2).
 type Level = 'FAIL' | 'WARN' | 'POLISH' | 'ADVISORY' | 'INFO' | 'NA' | 'PASS'
-// area is the criterion identifier (references/audit-rubric.md); ref is its reference-doc
+// area is the criterion identifier (references/rubric.md); ref is its reference-doc
 // pointer (the standard the criterion enforces); file names the path a file-scoped finding
 // concerns. ref/file are optional and ride into --json for the aggregate to render.
-type Finding = { level: Level; area: string; msg: string; ref?: string; file?: string }
-const ORDER: Level[] = ['FAIL', 'WARN', 'POLISH', 'ADVISORY', 'INFO', 'NA', 'PASS']
-const ICON: Record<Level, string> = { FAIL: '❌', WARN: '⚠️', POLISH: '✨', ADVISORY: '🧭', INFO: 'ℹ️', NA: '🚫', PASS: '✅' }
-const findings: Finding[] = []
-const add = (level: Level, area: string, msg: string, ref?: string, file?: string) => findings.push({ level, area, msg, ref, file })
+const findings: CheckerFinding[] = []
+const add = (level: Level, code: string, message: string, ref?: string, file?: string) =>
+  findings.push({ type: 'M', level, code, message, ...(ref ? { ref } : {}), ...(file ? { file } : {}) })
 
 // The standard the MCP-delta criteria enforce; the judgment handoff points at the rubric.
-const STD = 'references/workspace-mcp-standard.md'
-const RUBRIC = 'references/audit-rubric.md'
+const STD = 'references/standards.md'
+const RUBRIC = 'references/rubric.md'
+const LOCAL_RUBRIC = join(dirname(fileURLToPath(import.meta.url)), '..', 'references', 'rubric.md')
 
 const repo = process.argv[2]
-if (!repo || !existsSync(repo)) {
-  console.error('usage: audit.ts <repo-path>   (path must exist)')
-  process.exit(2)
+if (!repo || !existsSync(repo) || !statSync(repo).isDirectory()) {
+  const target = repo ? resolve(repo) : resolve('.')
+  const invalidInput: CheckerFinding[] = [
+    { type: 'M', level: 'FAIL', code: 'KI-CONFIG', message: 'Audit target must be an existing directory.', ref: STD }
+  ]
+  invalidInput.push(...judgmentFindingsFromRubric(LOCAL_RUBRIC, RUBRIC))
+  emitCheckerReporter({ mode: 'audit', concern: 'mcp', target, findings: invalidInput })
+  process.exit(checkerReporterExitCode(invalidInput))
 }
 const at = (...p: string[]) => join(repo, ...p)
 const has = (...p: string[]) => existsSync(at(...p))
@@ -80,19 +92,22 @@ const declaresKiMcp = kiMcpTable !== null
 const hasMcpStructure = isDir('src', 'mcp-server')
 if (!declaresKiMcp && !parsedKiMcp.malformed && !hasMcpStructure) {
   add('NA', 'KI-CONFIG', 'ki-mcp not applicable: no [ki-mcp] declaration or src/mcp-server/ structural marker', STD)
-  emit(findings, repo, 'mcp', `MCP standards audit — ${basename(repo)}  (${repo})`, '')
+  emitCheckerReporter({ mode: 'audit', concern: 'mcp', target: repo, findings })
+  process.exit(checkerReporterExitCode(findings))
 }
 
 // ── layout ──────────────────────────────────────────────────────────────────
 for (const d of ['config', 'mcp-server', 'tools', 'main', 'utils']) {
-  isDir('src', d) ? add('PASS', 'LAY-1', `src/${d}/ present`, STD, `src/${d}`) : add('FAIL', 'LAY-1', `src/${d}/ missing`, STD, `src/${d}`)
+  isDir('src', d)
+    ? add('PASS', 'LAY-1', `required directory is present: src/${d}/`, STD, `src/${d}`)
+    : add('FAIL', 'LAY-1', `required directory is missing: src/${d}/`, STD, `src/${d}`)
 }
 const hasCli = isDir('src', 'cli')
 if (hasCli) {
   for (const f of ['cli.ts', 'index.ts']) {
     has('src', 'cli', f)
-      ? add('PASS', 'LAY-1', `src/cli/${f} present`, STD, `src/cli/${f}`)
-      : add('FAIL', 'LAY-1', `src/cli/ exists but src/cli/${f} missing`, STD, `src/cli/${f}`)
+      ? add('PASS', 'LAY-1', `required CLI file is present: src/cli/${f}`, STD, `src/cli/${f}`)
+      : add('FAIL', 'LAY-1', `required CLI file is missing: src/cli/${f}`, STD, `src/cli/${f}`)
   }
 }
 
@@ -103,15 +118,19 @@ if (hasCli) {
 // end). The CLAUDE.md content
 // contract (no drift) stays a judgment item. Here: ROADMAP + CONTRIBUTING + SECURITY present,
 // CHANGELOG present AND non-empty.
-has('ROADMAP.md') ? add('PASS', 'FILES', 'ROADMAP.md present', STD, 'ROADMAP.md') : add('WARN', 'FILES', 'no ROADMAP.md', STD, 'ROADMAP.md')
+has('ROADMAP.md')
+  ? add('PASS', 'DOC-1', 'MCP roadmap is present', STD, 'ROADMAP.md')
+  : add('WARN', 'DOC-1', 'MCP roadmap is absent', STD, 'ROADMAP.md')
 for (const f of ['CONTRIBUTING.md', 'SECURITY.md']) {
-  has(f) ? add('PASS', 'FILES', `${f} present`, STD, f) : add('FAIL', 'FILES', `${f} missing`, STD, f)
+  has(f)
+    ? add('PASS', 'DOC-1', 'required MCP root document is present', STD, f)
+    : add('FAIL', 'DOC-1', 'required MCP root document is missing', STD, f)
 }
-if (!has('CHANGELOG.md')) add('FAIL', 'FILES', 'CHANGELOG.md missing', STD, 'CHANGELOG.md')
+if (!has('CHANGELOG.md')) add('FAIL', 'DOC-1', 'release history is missing', STD, 'CHANGELOG.md')
 else
   read('CHANGELOG.md').trim()
-    ? add('PASS', 'FILES', 'CHANGELOG.md present and non-empty', STD, 'CHANGELOG.md')
-    : add('FAIL', 'FILES', 'CHANGELOG.md is an empty stub — add a release entry (e.g. 1.0.0) or remove it', STD, 'CHANGELOG.md')
+    ? add('PASS', 'DOC-1', 'release history is present and non-empty', STD, 'CHANGELOG.md')
+    : add('FAIL', 'DOC-1', 'release history is an empty stub — add a release entry (e.g. 1.0.0) or remove it', STD, 'CHANGELOG.md')
 
 // vitest config presence — located only so the MCP coverage-exclude check below can read it.
 const vitestFile = [
@@ -128,10 +147,9 @@ let pkg: Record<string, unknown> = {}
 try {
   pkg = JSON.parse(read('package.json'))
 } catch {
-  add('FAIL', 'PKG-1', 'package.json missing or unparseable', STD, 'package.json')
+  add('FAIL', 'PKG-1', 'package manifest is missing or unparseable', STD, 'package.json')
 }
 const scripts = (pkg.scripts ?? {}) as Record<string, string>
-const name = String(pkg.name ?? basename(repo))
 
 // ── CI delta: the smoke step. The common CI shape (mise-action + aggregate ki:audit +
 // runner-neutral test) is engineering's, asserted by audit.ts; the MCP delta is the
@@ -213,12 +231,12 @@ if (cfg) {
     ? add('PASS', 'CFG-1', 'config exports loadConfig', STD, 'src/config/index.ts')
     : add('FAIL', 'CFG-1', 'config/index.ts does not export loadConfig', STD, 'src/config/index.ts')
   cfg.includes('process.loadEnvFile')
-    ? add('PASS', 'CONFIG', 'loadConfig uses process.loadEnvFile (Node .env parity)', STD, 'src/config/index.ts')
-    : add('WARN', 'CONFIG', 'config/index.ts has no process.loadEnvFile call', STD, 'src/config/index.ts')
+    ? add('PASS', 'CFG-1', 'loadConfig uses process.loadEnvFile (Node .env parity)', STD, 'src/config/index.ts')
+    : add('WARN', 'CFG-1', 'config/index.ts has no process.loadEnvFile call', STD, 'src/config/index.ts')
   if (/loadEnvFile\(\s*[`'"]\.\.?\//.test(cfg))
     add(
       'WARN',
-      'CONFIG',
+      'CFG-1',
       'loadEnvFile uses a cwd-relative path (./…) — resolve from import.meta.url; the launched `node dist/…` runs from an arbitrary cwd, not the package root',
       STD,
       'src/config/index.ts'
@@ -266,8 +284,8 @@ const walk = (dir: string) => {
 }
 if (isDir('src')) walk(at('src'))
 offenders.length
-  ? add('WARN', 'CONFIG', `process.env read outside config/ (verify each is intentional): ${offenders.join(', ')}`, STD)
-  : add('PASS', 'CONFIG', 'no process.env reads outside config/', STD)
+  ? add('WARN', 'CFG-1', `process.env read outside config/ (verify each is intentional): ${offenders.join(', ')}`, STD)
+  : add('PASS', 'CFG-1', 'no process.env reads outside config/', STD)
 
 // ── MCP vitest coverage EXCLUDES ──────────────────────────────────────────────
 // The 100% thresholds themselves are the common engineering layer (audit.ts);
@@ -403,7 +421,7 @@ if (isDir('src', 'tools')) {
 // (ki-repo's coverage cascade enforces the same presence across the org,
 // from the MCP-SDK dependency signal). Validate-down — no per-repo keys defined yet.
 const kiMcp = kiMcpText
-if (!kiMcp) add('WARN', 'KI-CONFIG', '.ki-config.toml missing (ki-repo owns the contract)', STD, '.ki-config.toml')
+if (!kiMcp) add('WARN', 'KI-CONFIG', 'shared configuration file is missing (ki-repo owns the contract)', STD, '.ki-config.toml')
 else if (!kiMcpTable)
   add('WARN', 'KI-CONFIG', 'no [ki-mcp] table — add it to mark this repo as governed by the MCP standard', STD, '.ki-config.toml')
 else {
@@ -416,72 +434,6 @@ else {
   }
 }
 
-// ── report ────────────────────────────────────────────────────────────────────
-function emit(items: Finding[], target: string, concern: string, title: string, footer: string): never {
-  const argv = process.argv.slice(2)
-  const json = argv.includes('--json')
-  const ri = argv.indexOf('--report')
-  const report = ri !== -1
-  const reportDir = report && argv[ri + 1] && !argv[ri + 1].startsWith('-') ? argv[ri + 1] : join(target, '.ki-meta', 'audits')
-
-  const n = (l: Level): number => items.filter((f) => f.level === l).length
-  const summary = {
-    fail: n('FAIL'),
-    warn: n('WARN'),
-    polish: n('POLISH'),
-    advisory: n('ADVISORY'),
-    info: n('INFO'),
-    na: n('NA'),
-    pass: n('PASS')
-  }
-  const tally = `FAIL=${summary.fail} WARN=${summary.warn} POLISH=${summary.polish} PASS=${summary.pass} ADVISORY=${summary.advisory} NA=${summary.na}`
-  const stamp = new Date().toISOString()
-
-  if (report) {
-    mkdirSync(reportDir, { recursive: true })
-    const body = ORDER.flatMap((l) => {
-      const rows = items.filter((f) => f.level === l)
-      return rows.length
-        ? [
-            '',
-            `## ${ICON[l]} ${l} (${rows.length})`,
-            ...rows.map((r) => `- [${r.area}]${r.file ? ` ${r.file}` : ''} ${r.msg}${r.ref ? ` (${r.ref})` : ''}`)
-          ]
-        : []
-    })
-    writeFileSync(join(reportDir, `${concern}.md`), [`# ${concern} audit — ${target}`, '', `_${stamp}_`, '', tally, ...body, ''].join('\n'))
-    writeFileSync(
-      join(reportDir, `${concern}.json`),
-      `${JSON.stringify({ concern, target, generatedAt: stamp, summary, findings: items }, null, 2)}\n`
-    )
-  }
-
-  if (json) {
-    process.stdout.write(`${JSON.stringify({ concern, target, generatedAt: stamp, summary, findings: items }, null, 2)}\n`)
-  } else {
-    console.log(`\n${title}\n${'─'.repeat(60)}`)
-    for (const l of ORDER) {
-      const rows = items.filter((f) => f.level === l)
-      if (!rows.length) continue
-      console.log(`\n${ICON[l]} ${l} (${rows.length})`)
-      for (const r of rows) console.log(`   [${r.area}]${r.file ? ` ${r.file}` : ''} ${r.msg}${r.ref ? ` (${r.ref})` : ''}`)
-    }
-    console.log(`\n${'─'.repeat(60)}\n${tally}`)
-    if (footer) console.log(footer)
-    if (summary.fail + summary.warn + summary.polish > 0)
-      console.log('→ to address: run /ki-mcp CONFORM   (judgment criteria: references/audit-rubric.md)')
-    if (report) console.log(`report → ${join(reportDir, `${concern}.{md,json}`)}`)
-    console.log('')
-  }
-  process.exit(summary.fail ? 1 : 0)
-}
-
-add('INFO', 'SCOPE', 'MCP server delta only — compose with audit.ts (common toolchain) for full coverage', RUBRIC)
-add('ADVISORY', 'JUDGMENT', 'mechanical layer only — apply the [J] criteria in references/audit-rubric.md by reading', RUBRIC)
-emit(
-  findings,
-  repo,
-  'mcp',
-  `MCP standards audit — ${name}  (${repo})`,
-  'MCP delta only — also run audit.ts (common toolchain) + the semantic pass in references/audit-rubric.md.'
-)
+findings.push(...judgmentFindingsFromRubric(LOCAL_RUBRIC, RUBRIC))
+emitCheckerReporter({ mode: 'audit', concern: 'mcp', target: repo, findings })
+process.exit(checkerReporterExitCode(findings))

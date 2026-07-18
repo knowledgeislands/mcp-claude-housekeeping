@@ -1,8 +1,8 @@
 // @ts-nocheck
-// Generated on 2026-07-12T10:44:02.702Z by @knowledgeislands/mcp-claude-housekeeping@1.0.0
+// Generated on 2026-07-18T16:27:19.650Z by @knowledgeislands/mcp-claude-housekeeping@1.0.0
 // Server: kit-mcp-claude-housekeeping
 // Source: /Users/krisbrown/.mcporter/mcporter.json
-// Transport: STDIO /Users/krisbrown/.local/share/mise/installs/node/lts/bin/node /Users/krisbrown/kis/knowledgeislands/mcp-claude-housekeeping/dist/mcp-server/index.js
+// Transport: STDIO /Users/krisbrown/.local/share/mise/installs/node/lts/bin/node /Users/krisbrown/workspaces/kis/knowledgeislands/mcp-claude-housekeeping/dist/mcp-server/index.js
 
 import { createRuntime, createServerProxy, wrapCallResult } from 'mcporter';
 import type { KitMcpClaudeHousekeepingTools } from './types';

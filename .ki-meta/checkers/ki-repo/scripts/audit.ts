@@ -46,7 +46,7 @@
  */
 import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { existsSync, readdirSync, readFileSync } from 'node:fs'
+import { existsSync, lstatSync, readdirSync, readFileSync } from 'node:fs'
 import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
@@ -83,6 +83,7 @@ const CHECK_DEFAULTS: Record<string, boolean> = {
   structure: true //            declares at least one repo-structure table
 }
 const KI_CONFIG = '.ki-config.toml'
+const VENDOR_DIR = '.ki-meta'
 
 function localRubricPath(): string {
   const scriptDir = dirname(fileURLToPath(import.meta.url))
@@ -332,6 +333,12 @@ const COVERAGE: { skill: string; table: string; artifact: string; detect: (s: Si
     detect: (s) => s.tree.has('.claude-plugin/marketplace.json') || [...s.tree].some((p) => p.endsWith('/.claude-plugin/marketplace.json'))
   },
   {
+    skill: 'specifications',
+    table: 'ki-specifications',
+    artifact: 'proposals/ + specifications/ + schemas/',
+    detect: (s) => s.root.has('proposals') && s.root.has('specifications') && s.root.has('schemas')
+  },
+  {
     skill: 'tools',
     table: 'ki-tools',
     artifact: 'install.sh + bin/<exe>',
@@ -367,6 +374,7 @@ const REPO_STRUCTURE_TABLES = [
   'ki-website',
   'ki-mcp',
   'ki-plugins',
+  'ki-specifications',
   'ki-tools',
   'ki-homebrew-tap',
   'ki-dotfiles-chezmoi'
@@ -615,7 +623,7 @@ function auditRepo(r: Repo, files: Set<string>, ki: KiConfig | null, kiText: str
     else if (declaredStructure.length === 0 && enforced('structure'))
       warn(
         'STRUCT-2',
-        'declares no repo-structure table — pick the one that matches its layout (ki-harness/ki-kb/ki-website/ki-mcp/ki-plugins/ki-tools/ki-homebrew-tap/ki-dotfiles-chezmoi), or set `structure = false` in [ki-repo.checks] if this repo genuinely has none'
+        'declares no repo-structure table — pick the one that matches its layout (ki-harness/ki-kb/ki-website/ki-mcp/ki-plugins/ki-specifications/ki-tools/ki-homebrew-tap/ki-dotfiles-chezmoi), or set `structure = false` in [ki-repo.checks] if this repo genuinely has none'
       )
   }
 
@@ -735,6 +743,68 @@ function localIntegrityFindings(dir: string): Finding[] {
     fail(
       'VENDOR-1',
       `vendored file(s) do not match the manifest hash (tampered or partially re-vendored): ${mismatched.join(', ')} — re-run ./.ki-meta/bin/ki-educate to restore`
+    )
+  return f
+}
+
+// CAPABILITY-COMPLETE: the shared config declares the target's governance roots;
+// this local-only check verifies that each declared root has the complete generated
+// contract that lets the repository govern itself without an installed harness.
+// It reads table *names* only (never another skill's keys), and treats the manifest
+// as the authoritative generated inventory. Hash integrity remains VENDOR-1's job.
+const capabilityPayloads = (skill: string): string[] => [
+  `${VENDOR_DIR}/checkers/${skill}/scripts/audit.ts`,
+  `${VENDOR_DIR}/checkers/${skill}/scripts/conform.ts`,
+  `${VENDOR_DIR}/educators/${skill}/educate.ts`
+]
+
+function isRegularNonLink(path: string): boolean {
+  try {
+    const stat = lstatSync(path)
+    return stat.isFile() && !stat.isSymbolicLink()
+  } catch {
+    return false
+  }
+}
+
+function localCapabilityFindings(dir: string): Finding[] {
+  const { f, fail } = mk()
+  const cfgPath = join(dir, KI_CONFIG)
+  if (!existsSync(cfgPath)) return f
+
+  const roots = [
+    ...new Set(
+      declaredTables(readFileSync(cfgPath, 'utf8'))
+        .map(({ root }) => root)
+        .filter((root) => root.startsWith('ki-'))
+    )
+  ].sort()
+  if (roots.length === 0) return f
+
+  const manifestPath = join(dir, VENDOR_DIR, 'manifest.json')
+  let files: Record<string, string> = {}
+  try {
+    files = (JSON.parse(readFileSync(manifestPath, 'utf8')) as { files?: Record<string, string> }).files ?? {}
+  } catch {
+    fail(
+      'CAPABILITY-COMPLETE',
+      `declared governance roots have no readable generated manifest — run ./.ki-meta/bin/ki-educate to publish their local EDUCATE / AUDIT / CONFORM payloads`,
+      KI_CONFIG
+    )
+    return f
+  }
+
+  const missing: string[] = []
+  for (const skill of roots) {
+    for (const rel of capabilityPayloads(skill)) {
+      if (!files[rel] || !isRegularNonLink(join(dir, rel))) missing.push(rel)
+    }
+  }
+  if (missing.length)
+    fail(
+      'CAPABILITY-COMPLETE',
+      `declared governance root(s) lack complete local EDUCATE / AUDIT / CONFORM payloads: ${missing.join(', ')} — remove process/global-only tables, or repair the governance skill and re-run ./.ki-meta/bin/ki-educate`,
+      KI_CONFIG
     )
   return f
 }
@@ -867,7 +937,7 @@ const scoped = (nwo: string, f: Finding): string => `${nwo}${f.file ? `/${f.file
 for (const t of targets) {
   // Offline, local-disk vendor-integrity check — independent of GitHub reachability,
   // so it still runs for a target with no github.com origin (or none at all).
-  const localFindings = t.dir ? [...localIntegrityFindings(t.dir), ...localConfigFindings(t.dir)] : []
+  const localFindings = t.dir ? [...localIntegrityFindings(t.dir), ...localConfigFindings(t.dir), ...localCapabilityFindings(t.dir)] : []
   if (!t.nameWithOwner) {
     all.push({ level: 'NA', area: 'ACCESS-1', msg: t.note ?? 'GitHub checks skipped', ref: STD, file: t.label })
     for (const x of localFindings) all.push({ level: x.level, area: x.area, msg: x.msg, ref: x.ref, file: scoped(t.label, x) })

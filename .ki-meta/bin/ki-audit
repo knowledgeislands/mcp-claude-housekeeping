@@ -8,7 +8,7 @@ case "${1:-}" in
     echo "  runs each vendored skill checker under .ki-meta/checkers/ for the given verb."
     echo "  audit    read-only self-check (the default verb)"
     echo "  conform  apply the mechanical fixes (same as ./.ki-meta/bin/ki-conform)"
-    echo "  educate     re-sync the vendored scripts from the harness (same as ./.ki-meta/bin/ki-educate)"
+    echo "  educate     run whole-set re-bootstrap or one vendored educator (same as ./.ki-meta/bin/ki-educate)"
     echo "  help     list governed skills, or show one skill's HELP (same as ./.ki-meta/bin/ki-help)"
     exit 0
     ;;

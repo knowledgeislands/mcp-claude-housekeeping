@@ -127,7 +127,7 @@ const ids = (value: string | undefined): string[] =>
         .map((part) => part.trim())
         .filter(Boolean)
 
-const planRef = (plan: Pick<Plan, 'theme' | 'id'>): string => `${plan.theme}/${plan.id}`
+const planRef = (plan: Pick<Plan, 'id'>): string => plan.id
 
 function discover(excludedThemes = new Set<string>()): { themes: string[]; items: Item[]; plans: Plan[] } {
   const themes = readdirSync(roadmapDir, { withFileTypes: true })
@@ -236,7 +236,8 @@ type PrunableTheme = { theme: string; original: string; hasPlans: boolean }
 type StagedTheme = PrunableTheme & { staged: string }
 
 function isScaffoldOnlyTheme(text: string): boolean {
-  for (const line of text.split(/\r?\n/)) {
+  const withoutFrontmatter = text.replace(/^---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/, '')
+  for (const line of withoutFrontmatter.split(/\r?\n/)) {
     const trimmed = line.trim()
     if (!trimmed) continue
     if (/^#\s+/.test(trimmed) || /^##\s+/.test(trimmed)) continue

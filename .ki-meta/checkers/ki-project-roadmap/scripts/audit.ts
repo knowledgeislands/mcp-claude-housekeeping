@@ -44,8 +44,9 @@ const HORIZON_BLURBS: Record<Horizon, string> = {
 }
 const NEAR = new Set<Horizon>(['Blocking', 'Next'])
 const THEME_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
-const PLAN_RE = /^(\d{3,})-([a-z0-9]+(?:-[a-z0-9]+)*)\.md$/
-const PLAN_REF_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*\/\d{3,}$/
+const THEME_CODE_RE = /^[A-Z][A-Z0-9]{1,7}$/
+const PLAN_ID_RE = /^[A-Z][A-Z0-9]{1,7}-\d{3,}$/
+const PLAN_RE = /^([A-Z][A-Z0-9]{1,7}-\d{3,})-([a-z0-9]+(?:-[a-z0-9]+)*)\.md$/
 const REQUIRED = ['id', 'title', 'status', 'roadmap', 'blocks', 'blocked-by']
 const OPTIONAL = ['handoff', 'tier', 'readiness']
 const VALID_STATUS = new Set(['open', 'in-progress', 'done'])
@@ -190,7 +191,28 @@ function ids(value: string | undefined): string[] {
     .filter(Boolean)
 }
 
-const planRef = (plan: Pick<Plan, 'theme' | 'id'>): string => `${plan.theme}/${plan.id}`
+const planRef = (plan: Pick<Plan, 'id'>): string => plan.id
+
+function themeCode(text: string, display: string): string | null {
+  const parsed = parseFrontmatter(text)
+  if (!parsed) {
+    add('FAIL', 'THEME-2', 'theme roadmap must declare a code in YAML frontmatter', STANDARD_REF, display)
+    return null
+  }
+  const unexpected = Object.keys(parsed.values).filter((field) => field !== 'code')
+  if (unexpected.length)
+    add('FAIL', 'THEME-2', `theme frontmatter has unexpected field(s): ${unexpected.sort().join(', ')}`, STANDARD_REF, display)
+  if (parsed.duplicateKeys.length)
+    add('FAIL', 'THEME-2', `theme frontmatter duplicates key(s): ${parsed.duplicateKeys.join(', ')}`, STANDARD_REF, display)
+  if (parsed.unparsedLines.length) add('FAIL', 'THEME-2', 'theme frontmatter must contain only a flat code field', STANDARD_REF, display)
+  if (!/^code:\s*[A-Z][A-Z0-9]{1,7}\s*$/m.test(parsed.raw))
+    add('FAIL', 'THEME-2', 'theme code must be an unquoted uppercase identifier', STANDARD_REF, display)
+  if (!parsed.values.code || !THEME_CODE_RE.test(parsed.values.code)) {
+    add('FAIL', 'THEME-2', `theme code '${parsed.values.code ?? ''}' must match ${THEME_CODE_RE.source}`, STANDARD_REF, display)
+    return null
+  }
+  return parsed.values.code
+}
 
 function validatePlanBody(body: string, display: string): void {
   const requiredSections = ['Context', 'Current state', 'Steps', 'Files touched', 'Verify', 'Dependencies / blocks']
@@ -274,6 +296,7 @@ function discoverThematic(): { themes: string[]; items: Item[]; plans: Plan[] } 
   const themes: string[] = []
   const items: Item[] = []
   const plans: Plan[] = []
+  const codes = new Map<string, string>()
   const entries = readdirSync(roadmapDir, { withFileTypes: true })
   for (const entry of entries) {
     if (entry.name === 'README.md') continue
@@ -299,15 +322,16 @@ function discoverThematic(): { themes: string[]; items: Item[]; plans: Plan[] } 
       add('FAIL', 'THEME-1', 'theme has no ROADMAP.md', STANDARD_REF, `docs/roadmap/${theme}`)
       continue
     }
-    const themeItems = parseRoadmap(roadmap, `docs/roadmap/${theme}/ROADMAP.md`, theme)
+    const displayRoadmap = `docs/roadmap/${theme}/ROADMAP.md`
+    const code = themeCode(readFileSync(roadmap, 'utf8'), displayRoadmap)
+    if (code) {
+      const previous = codes.get(code)
+      if (previous) add('FAIL', 'THEME-2', `theme code '${code}' is already used by ${previous}`, STANDARD_REF, displayRoadmap)
+      else codes.set(code, displayRoadmap)
+    }
+    const themeItems = parseRoadmap(roadmap, displayRoadmap, theme)
     if (!themeItems.length)
-      add(
-        'FAIL',
-        'THEME-3',
-        'empty theme roadmap must be pruned; retain only docs/roadmap/README.md',
-        STANDARD_REF,
-        `docs/roadmap/${theme}/ROADMAP.md`
-      )
+      add('FAIL', 'THEME-3', 'empty theme roadmap must be pruned; retain only docs/roadmap/README.md', STANDARD_REF, displayRoadmap)
     items.push(...themeItems)
     const allowed = new Set(['ROADMAP.md', 'plans'])
     for (const child of readdirSync(themeRoot)) {
@@ -337,7 +361,7 @@ function discoverThematic(): { themes: string[]; items: Item[]; plans: Plan[] } 
       }
       const match = PLAN_RE.exec(name)
       if (!match || !lstatSync(path).isFile()) {
-        add('FAIL', 'PLAN-1', 'plan filename must be <NNN>-<slug>.md', FORMAT_REF, display)
+        add('FAIL', 'PLAN-1', 'plan filename must be <THEME>-<NNN>-<slug>.md', FORMAT_REF, display)
         continue
       }
       const content = readFileSync(path, 'utf8')
@@ -357,10 +381,13 @@ function discoverThematic(): { themes: string[]; items: Item[]; plans: Plan[] } 
       for (const field of ['id', 'title', 'status', 'roadmap']) {
         if (field in fm && !fm[field].trim()) add('FAIL', 'PLAN-1', `frontmatter field '${field}' must not be empty`, FORMAT_REF, display)
       }
-      if (!/^id:\s*(['"])\d{3,}\1\s*$/m.test(parsed.raw)) add('FAIL', 'PLAN-1', 'id must be quoted in frontmatter', FORMAT_REF, display)
-      if (fm.id && !/^\d{3,}$/.test(fm.id))
-        add('FAIL', 'PLAN-1', `id '${fm.id}' must be a quoted zero-padded 3+ digit string`, FORMAT_REF, display)
+      if (!/^id:\s*(['"])[A-Z][A-Z0-9]{1,7}-\d{3,}\1\s*$/m.test(parsed.raw))
+        add('FAIL', 'PLAN-1', 'id must be quoted in frontmatter', FORMAT_REF, display)
+      if (fm.id && !PLAN_ID_RE.test(fm.id))
+        add('FAIL', 'PLAN-1', `id '${fm.id}' must be a quoted <THEME>-<NNN> identifier`, FORMAT_REF, display)
       if (fm.id && fm.id !== match[1]) add('FAIL', 'PLAN-1', `id '${fm.id}' does not match filename id '${match[1]}'`, FORMAT_REF, display)
+      if (fm.id && code && !fm.id.startsWith(`${code}-`))
+        add('FAIL', 'PLAN-1', `id '${fm.id}' does not use theme code '${code}'`, FORMAT_REF, display)
       if (fm.status && !VALID_STATUS.has(fm.status)) add('FAIL', 'PLAN-1', `invalid status '${fm.status}'`, FORMAT_REF, display)
       if (match[2].length > 50) add('FAIL', 'PLAN-1', `filename slug is ${match[2].length} characters; maximum is 50`, FORMAT_REF, display)
       validatePlanBody(parsed.body, display)
@@ -374,7 +401,7 @@ function discoverThematic(): { themes: string[]; items: Item[]; plans: Plan[] } 
         if (duplicates.length) add('FAIL', 'PLAN-3', `${field} contains duplicate id(s): ${duplicates.join(', ')}`, FORMAT_REF, display)
       }
       const planId = fm.id || match[1]
-      const reference = `${theme}/${planId}`
+      const reference = planId
       if (blocks.includes(reference) || blockedBy.includes(reference))
         add('FAIL', 'PLAN-3', `plan ${reference} must not depend on itself`, FORMAT_REF, display)
       plans.push({ id: planId, theme, file: display, name, fm, blocks, blockedBy })
@@ -455,8 +482,8 @@ if (!existsSync(thematicDir)) {
   for (const plan of plans) {
     const reference = planRef(plan)
     for (const dependency of [...plan.blocks, ...plan.blockedBy]) {
-      if (!PLAN_REF_RE.test(dependency))
-        add('FAIL', 'PLAN-3', `dependency '${dependency}' is not a qualified <theme>/<NNN> plan reference`, FORMAT_REF, plan.file)
+      if (!PLAN_ID_RE.test(dependency))
+        add('FAIL', 'PLAN-3', `dependency '${dependency}' is not a <THEME>-<NNN> plan identifier`, FORMAT_REF, plan.file)
       else if (!byRef.has(dependency)) add('FAIL', 'PLAN-3', `dependency ${dependency} does not exist`, FORMAT_REF, plan.file)
     }
     for (const blocked of plan.blocks) {

@@ -14,7 +14,7 @@ if (!verb) {
 }
 const binDir = dirname(fileURLToPath(import.meta.url))
 if (verb === 'educate' || verb === 'help') {
-  // educate: the local re-sync prompt (re-run the remote chain at the manifest's ref).
+  // educate: whole-set re-bootstrap or a selected target-local educator payload.
   // help: the vendored HELP snapshots. Both exec the sibling wrapper.
   execFileSync(join(binDir, verb === 'educate' ? 'ki-educate' : 'ki-help'), process.argv.slice(3), { stdio: 'inherit' })
   process.exit(0)
@@ -61,13 +61,13 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-
 const FAILURE_LEVELS = ['FAIL', 'WARN', 'POLISH']
 const RECAP_LEVELS = ['FAIL', 'WARN', 'POLISH', 'ADVISORY']
 const verbed = verb === 'conform' ? 'conformed' : 'audited'
-// Render one finding row: icon status [code] file msg (ref). file/ref shown only when
+// Render one finding row: icon status [readable title (code)] file msg (ref). file/ref shown only when
 // the finding carries them (structured fields — most checkers only populate them once
 // swept). full=false trims msg to its first line (recap rows stay one-line).
-// Fixed-width short level tags (fail/warn/pol/adv/info/na/pass) keep the [code] column
+// Fixed-width short level tags (fail/warn/pol/adv/info/na/pass) keep the identity column
 // aligned at a tight 4-wide field — without them "advisory" would force an 8-wide pad.
 // Icons are each two display columns (sub-width glyphs ⊘/⚠️/ℹ️ carry a trailing space),
-// so [code] lands in a constant column across both body and recap rows.
+// aligned across both body and recap rows.
 const SHORT = { FAIL: 'fail', WARN: 'warn', POLISH: 'pol', ADVISORY: 'adv', INFO: 'info', NA: 'na', PASS: 'pass' }
 const rubricTitleCache = new Map()
 const rubricTitles = (skillDir) => {
@@ -96,7 +96,7 @@ const rubricTitles = (skillDir) => {
 const findingLine = (icon, level, code, title, file, msg, ref, skill, full) =>
   '  ' + icon + ' ' + (SHORT[level] || level.toLowerCase()).padEnd(4) +
   (skill ? ' ' + skill.padEnd(20) : '') +
-  ' \x1b[2m[' + code + (title ? ': ' + title : '') + ']\x1b[0m' +
+  ' \x1b[2m[' + (title ? title + ' (' + code + ')' : code) + ']\x1b[0m' +
   (file ? ' \x1b[36m' + file + '\x1b[0m' : '') +
   ' ' + (full ? msg : String(msg).split('\n')[0]) +
   (ref ? ' \x1b[2m(' + ref + ')\x1b[0m' : '')

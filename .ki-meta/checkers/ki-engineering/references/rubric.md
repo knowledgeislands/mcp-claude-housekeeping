@@ -40,7 +40,7 @@ Capability conditionals only apply when the repo has the marker (tests / compile
 - [ ] **SCR-1** [M] FAIL — **the `ki:` naming law (exhaustive)**: every `scripts` entry is one of the six bare lifecycle idioms (`build`, `prepare`, `test`, `test:coverage`, `test:watch`, `clean`) **or** carries the `ki:` prefix. A bare non-idiom name is drift.
 - [ ] **SCR-2** [M] FAIL — both aggregate entrypoints are present: `ki:audit` (read-only gate) and `ki:conform` (write pass), each fanning out over the vendored per-skill modes in `.ki-meta`.
 - [ ] **SCR-3** [M] FAIL — no retired keys linger: the `ki:lint:*` / `ki:deps:*` / `ki:knip` families, `ki:verify`, and any per-skill `ki:<skill>:lint` are folded into `ki:engineering:audit`/`conform` + the aggregate `ki:audit` (TOOLCHAIN-001) — their presence is drift.
-- [ ] **SCR-4** [M] FAIL — every skill vendored into `.ki-meta/skills/<skill>/` is reachable by the derived keys `ki:<suffix>:audit` / `ki:<suffix>:conform` (suffix = skill dir minus `ki-`).
+- [ ] **SCR-4** [M] FAIL — every checker payload vendored into `.ki-meta/checkers/<skill>/` is reachable by the derived keys `ki:<suffix>:audit` / `ki:<suffix>:conform` (suffix = skill dir minus `ki-`).
 - [ ] **SCR-5** [M] FAIL/WARN — `clean` removes `node_modules` (FAIL otherwise) and `prepare` = `husky` (WARN otherwise); `clean` also removes `dist` where the repo builds.
 - [ ] **SCR-7** [M] FAIL — a repo with tests exposes the runner-neutral bare `test` idiom. Compiled repos expose bare `build`; neither lifecycle command is appended to the canonical aggregate entrypoints.
 - [ ] **BIO-1** [M] FAIL — `bunx @biomejs/biome check` exits clean (the read-only Biome pass, run directly by `ki:engineering:audit`).

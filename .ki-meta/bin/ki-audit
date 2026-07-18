@@ -5,7 +5,7 @@ set -eu
 case "${1:-}" in
   -h|--help)
     echo "usage: ki-audit [audit|conform|educate|help] [--dry-run ...]   (default verb: audit)"
-    echo "  runs each vendored skill checker under .ki-meta/skills/ for the given verb."
+    echo "  runs each vendored skill checker under .ki-meta/checkers/ for the given verb."
     echo "  audit    read-only self-check (the default verb)"
     echo "  conform  apply the mechanical fixes (same as ./.ki-meta/bin/ki-conform)"
     echo "  educate     re-sync the vendored scripts from the harness (same as ./.ki-meta/bin/ki-educate)"

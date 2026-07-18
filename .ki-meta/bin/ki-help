@@ -6,13 +6,13 @@ set -eu
 meta="$(cd "$(dirname "$0")/.." && pwd)"
 if [ $# -eq 0 ]; then
   echo "governed skills (./.ki-meta/bin/ki-help <skill>):"
-  for d in "$meta"/skills/*/; do
+  for d in "$meta"/checkers/*/; do
     s="$(basename "$d")"
     [ -f "$d/help.md" ] && echo "  $s"
   done
   exit 0
 fi
-f="$meta/skills/$1/help.md"
+f="$meta/checkers/$1/help.md"
 if [ ! -f "$f" ]; then
   echo "no help vendored for '$1'" >&2
   exit 1

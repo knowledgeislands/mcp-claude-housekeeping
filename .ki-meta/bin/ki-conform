@@ -5,7 +5,7 @@ set -eu
 case "${1:-}" in
   -h|--help)
     echo "usage: ki-conform [--dry-run]"
-    echo "  applies each vendored skill's mechanical fixes across .ki-meta/skills/."
+    echo "  applies each vendored skill's mechanical fixes across .ki-meta/checkers/."
     echo "  --dry-run  report what would change without writing."
     exit 0
     ;;

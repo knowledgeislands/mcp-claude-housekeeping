@@ -350,20 +350,20 @@ retired.length
   : add('PASS', 'SCR-3', 'no retired ki:lint:* / ki:deps:* / ki:verify keys', STD, 'package.json')
 
 // ── core: per-skill audit/conform key coverage (derived + enforced) ───────────
-// Every skill vendored into .ki-meta/skills/<skill>/ must be reachable by the DERIVED
+// Every checker vendored into .ki-meta/checkers/<skill>/ must be reachable by the DERIVED
 // keys ki:<suffix>:audit / ki:<suffix>:conform (suffix = skill dir minus ki-). This is
 // the mechanical half of "every vendored mode has a package.json entry". Reads .ki-meta
 // only (offline-safe); ki-bootstrap is never vendored so it is not required here.
-if (isDir('.ki-meta', 'skills')) {
-  const metaSkills = at('.ki-meta', 'skills')
-  for (const skill of readdirSync(metaSkills).filter((d) => statSync(join(metaSkills, d)).isDirectory())) {
+if (isDir('.ki-meta', 'checkers')) {
+  const metaCheckers = at('.ki-meta', 'checkers')
+  for (const skill of readdirSync(metaCheckers).filter((d) => statSync(join(metaCheckers, d)).isDirectory())) {
     const suffix = skill.replace(/^ki-/, '')
     for (const mode of ['audit', 'conform'] as const) {
-      if (!existsSync(join(metaSkills, skill, `${mode}.ts`))) continue
+      if (!existsSync(join(metaCheckers, skill, 'scripts', `${mode}.ts`))) continue
       const key = `ki:${suffix}:${mode}`
       scripts[key]
-        ? add('PASS', 'SCR-4', `${key} wired to vendored ${skill}/${mode}.ts`, STD, 'package.json')
-        : add('FAIL', 'SCR-4', `missing script "${key}" for vendored .ki-meta/skills/${skill}/${mode}.ts`, STD, 'package.json')
+        ? add('PASS', 'SCR-4', `${key} wired to vendored ${skill}/scripts/${mode}.ts`, STD, 'package.json')
+        : add('FAIL', 'SCR-4', `missing script "${key}" for vendored .ki-meta/checkers/${skill}/scripts/${mode}.ts`, STD, 'package.json')
     }
   }
 }

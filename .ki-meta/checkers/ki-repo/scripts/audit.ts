@@ -695,7 +695,7 @@ function auditRepo(r: Repo, files: Set<string>, ki: KiConfig | null, kiText: str
 
 // ── vendor-integrity (ADR-KI-HARNESS-006) ─────────────────────────────────────
 // Offline, local-disk check independent of the GitHub-based checks above: a
-// bootstrapped repo's vendored `.ki-meta/skills/**` copies (+ the aggregate
+// bootstrapped repo's vendored `.ki-meta/checkers/**` copies (+ the aggregate
 // runner) must match the sha256 recorded in `.ki-meta/manifest.json` at vendor
 // time. A mismatch means tampered or partially re-vendored files (FAIL). A repo
 // that carries `.ki-meta/` but no manifest predates the manifest contract

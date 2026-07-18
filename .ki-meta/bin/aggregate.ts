@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// Vendored by ki-bootstrap. Runs each vendored skill checker under ../skills/ in
+// Vendored by ki-bootstrap. Runs each vendored skill checker under ../checkers/ in
 // sequence for the given verb — no package.json required.
 // Usage: bun .ki-meta/bin/aggregate.ts <audit|conform|educate|help>
 import { execFileSync, spawnSync } from 'node:child_process'
@@ -35,9 +35,9 @@ if (verb === 'refresh') {
 // carries the identity.
 const pattern = verb === 'audit' ? /^(audit|lint)\.ts$/ : verb === 'conform' ? /^conform\.ts$/ : null
 if (!pattern) process.exit(0)
-const skillsDir = join(binDir, '..', 'skills')
-if (!existsSync(skillsDir)) process.exit(0)
-const skills = readdirSync(skillsDir, { withFileTypes: true })
+const checkersDir = join(binDir, '..', 'checkers')
+if (!existsSync(checkersDir)) process.exit(0)
+const checkers = readdirSync(checkersDir, { withFileTypes: true })
   .filter((e) => e.isDirectory())
   .map((e) => e.name)
   .sort()
@@ -176,13 +176,14 @@ let failed = false
 const recap = []
 const reportErrors = []
 const extraArgs = process.argv.slice(3)
-for (const skill of skills) {
-  const dir = join(skillsDir, skill)
-  const script = readdirSync(dir).find((f) => pattern.test(f))
+for (const skill of checkers) {
+  const dir = join(checkersDir, skill)
+  const scriptsDir = join(dir, 'scripts')
+  const script = existsSync(scriptsDir) ? readdirSync(scriptsDir).find((f) => pattern.test(f)) : undefined
   if (!script) continue
   const key = 'ki:' + skill.replace(/^ki-/, '') + ':' + verb
   console.log('\n\x1b[36m==> ' + key + '\x1b[0m')
-  const scriptPath = join(dir, script)
+  const scriptPath = join(scriptsDir, script)
   // Flags after the verb (for example --dry-run) forward to every child. Reporting
   // is never a flag: canonical JSONL is the normal checker output.
   const res = spawnSync('bun', [scriptPath, '.', ...extraArgs], { encoding: 'utf8' })

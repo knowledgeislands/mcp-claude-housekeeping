@@ -227,6 +227,7 @@ const KI_SECTION = 'ki-repo'
 const KI_REPO_DEFAULT = `[${KI_SECTION}]
 visibility = "private"   # "public" | "private" — must match the repo's actual GitHub visibility
 license = "MIT"          # SPDX id the LICENSE, package.json, and GitHub must match; default MIT. Use "UNLICENSED" for proprietary. Pick one at https://choosealicense.com/
+supported_runtimes = ["claude-code", "codex"] # required agent-runtime support surface
 
 # Per-repo check overrides — true = enforce, false = don't. Omit any check to take
 # the org default; a repo that fully conforms needs nothing here.
@@ -810,52 +811,50 @@ function localCapabilityFindings(dir: string): Finding[] {
 }
 
 // The agent runtimes the bootstrap linkers know how to install for. A repo may
-// declare a subset in `[ki-repo] target_runtimes`; anything outside this set has no
+// declare a subset in `[ki-repo] supported_runtimes`; anything outside this set has no
 // discovery path, so the linker would silently do nothing for it (RUNTIMES-1).
 const KNOWN_RUNTIMES = ['claude-code', 'codex']
 
-// Parse `target_runtimes = ["a", "b"]` from the [ki-repo] table only (the documented
+// Parse `supported_runtimes = ["a", "b"]` from the [ki-repo] table only (the documented
 // home of the key — table-aware, unlike the bootstrap resolver's tolerant match).
 // Returns null when the key is absent (the ["claude-code"] default applies, nothing to
 // check), else the declared list (possibly empty).
-function parseTargetRuntimes(text: string): string[] | null {
+function parseSupportedRuntimes(text: string): { runtimes: string[]; issue?: string } {
   let document: Record<string, unknown>
   try {
     document = TOML.parse(text) as Record<string, unknown>
   } catch {
-    return null
+    return { runtimes: [], issue: 'must be valid TOML' }
   }
   const table = document[KI_SECTION]
-  if (!table || typeof table !== 'object' || Array.isArray(table)) return null
-  const runtimes = (table as Record<string, unknown>).target_runtimes
-  if (runtimes === undefined) return null
-  if (!Array.isArray(runtimes)) return []
-  return runtimes.filter((runtime): runtime is string => typeof runtime === 'string')
+  if (!table || typeof table !== 'object' || Array.isArray(table)) return { runtimes: [], issue: `must contain a [${KI_SECTION}] table` }
+  const runtimes = (table as Record<string, unknown>).supported_runtimes
+  if (runtimes === undefined) return { runtimes: [], issue: 'is required' }
+  if (!Array.isArray(runtimes)) return { runtimes: [], issue: 'must be an array of runtime names' }
+  if (runtimes.length === 0) return { runtimes: [], issue: 'must not be empty' }
+  if (runtimes.some((runtime) => typeof runtime !== 'string')) return { runtimes: [], issue: 'must contain only runtime names' }
+  const list = runtimes as string[]
+  if (new Set(list).size !== list.length) return { runtimes: [], issue: 'must not repeat a runtime' }
+  return { runtimes: list }
 }
 
-// RUNTIMES-1: validate `[ki-repo] target_runtimes` if declared. A pure local
-// .ki-config.toml read — offline-safe, sits beside vendor-integrity. Absent key →
-// default ["claude-code"], nothing to check. Every declared name must be a runtime the
-// linkers recognise; an empty list would target nothing.
+// RUNTIMES-1: validate the required `[ki-repo] supported_runtimes` declaration. A pure
+// local .ki-config.toml read — offline-safe, sitting beside vendor-integrity. Every
+// name must be a runtime the linkers recognise; the support surface is never inferred.
 function localConfigFindings(dir: string): Finding[] {
-  const { f, warn } = mk()
+  const { f, fail } = mk()
   const cfgPath = join(dir, KI_CONFIG)
   if (!existsSync(cfgPath)) return f
-  const runtimes = parseTargetRuntimes(readFileSync(cfgPath, 'utf8'))
-  if (runtimes === null) return f
-  if (runtimes.length === 0) {
-    warn(
-      'RUNTIMES-1',
-      `[${KI_SECTION}] target_runtimes is empty — the linkers would target no runtime; omit the key to default to ["claude-code"]`,
-      KI_CONFIG
-    )
+  const parsed = parseSupportedRuntimes(readFileSync(cfgPath, 'utf8'))
+  if (parsed.issue) {
+    fail('RUNTIMES-1', `[${KI_SECTION}] supported_runtimes ${parsed.issue}`, KI_CONFIG)
     return f
   }
-  const unknown = runtimes.filter((rt) => !KNOWN_RUNTIMES.includes(rt))
+  const unknown = parsed.runtimes.filter((rt) => !KNOWN_RUNTIMES.includes(rt))
   if (unknown.length)
-    warn(
+    fail(
       'RUNTIMES-1',
-      `[${KI_SECTION}] target_runtimes names unknown runtime(s): ${unknown.join(', ')} (known: ${KNOWN_RUNTIMES.join(', ')})`,
+      `[${KI_SECTION}] supported_runtimes names unknown runtime(s): ${unknown.join(', ')} (known: ${KNOWN_RUNTIMES.join(', ')})`,
       KI_CONFIG
     )
   return f

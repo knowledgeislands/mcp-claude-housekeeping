@@ -101,6 +101,7 @@ const KI_SECTION = 'ki-repo'
 const KI_REPO_DEFAULT = `[${KI_SECTION}]
 visibility = "private"   # "public" | "private" — must match the repo's actual GitHub visibility
 license = "MIT"          # SPDX id the LICENSE, package.json, and GitHub must match; default MIT. Use "UNLICENSED" for proprietary. Pick one at https://choosealicense.com/
+supported_runtimes = ["claude-code", "codex"] # required agent-runtime support surface
 
 # Per-repo check overrides — true = enforce, false = don't. Omit any check to take
 # the org default; a repo that fully conforms needs nothing here.

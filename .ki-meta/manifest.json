@@ -1,5 +1,5 @@
 {
-  "ref": "28cdf294b13db81b837ee5e94054c86465890896",
+  "ref": "07e2085f223ed5ebb3dbf0787e860d9e79d30bc9",
   "files": {
     ".ki-meta/checkers/ki-authoring/scripts/audit.ts": "b83ad36783a4ab9a26d348aa0338f1fb6f613280af64de906bafa11d50382fd6",
     ".ki-meta/checkers/ki-authoring/scripts/conform.ts": "9f6b612af943181b859dc3a1bff8fa9570adbd0686c583022e0b579bb6dfbe41",
@@ -22,10 +22,10 @@
     ".ki-meta/checkers/ki-mcp/scripts/vendored/ki-skills/checker-reporter.ts": "41d95a0c1759278f87812a91d283b85cc036349be1010eb0cc53580e3ba22344",
     ".ki-meta/checkers/ki-mcp/help.md": "9af4a9ffddbfc19b274642dea69d26baea59c37450674a0e843c978cf39a6f9e",
     ".ki-meta/educators/ki-mcp/educate.ts": "aeaf1abf98b5c4da581f26dfd37e21591ad30fdebb95a2d35e240c9f71433c96",
-    ".ki-meta/checkers/ki-repo/scripts/audit.ts": "fb15d2d4fc520e147e69a36e6d3b165dac62043c1a723fef11d1bf680a555337",
-    ".ki-meta/checkers/ki-repo/scripts/conform.ts": "9d86828cb458b6f4a3dc7c1dac97d28af9cd48714986cc1841f52adc03d34fc6",
+    ".ki-meta/checkers/ki-repo/scripts/audit.ts": "8ac6e4867227dc7260fe5ea2566d2af11e40ca01faf9c6828c35f2600b2c1f05",
+    ".ki-meta/checkers/ki-repo/scripts/conform.ts": "814b26b7222b17e12d434a21a1a44a25011fd0f3555394151b0df40f97a66cb3",
     ".ki-meta/checkers/ki-repo/.ki-meta/mode-elements.json": "ebd6c480603bc2045253cf715715352bcb17c7b8a73ad1a3b66399b74216866e",
-    ".ki-meta/checkers/ki-repo/references/rubric.md": "cecf1f442ecdbd3697497fe20610e26d4555ac401ea59290cd13ddd67f1d03a2",
+    ".ki-meta/checkers/ki-repo/references/rubric.md": "152ccd8c890c533c07a0ab749e9c3ddab34a24e5919084e13ee7560b015b14f4",
     ".ki-meta/checkers/ki-repo/scripts/vendored/ki-skills/checker-reporter.ts": "41d95a0c1759278f87812a91d283b85cc036349be1010eb0cc53580e3ba22344",
     ".ki-meta/checkers/ki-repo/help.md": "fbbd19b0aede8af2363aadcfbbfbaab5368cca5c4a81df851d345a776d617116",
     ".ki-meta/educators/ki-repo/educate.ts": "c86d13ddf2fc4b9427b9effa26d66d8f963f800fc13ca593fc0618132f058ba8",

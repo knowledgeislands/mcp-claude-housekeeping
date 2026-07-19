@@ -1,6 +1,7 @@
 # Knowledge Islands repo config — read by the ki-repo skill.
 # One [table] per skill that needs per-repo options.
 [ki-repo]
+supported_runtimes = ["claude-code", "codex"]
 visibility = "public"   # "public" | "private"
 # This repo fully conforms, so it declares no check overrides. To diverge, add a
 # [ki-repo.checks] table with one boolean per check (true = enforce).

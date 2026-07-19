@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-/** Normalize only derivable project-roadmap projections. */
+/** Normalize only derivable repository-roadmap projections. */
 import { spawnSync } from 'node:child_process'
 import {
   closeSync,
@@ -158,9 +158,9 @@ function discover(excludedThemes = new Set<string>()): { themes: string[]; items
 
 function projection(items: Item[]): string {
   const lines = [
-    '# Project roadmap',
+    '# Repository roadmap',
     '',
-    'This portfolio view is generated from the canonical theme roadmaps under `docs/roadmap/`. Edit those files, then run `ki-project-roadmap` CONFORM.',
+    'This portfolio view is generated from the canonical theme roadmaps under `docs/roadmap/`. Edit those files, then run `ki-repo-roadmap` CONFORM.',
     ''
   ]
   for (const horizon of HORIZONS) {
@@ -208,7 +208,7 @@ function withHorizonBlurbs(text: string): string {
 }
 
 function index(themes: string[], plans: Plan[]): string {
-  const lines = ['# Project roadmap index', '', 'Canonical themes and active execution plans.', '', '## Themes', '']
+  const lines = ['# Repository roadmap index', '', 'Canonical themes and active execution plans.', '', '## Themes', '']
   for (const theme of themes) lines.push(`- [${theme}](${theme}/ROADMAP.md)`)
   lines.push('', '## Active plans', '')
   for (const plan of [...plans].sort((a, b) => planRef(a).localeCompare(planRef(b)))) {
@@ -364,7 +364,7 @@ function emit(): never {
     file: finding.file
   }))
   canonical.push(...judgmentFindingsFromRubric(localRubricPath()))
-  emitCheckerReporter({ mode: 'conform', concern: 'project-roadmap', target: root, findings: canonical })
+  emitCheckerReporter({ mode: 'conform', concern: 'repo-roadmap', target: root, findings: canonical })
   process.exit(checkerReporterExitCode(canonical))
 }
 
@@ -398,7 +398,7 @@ if (isKb()) {
   findings.push({
     level: 'NA',
     area: 'SCOPE-1',
-    msg: 'KB repository: use ki-kb-streams; no project-roadmap files changed',
+    msg: 'KB repository: use ki-kb-streams; no repository-roadmap files changed',
     ref: STANDARD_REF
   })
   emit()

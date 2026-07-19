@@ -199,9 +199,17 @@ if (!lintStaged || typeof lintStaged !== 'object') {
   add('FAIL', 'PKG-6', 'lint-staged block missing (the husky pre-commit fan-out)', STD, 'package.json')
 } else {
   const ls = JSON.stringify(lintStaged)
-  ls.includes('@biomejs/biome') && ls.includes('prettier') && ls.includes('markdownlint')
-    ? add('PASS', 'PKG-6', 'lint-staged fans out to biome (code) + prettier/markdownlint (Markdown)', STD, 'package.json')
-    : add('WARN', 'PKG-6', 'lint-staged should run @biomejs/biome on code and prettier + markdownlint on *.md', STD, 'package.json')
+  const fanOut = ls.includes('@biomejs/biome') && ls.includes('prettier') && ls.includes('markdownlint')
+  const stagedMarkdownOnly = ls.includes('markdownlint-cli2 --no-globs')
+  fanOut && stagedMarkdownOnly
+    ? add('PASS', 'PKG-6', 'lint-staged fans out to biome and staged-only prettier/markdownlint', STD, 'package.json')
+    : add(
+        'WARN',
+        'PKG-6',
+        'lint-staged should run biome on code and prettier + markdownlint-cli2 --no-globs on staged Markdown only',
+        STD,
+        'package.json'
+      )
 }
 
 // ── core: mise.toml toolchain pin ─────────────────────────────────────────────
@@ -361,9 +369,18 @@ if (isDir('.ki-meta', 'checkers')) {
     for (const mode of ['audit', 'conform'] as const) {
       if (!existsSync(join(metaCheckers, skill, 'scripts', `${mode}.ts`))) continue
       const key = `ki:${suffix}:${mode}`
-      scripts[key]
-        ? add('PASS', 'SCR-4', `${key} wired to vendored ${skill}/scripts/${mode}.ts`, STD, 'package.json')
-        : add('FAIL', 'SCR-4', `missing script "${key}" for vendored .ki-meta/checkers/${skill}/scripts/${mode}.ts`, STD, 'package.json')
+      const expected = `bun .ki-meta/bin/aggregate.ts ${mode} --skill ${skill}`
+      scripts[key] === expected
+        ? add('PASS', 'SCR-4', `${key} renders vendored ${skill}/scripts/${mode}.ts through the aggregate reporter`, STD, 'package.json')
+        : add(
+            'FAIL',
+            'SCR-4',
+            scripts[key]
+              ? `${key} must use ${JSON.stringify(expected)} to render its vendored checker through the aggregate reporter`
+              : `missing script "${key}" for vendored .ki-meta/checkers/${skill}/scripts/${mode}.ts`,
+            STD,
+            'package.json'
+          )
     }
   }
 }

@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-/** Mechanical auditor for the non-KB project-roadmap standard. */
+/** Mechanical auditor for the non-KB repository-roadmap standard. */
 import { existsSync, lstatSync, readdirSync, readFileSync } from 'node:fs'
 import { basename, dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -242,9 +242,9 @@ function validatePlanBody(body: string, display: string): void {
 
 function projection(items: Item[]): string {
   const lines = [
-    '# Project roadmap',
+    '# Repository roadmap',
     '',
-    'This portfolio view is generated from the canonical theme roadmaps under `docs/roadmap/`. Edit those files, then run `ki-project-roadmap` CONFORM.',
+    'This portfolio view is generated from the canonical theme roadmaps under `docs/roadmap/`. Edit those files, then run `ki-repo-roadmap` CONFORM.',
     ''
   ]
   for (const horizon of HORIZONS) {
@@ -267,7 +267,7 @@ function projection(items: Item[]): string {
 }
 
 function planIndex(themes: string[], plans: Plan[]): string {
-  const lines = ['# Project roadmap index', '', 'Canonical themes and active execution plans.', '', '## Themes', '']
+  const lines = ['# Repository roadmap index', '', 'Canonical themes and active execution plans.', '', '## Themes', '']
   for (const theme of themes) lines.push(`- [${theme}](${theme}/ROADMAP.md)`)
   lines.push('', '## Active plans', '')
   for (const plan of [...plans].sort((a, b) => planRef(a).localeCompare(planRef(b)))) {
@@ -419,7 +419,7 @@ if (!existsSync(root) || !lstatSync(root).isDirectory()) {
 if (isKb(root)) {
   const artifacts = [rootRoadmap, thematicDir].filter(existsSync).map((path) => relative(root, path))
   if (artifacts.length)
-    add('FAIL', 'SCOPE-1', `KB repositories use ki-kb-streams; remove project-roadmap artifacts: ${artifacts.join(', ')}`, STANDARD_REF)
+    add('FAIL', 'SCOPE-1', `KB repositories use ki-kb-streams; remove repository-roadmap artifacts: ${artifacts.join(', ')}`, STANDARD_REF)
   else add('NA', 'SCOPE-1', 'KB repository: streams and proposal checklists are governed by ki-kb-streams', STANDARD_REF)
   emit()
 }
@@ -538,7 +538,7 @@ if (!existsSync(thematicDir)) {
 }
 
 if (!findings.some((finding) => ['FAIL', 'WARN', 'POLISH'].includes(finding.level))) {
-  add('PASS', 'PROFILE-1', 'project-roadmap mechanics conform', STANDARD_REF)
+  add('PASS', 'PROFILE-1', 'repository-roadmap mechanics conform', STANDARD_REF)
 }
 emit()
 
@@ -554,6 +554,6 @@ function emit(): never {
     file: finding.file
   }))
   canonical.push(...judgmentFindingsFromRubric(join(skillRoot, 'references', 'rubric.md'), RUBRIC_REF))
-  emitCheckerReporter({ mode: 'audit', concern: 'project-roadmap', target: root, findings: canonical })
+  emitCheckerReporter({ mode: 'audit', concern: 'repo-roadmap', target: root, findings: canonical })
   process.exit(checkerReporterExitCode(canonical))
 }

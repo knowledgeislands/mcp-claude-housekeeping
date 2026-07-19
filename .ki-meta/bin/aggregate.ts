@@ -1,15 +1,16 @@
 #!/usr/bin/env bun
 // Vendored by ki-bootstrap. Runs each vendored skill checker under ../checkers/ in
 // sequence for the given verb — no package.json required.
-// Usage: bun .ki-meta/bin/aggregate.ts <audit|conform|educate|help>
+// Usage: bun .ki-meta/bin/aggregate.ts <audit|conform|educate|help> [--skill <ki-skill>] [--reporter-levels=<levels>]
 import { execFileSync, spawnSync } from 'node:child_process'
-import { existsSync, readFileSync, readdirSync } from 'node:fs'
+import { existsSync, lstatSync, readFileSync, readdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { planModeElements } from './mode-elements.ts'
 
 const verb = process.argv[2]
 if (!verb) {
-  console.error('usage: aggregate.ts <audit|conform|educate|help>')
+  console.error('usage: aggregate.ts <audit|conform|educate|help> [--skill <ki-skill>] [--reporter-levels=<levels>]')
   process.exit(2)
 }
 const binDir = dirname(fileURLToPath(import.meta.url))
@@ -31,13 +32,10 @@ if (verb === 'refresh') {
   )
   process.exit(3)
 }
-// Vendored copies are named by verb (audit.ts / conform.ts) — the skill dir already
-// carries the identity.
-const pattern = verb === 'audit' ? /^(audit|lint)\.ts$/ : verb === 'conform' ? /^conform\.ts$/ : null
-if (!pattern) process.exit(0)
+if (verb !== 'audit' && verb !== 'conform') process.exit(0)
 const checkersDir = join(binDir, '..', 'checkers')
 if (!existsSync(checkersDir)) process.exit(0)
-const checkers = readdirSync(checkersDir, { withFileTypes: true })
+let checkers = readdirSync(checkersDir, { withFileTypes: true })
   .filter((e) => e.isDirectory())
   .map((e) => e.name)
   .sort()
@@ -55,11 +53,7 @@ const LEVELS = ['FAIL', 'WARN', 'POLISH', 'ADVISORY', 'INFO', 'NA', 'PASS']
 const SUMMARY_KEYS = ['fail', 'warn', 'polish', 'advisory', 'info', 'na', 'pass']
 const RUN_KEYS = ['version', 'runId', 'record', 'mode', 'concern', 'target', 'generatedAt']
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
-// The recap splits real violations (FAIL/WARN/POLISH — the checker decided a criterion
-// is broken) from ADVISORY (always-on judgment reminders the checker cannot decide). A
-// genuine failure must never be buried under the unconditional reminders.
 const FAILURE_LEVELS = ['FAIL', 'WARN', 'POLISH']
-const RECAP_LEVELS = ['FAIL', 'WARN', 'POLISH', 'ADVISORY']
 const verbed = verb === 'conform' ? 'conformed' : 'audited'
 // Render one finding row: icon status [readable title (code)] file msg (ref). file/ref shown only when
 // the finding carries them (structured fields — most checkers only populate them once
@@ -69,6 +63,36 @@ const verbed = verb === 'conform' ? 'conformed' : 'audited'
 // Icons are each two display columns (sub-width glyphs ⊘/⚠️/ℹ️ carry a trailing space),
 // aligned across both body and recap rows.
 const SHORT = { FAIL: 'fail', WARN: 'warn', POLISH: 'pol', ADVISORY: 'adv', INFO: 'info', NA: 'na', PASS: 'pass' }
+const DEFAULT_REPORTER_LEVELS = new Set(FAILURE_LEVELS)
+const parseReporterOptions = (args) => {
+  let levels = DEFAULT_REPORTER_LEVELS
+  let skill
+  const childArgs = []
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index]
+    let value
+    if (arg === '--reporter-levels') value = args[++index]
+    else if (arg.startsWith('--reporter-levels=')) value = arg.slice('--reporter-levels='.length)
+    else if (arg === '--skill') {
+      skill = args[++index]
+      if (!skill || !/^ki-[a-z0-9-]+$/.test(skill)) throw new Error('--skill requires one canonical ki-* skill name')
+      continue
+    } else if (arg.startsWith('--skill=')) {
+      skill = arg.slice('--skill='.length)
+      if (!/^ki-[a-z0-9-]+$/.test(skill)) throw new Error('--skill requires one canonical ki-* skill name')
+      continue
+    } else {
+      childArgs.push(arg)
+      continue
+    }
+    if (!value) throw new Error('--reporter-levels requires one or more comma-separated levels')
+    const requested = value.toUpperCase() === 'ALL' ? LEVELS : value.split(',').map((level) => level.trim().toUpperCase())
+    if (!requested.length || requested.some((level) => !LEVELS.includes(level)))
+      throw new Error('--reporter-levels accepts comma-separated values from ' + LEVELS.join(', ') + ', or all')
+    levels = new Set(requested)
+  }
+  return { levels, skill, childArgs }
+}
 const rubricTitleCache = new Map()
 const rubricTitles = (skillDir) => {
   if (rubricTitleCache.has(skillDir)) return rubricTitleCache.get(skillDir)
@@ -173,20 +197,69 @@ const validateReport = (events, exitCode, expectedMode) => {
 }
 
 let failed = false
-const recap = []
+const reports = []
 const reportErrors = []
-const extraArgs = process.argv.slice(3)
+let reporter
+try {
+  reporter = parseReporterOptions(process.argv.slice(3))
+} catch (error) {
+  console.error('error: ' + error.message)
+  process.exit(2)
+}
+if (reporter.skill) {
+  if (!checkers.includes(reporter.skill)) {
+    console.error('error: no vendored checker for ' + reporter.skill)
+    process.exit(2)
+  }
+  checkers = [reporter.skill]
+}
+const declarations = {}
 for (const skill of checkers) {
+  const declarationPath = join(checkersDir, skill, 'mode-elements.json')
+  if (!existsSync(declarationPath)) {
+    console.error('error: no vendored mode-element declaration for ' + skill)
+    process.exit(2)
+  }
+  const stat = lstatSync(declarationPath)
+  if (!stat.isFile() || stat.isSymbolicLink()) {
+    console.error('error: unsafe mode-element declaration for ' + skill)
+    process.exit(2)
+  }
+  try {
+    declarations[skill] = JSON.parse(readFileSync(declarationPath, 'utf8'))
+  } catch {
+    console.error('error: invalid mode-element JSON for ' + skill)
+    process.exit(2)
+  }
+}
+const planned = planModeElements(declarations, verb)
+if (planned.errors.length) {
+  console.error('error: invalid mode-element graph: ' + planned.errors.join('; '))
+  process.exit(2)
+}
+const entryCounts = new Map()
+for (const item of planned.order) {
+  const key = item.skill + '/' + item.element.entry
+  entryCounts.set(key, (entryCounts.get(key) || 0) + 1)
+}
+for (const { skill, element } of planned.order) {
   const dir = join(checkersDir, skill)
-  const scriptsDir = join(dir, 'scripts')
-  const script = existsSync(scriptsDir) ? readdirSync(scriptsDir).find((f) => pattern.test(f)) : undefined
-  if (!script) continue
-  const key = 'ki:' + skill.replace(/^ki-/, '') + ':' + verb
-  console.log('\n\x1b[36m==> ' + key + '\x1b[0m')
-  const scriptPath = join(scriptsDir, script)
-  // Flags after the verb (for example --dry-run) forward to every child. Reporting
-  // is never a flag: canonical JSONL is the normal checker output.
-  const res = spawnSync('bun', [scriptPath, '.', ...extraArgs], { encoding: 'utf8' })
+  const scriptPath = join(dir, element.entry)
+  if (!existsSync(scriptPath)) {
+    failed = true
+    reportErrors.push({ skill, errors: ['declared entry is missing: ' + element.entry] })
+    continue
+  }
+  const scriptStat = lstatSync(scriptPath)
+  if (!scriptStat.isFile() || scriptStat.isSymbolicLink()) {
+    failed = true
+    reportErrors.push({ skill, errors: ['declared entry is unsafe: ' + element.entry] })
+    continue
+  }
+  // The renderer consumes --reporter-levels itself. All other flags (for example
+  // --dry-run) forward to every child, whose canonical JSONL stays complete.
+  const selected = entryCounts.get(skill + '/' + element.entry) > 1 ? ['--mode-element=' + element.id] : []
+  const res = spawnSync('bun', [scriptPath, '.', ...selected, ...reporter.childArgs], { encoding: 'utf8' })
   const parsed = parseJsonl(res.stdout ?? '')
   const errors = [...parsed.errors, ...validateReport(parsed.events, res.status ?? 1, verb)]
   if (res.error) errors.push('process failed to start: ' + res.error.message)
@@ -198,40 +271,69 @@ for (const skill of checkers) {
   }
   const findings = parsed.events.slice(1, -1)
   const titles = rubricTitles(dir)
-  for (const finding of findings) {
-    const level = finding.level
-    const code = finding.code
-    const title = titles.get(code) || ''
-    const message = finding.message
-    const ref = finding.ref ?? ''
-    const file = finding.file ?? ''
-    console.log(findingLine(ICON[level], level, code, title, file, message, ref, '', true))
-    if (RECAP_LEVELS.includes(level)) recap.push({ skill, level, code, title, msg: message, ref, file })
-  }
-  const summary = parsed.events.at(-1).summary
-  const sicon = summary.fail ? ICON.FAIL : summary.warn ? ICON.WARN : summary.polish ? ICON.POLISH : summary.advisory ? ICON.ADVISORY : ICON.PASS
-  console.log('  ' + sicon + ' \x1b[2msummary: FAIL=' + summary.fail + ' WARN=' + summary.warn + ' POLISH=' + summary.polish + ' PASS=' + summary.pass + ' ADVISORY=' + summary.advisory + ' NA=' + summary.na + '\x1b[0m')
+  reports.push({ skill, key: 'ki:' + skill.replace(/^ki-/, '') + ':' + verb + '/' + element.id, findings, titles, summary: parsed.events.at(-1).summary })
   if ((res.status ?? 0) !== 0) failed = true
 }
+for (const report of reports) {
+  const visible = report.findings.filter((finding) => reporter.levels.has(finding.level))
+  if (!visible.length) continue
+  console.log('\n\x1b[36m==> ' + report.key + '\x1b[0m')
+  for (const finding of visible) {
+    const level = finding.level
+    console.log(
+      findingLine(
+        ICON[level],
+        level,
+        finding.code,
+        report.titles.get(finding.code) || '',
+        finding.file ?? '',
+        finding.message,
+        finding.ref ?? '',
+        '',
+        true
+      )
+    )
+  }
+  const summary = report.summary
+  const sicon = summary.fail ? ICON.FAIL : summary.warn ? ICON.WARN : summary.polish ? ICON.POLISH : ICON.PASS
+  console.log('  ' + sicon + ' \x1b[2msummary: FAIL=' + summary.fail + ' WARN=' + summary.warn + ' POLISH=' + summary.polish + '\x1b[0m')
+}
 console.log('\n\x1b[36m==> recap\x1b[0m')
-const fails = recap.filter((r) => FAILURE_LEVELS.includes(r.level))
-const reminders = recap.filter((r) => r.level === 'ADVISORY')
-if (fails.length === 0) {
-  console.log('  \x1b[32m\u2705 no FAIL / WARN / POLISH across ' + verbed + ' skills\x1b[0m')
+const allFindings = reports.flatMap((report) =>
+  report.findings.map((finding) => ({
+    skill: report.skill,
+    level: finding.level,
+    code: finding.code,
+    title: report.titles.get(finding.code) || '',
+    msg: finding.message,
+    ref: finding.ref ?? '',
+    file: finding.file ?? ''
+  }))
+)
+const recap = allFindings.filter((finding) => reporter.levels.has(finding.level))
+if (recap.length === 0) {
+  console.log('  \x1b[32m\u2705 no ' + [...reporter.levels].join(' / ') + ' findings across ' + verbed + ' skills\x1b[0m')
 } else {
-  console.log('  \x1b[1mfailures & warnings\x1b[0m')
-  for (const level of FAILURE_LEVELS)
-    for (const h of fails.filter((r) => r.level === level))
+  console.log('  \x1b[1mselected findings\x1b[0m')
+  for (const level of LEVELS)
+    for (const h of recap.filter((finding) => finding.level === level))
       console.log(findingLine(ICON[level], level, h.code, h.title, h.file, h.msg, h.ref, h.skill, false))
 }
-if (reminders.length) {
-  console.log('  \x1b[1mjudgment reminders (always on — read & assess)\x1b[0m')
-  for (const h of reminders) console.log(findingLine(ICON.ADVISORY, 'ADVISORY', h.code, h.title, h.file, h.msg, h.ref, h.skill, false))
-}
-const count = (l) => recap.filter((r) => r.level === l).length
+const count = (level) => allFindings.filter((finding) => finding.level === level).length
 const ticon = count('FAIL') ? ICON.FAIL : count('WARN') ? ICON.WARN : count('POLISH') ? ICON.POLISH : ICON.PASS
+const suppressed = LEVELS.filter((level) => !reporter.levels.has(level))
+const suppressedCounts = suppressed.map((level) => level + '=' + count(level)).join(' ')
 console.log(
-  '  ' + ticon + ' \x1b[2mtotals: FAIL=' + count('FAIL') + ' WARN=' + count('WARN') + ' POLISH=' + count('POLISH') + ' ADVISORY=' + count('ADVISORY') + '\x1b[0m'
+  '  ' +
+    ticon +
+    ' \x1b[2mtotals: FAIL=' +
+    count('FAIL') +
+    ' WARN=' +
+    count('WARN') +
+    ' POLISH=' +
+    count('POLISH') +
+    (suppressed.length ? ' (suppressed: ' + suppressedCounts + ')' : ' (all levels shown)') +
+    '\x1b[0m'
 )
 if (reportErrors.length) {
   console.log('  \x1b[1minvalid checker reports\x1b[0m')

@@ -1,13 +1,13 @@
 #!/bin/sh
 # Vendored by ki-bootstrap — run the whole-set bootstrap chain, or one local educator.
-# Usage: ./.ki-meta/bin/ki-educate [skill] [--ref <ref>] [--dry-run] [--help]
+# Usage: ./.ki-meta/bin/ki-educate [skill] [--ref <ref>] [--dry-run] [--verbose] [--help]
 set -eu
 DEFAULT_REF="main"
 REPO="knowledgeislands/ki-agentic-harness"
 root="$(cd "$(dirname "$0")/../.." && pwd)"
 case "${1:-}" in
   --help|-h)
-    echo "usage: ki-educate [skill] [--ref <ref>] [--dry-run]"
+    echo "usage: ki-educate [skill] [--ref <ref>] [--dry-run] [--verbose]"
     echo "  without a skill, re-runs the whole bootstrap chain (default ref: main)."
     echo "  with a skill, dispatches only .ki-meta/educators/<skill>/educate.ts."
     exit 0
@@ -31,6 +31,7 @@ while [ $# -gt 0 ]; do
   case "$1" in
     --ref) ref="$2"; shift 2 ;;
     --dry-run) pass="$pass --dry-run"; shift ;;
+    --verbose) pass="$pass --verbose"; shift ;;
     *) echo "unsupported whole-set ki-educate argument: $1" >&2; exit 2 ;;
   esac
 done

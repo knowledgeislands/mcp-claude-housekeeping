@@ -26,7 +26,7 @@ Capability conditionals only apply when the repo has the marker (tests / compile
 - [ ] **PKG-3** [M] WARN — `"engines.node"` floor is `>= 22`.
 - [ ] **PKG-4** [M] FAIL — **coverage manifest (exhaustive)**: every top-level `package.json` key is in the manifest (§1) — `name`, `version`, `description`, `author`, `license`, `private`, `repository`, `homepage`, `bugs`, `keywords`, `type`, `packageManager`, `engines`, `scripts`, `devDependencies`, `dependencies`, `workspaces`, `lint-staged`, `main`, `bin`, `exports`, `files`. An unknown key is drift. (Also the code for an unparseable `package.json`.)
 - [ ] **PKG-5** [M] FAIL — toolchain `devDependencies` present: `@biomejs/biome`, `knip`, `prettier`, `husky`, `lint-staged`, `markdownlint-cli2`, `syncpack`, `typescript` (the tools the engineering and authoring modes invoke — declared, not implied). `depcheck` / `node-jq` are gone (replaced by knip).
-- [ ] **PKG-6** [M] FAIL/WARN — `lint-staged` block present (FAIL if missing) and fans out to `@biomejs/biome` on code + `prettier` + `markdownlint` on Markdown (WARN otherwise).
+- [ ] **PKG-6** [M] FAIL/WARN — `lint-staged` block present (FAIL if missing) and fans out to `@biomejs/biome` on code + `prettier` + `markdownlint-cli2 --no-globs` on staged Markdown only (WARN otherwise).
 - [ ] **MISE-1** [M] WARN — a root `mise.toml` pins both `node` and `bun` under `[tools]`.
 - [ ] **MISE-2** [M] WARN — the `mise.toml` `bun` version **equals** the `packageManager` Bun version (the drift pair).
 - [ ] **MISE-3** [M] POLISH — no legacy single-tool pin file (`.node-version`, `.nvmrc`, `.bun-version`) lingers beside `mise.toml` (warn).

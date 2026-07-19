@@ -137,7 +137,7 @@ const MARKDOWNLINT_DEFAULT = `{
   // machine-produced (ADR-KI-HARNESS-TOOLCHAIN-005) — excluded like dist/, so their
   // formatting is never a finding. Command files are frontmatter-first runtime definitions,
   // while authored \`.claude/\` siblings such as workflows remain in scope.
-  "ignores": ["dist/**", "node_modules/**", ".ki-meta/**", "src/generated/**", ".claude/commands/**", ".claude/skills/**", ".claude/agents/**", ".agents/skills/**"]
+  "ignores": ["dist/**", "**/node_modules/**", ".ki-meta/**", "src/generated/**", ".claude/commands/**", ".claude/skills/**", ".claude/agents/**", ".agents/skills/**"]
 }
 `
 

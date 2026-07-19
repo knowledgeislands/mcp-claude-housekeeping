@@ -1,10 +1,10 @@
-# Project roadmap audit rubric
+# Repo roadmap audit rubric
 
 The checker applies `[M]` criteria. A reviewer applies `[J]` criteria after the checker.
 
 ## Scope and profile
 
-- **SCOPE-1 [M]** KB repositories use `ki-kb-streams`; project-roadmap artifacts in a KB FAIL. A KB without them reports NA. ([standard](standards.md#scope))
+- **SCOPE-1 [M]** KB repositories use `ki-kb-streams`; repo-roadmap artifacts in a KB FAIL. A KB without them reports NA. ([standard](standards.md#scope))
 - **PROFILE-1 [M]** A non-KB repository has a root `ROADMAP.md`; `docs/roadmap/` selects thematic profile, otherwise simple. Missing roots or incomplete thematic structure FAIL. ([standard](standards.md#simple-profile))
 - **PROFILE-2 [J]** Simple remains appropriate only while the work is understandable without theme isolation or execution plans. ([standard](standards.md#expansion-boundary))
 

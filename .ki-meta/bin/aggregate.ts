@@ -215,7 +215,7 @@ if (reporter.skill) {
 }
 const declarations = {}
 for (const skill of checkers) {
-  const declarationPath = join(checkersDir, skill, 'mode-elements.json')
+  const declarationPath = join(checkersDir, skill, '.ki-meta', 'mode-elements.json')
   if (!existsSync(declarationPath)) {
     console.error('error: no vendored mode-element declaration for ' + skill)
     process.exit(2)

@@ -1,4 +1,4 @@
-# Project roadmap
+# Repository roadmap
 
 This portfolio view is generated from the canonical theme roadmaps under `docs/roadmap/`. Edit those files, then run `ki-repo-roadmap` CONFORM.
 

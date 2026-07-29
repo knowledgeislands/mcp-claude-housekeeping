@@ -19,8 +19,7 @@ const writeSession = async (uuid: string, body: Record<string, unknown>, mtime?:
 
 // Most tests exercise the actual rename (write path); default dry_run to false.
 // Dedicated tests below pass dry_run: true to exercise the preview path.
-const rename = (root: string, args: { session_id?: string; name: string; dry_run?: boolean }) =>
-  sessionRename(root, { dry_run: false, ...args })
+const rename = (root: string, args: { session_id?: string; name: string; dry_run?: boolean }) => sessionRename(root, { dry_run: false, ...args })
 
 beforeAll(async () => {
   await fs.mkdir(ROOT, { recursive: true })

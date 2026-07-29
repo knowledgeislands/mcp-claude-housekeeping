@@ -1,15 +1,7 @@
 import type { Dirent } from 'node:fs'
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
-import {
-  assertRealPathWithinRoot,
-  daysAgo,
-  duBytes,
-  isNodeError,
-  pathExists,
-  readJsonIfExists,
-  resolveWithinRoot
-} from '../../utils/utils.js'
+import { assertRealPathWithinRoot, daysAgo, duBytes, isNodeError, pathExists, readJsonIfExists, resolveWithinRoot } from '../../utils/utils.js'
 
 const DAY_MS = 1000 * 60 * 60 * 24
 
@@ -33,9 +25,7 @@ export const storageSummary = async (workspaceRoot: string, args: { flag_size_gb
     if (!newest || m > newest.mtime) newest = { name, mtime: m }
   }
 
-  const sessionEntries = await Promise.all(
-    sessionDirs.map(async (e) => ({ name: e.name, bytes: await duBytes(path.join(workspaceRoot, e.name)) }))
-  )
+  const sessionEntries = await Promise.all(sessionDirs.map(async (e) => ({ name: e.name, bytes: await duBytes(path.join(workspaceRoot, e.name)) })))
   sessionEntries.sort((a, b) => b.bytes - a.bytes)
   const top5 = sessionEntries.slice(0, 5)
 
@@ -115,10 +105,7 @@ interface ArtifactRecord {
   mcpTools?: string[]
 }
 
-export const artifactHealth = async (
-  workspaceRoot: string,
-  args: { flag_versions: number; flag_stale_days: number; flag_unstarred_idle_days: number }
-) => {
+export const artifactHealth = async (workspaceRoot: string, args: { flag_versions: number; flag_stale_days: number; flag_unstarred_idle_days: number }) => {
   const artifactsPath = path.join(workspaceRoot, 'artifacts.json')
   const artifacts = (await readJsonIfExists<ArtifactRecord[]>(artifactsPath)) ?? []
 
@@ -129,8 +116,7 @@ export const artifactHealth = async (
     const flags: string[] = []
     if (versionCount > args.flag_versions) flags.push(`high_churn_versions>${args.flag_versions}`)
     if (ageDays !== null && ageDays > args.flag_stale_days) flags.push(`stale>${args.flag_stale_days}d`)
-    if (!a.isStarred && ageDays !== null && ageDays > args.flag_unstarred_idle_days)
-      flags.push(`unstarred_idle>${args.flag_unstarred_idle_days}d`)
+    if (!a.isStarred && ageDays !== null && ageDays > args.flag_unstarred_idle_days) flags.push(`unstarred_idle>${args.flag_unstarred_idle_days}d`)
     return {
       id: a.id,
       name: a.name,

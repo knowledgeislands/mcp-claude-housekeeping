@@ -24,9 +24,7 @@ describe('MCP_CLAUDE_HOUSEKEEPING_PATH', () => {
   })
 
   it('throws when MCP_CLAUDE_HOUSEKEEPING_PATH is unset', () => {
-    expect(() => loadConfig(baseEnv({ MCP_CLAUDE_HOUSEKEEPING_PATH: undefined }))).toThrow(
-      /MCP_CLAUDE_HOUSEKEEPING_PATH environment variable must be set/
-    )
+    expect(() => loadConfig(baseEnv({ MCP_CLAUDE_HOUSEKEEPING_PATH: undefined }))).toThrow(/MCP_CLAUDE_HOUSEKEEPING_PATH environment variable must be set/)
   })
 })
 
@@ -48,9 +46,7 @@ describe('MCP_CLAUDE_HOUSEKEEPING_ACCESS_LEVEL', () => {
   })
 
   it('throws on an unknown level', () => {
-    expect(() => loadConfig(baseEnv({ MCP_CLAUDE_HOUSEKEEPING_ACCESS_LEVEL: 'observer' }))).toThrow(
-      /Invalid MCP_CLAUDE_HOUSEKEEPING_ACCESS_LEVEL="observer"/
-    )
+    expect(() => loadConfig(baseEnv({ MCP_CLAUDE_HOUSEKEEPING_ACCESS_LEVEL: 'observer' }))).toThrow(/Invalid MCP_CLAUDE_HOUSEKEEPING_ACCESS_LEVEL="observer"/)
   })
 })
 
@@ -65,9 +61,7 @@ describe('MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG', () => {
   })
 
   it('throws on an unknown mode', () => {
-    expect(() => loadConfig(baseEnv({ MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG: 'sometimes' }))).toThrow(
-      /Invalid MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG/
-    )
+    expect(() => loadConfig(baseEnv({ MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG: 'sometimes' }))).toThrow(/Invalid MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG/)
   })
 })
 
@@ -106,9 +100,7 @@ describe('derived roots', () => {
     const cfg = loadConfig(baseEnv())
     expect(cfg.claudeCodeRootPath).toBe(path.join(os.homedir(), '.claude'))
     expect(cfg.claudeDesktopRootPath).toBe(path.join(os.homedir(), 'Library', 'Application Support', 'Claude', 'local-agent-mode-sessions'))
-    expect(cfg.vscodeWorkspaceStorageRootPath).toBe(
-      path.join(os.homedir(), 'Library', 'Application Support', 'Code', 'User', 'workspaceStorage')
-    )
+    expect(cfg.vscodeWorkspaceStorageRootPath).toBe(path.join(os.homedir(), 'Library', 'Application Support', 'Code', 'User', 'workspaceStorage'))
   })
 })
 

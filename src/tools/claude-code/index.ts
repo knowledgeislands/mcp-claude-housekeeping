@@ -54,9 +54,7 @@ const ccObsoleteSessionsOutput = z.object({
   older_than_days: z.number(),
   obsolete_count: z.number(),
   total_bytes: z.number(),
-  top_10_oldest: z.array(
-    z.object({ project: z.string(), session: z.string(), last_activity: z.string(), age_days: z.number(), bytes: z.number() })
-  ),
+  top_10_oldest: z.array(z.object({ project: z.string(), session: z.string(), last_activity: z.string(), age_days: z.number(), bytes: z.number() })),
   flags: z.array(z.string())
 })
 const ccGlobalStatusOutput = z.object({
@@ -91,9 +89,7 @@ const ccSessionsPruneOutput = z.object({
   dry_run: z.boolean(),
   deleted_count: z.number(),
   total_bytes_freed: z.number(),
-  deleted: z.array(
-    z.object({ project: z.string(), session: z.string(), age_days: z.number(), bytes: z.number(), sidecar_deleted: z.boolean() })
-  )
+  deleted: z.array(z.object({ project: z.string(), session: z.string(), age_days: z.number(), bytes: z.number(), sidecar_deleted: z.boolean() }))
 })
 const ccProjectRelocateOutput = z.object({
   project: z.string(),

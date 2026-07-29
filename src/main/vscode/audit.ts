@@ -1,15 +1,7 @@
 import type { Dirent } from 'node:fs'
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
-import {
-  assertRealPathWithinRoot,
-  daysAgo,
-  duBytes,
-  isNodeError,
-  pathExists,
-  readJsonIfExists,
-  resolveWithinRoot
-} from '../../utils/utils.js'
+import { assertRealPathWithinRoot, daysAgo, duBytes, isNodeError, pathExists, readJsonIfExists, resolveWithinRoot } from '../../utils/utils.js'
 
 const DAY_MS = 1000 * 60 * 60 * 24
 

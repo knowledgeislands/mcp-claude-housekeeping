@@ -1,15 +1,7 @@
 import type { Dirent } from 'node:fs'
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
-import {
-  assertRealPathWithinRoot,
-  daysAgo,
-  duBytes,
-  isNodeError,
-  pathExists,
-  readJsonIfExists,
-  resolveWithinRoot
-} from '../../utils/utils.js'
+import { assertRealPathWithinRoot, daysAgo, duBytes, isNodeError, pathExists, readJsonIfExists, resolveWithinRoot } from '../../utils/utils.js'
 
 const DAY_MS = 1000 * 60 * 60 * 24
 
@@ -118,10 +110,7 @@ export const projectsList = async (claudeRoot: string) => {
 
 /* ==================== storage summary ==================== */
 
-export const storageSummary = async (
-  claudeRoot: string,
-  args: { flag_size_gb: number; flag_session_count: number; flag_orphan_count: number }
-) => {
+export const storageSummary = async (claudeRoot: string, args: { flag_size_gb: number; flag_session_count: number; flag_orphan_count: number }) => {
   const projects = await discoverProjects(claudeRoot)
   const totalSessions = projects.reduce((sum, p) => sum + p.session_files.length, 0)
   const orphanCount = projects.filter((p) => !p.source_exists).length
@@ -158,10 +147,7 @@ const statMtime = async (file: string): Promise<number | null> => {
   /* v8 ignore stop */
 }
 
-export const obsoleteSessions = async (
-  claudeRoot: string,
-  args: { older_than_days: number; flag_count: number; flag_size_mb: number; project?: string }
-) => {
+export const obsoleteSessions = async (claudeRoot: string, args: { older_than_days: number; flag_count: number; flag_size_mb: number; project?: string }) => {
   const cutoff = Date.now() - args.older_than_days * DAY_MS
   const projects = await discoverProjects(claudeRoot)
   const target = args.project ? projects.filter((p) => p.id === args.project) : projects

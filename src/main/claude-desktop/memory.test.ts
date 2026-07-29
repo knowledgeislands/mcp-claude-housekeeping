@@ -40,21 +40,15 @@ describe('memoryWrite + memoryRead', () => {
   })
 
   it('rejects names without .md extension', async () => {
-    await expect(memoryWrite(CLAUDE_DESKTOP_ROOT_PATH, { space_id: SPACE_ID, name: 'bad', content: 'x' })).rejects.toThrow(
-      /must end with .md/
-    )
+    await expect(memoryWrite(CLAUDE_DESKTOP_ROOT_PATH, { space_id: SPACE_ID, name: 'bad', content: 'x' })).rejects.toThrow(/must end with .md/)
   })
 
   it('rejects path traversal in the name', async () => {
-    await expect(memoryWrite(CLAUDE_DESKTOP_ROOT_PATH, { space_id: SPACE_ID, name: '../escape.md', content: 'x' })).rejects.toThrow(
-      /Path escapes root/
-    )
+    await expect(memoryWrite(CLAUDE_DESKTOP_ROOT_PATH, { space_id: SPACE_ID, name: '../escape.md', content: 'x' })).rejects.toThrow(/Path escapes root/)
   })
 
   it('rejects path traversal in the space_id', async () => {
-    await expect(memoryWrite(CLAUDE_DESKTOP_ROOT_PATH, { space_id: '../other', name: 'a.md', content: 'x' })).rejects.toThrow(
-      /Path escapes root/
-    )
+    await expect(memoryWrite(CLAUDE_DESKTOP_ROOT_PATH, { space_id: '../other', name: 'a.md', content: 'x' })).rejects.toThrow(/Path escapes root/)
   })
 })
 
@@ -86,15 +80,11 @@ describe('memoryDelete', () => {
   })
 
   it('refuses to delete MEMORY.md', async () => {
-    await expect(memoryDelete(CLAUDE_DESKTOP_ROOT_PATH, { space_id: SPACE_ID, name: 'MEMORY.md', dry_run: false })).rejects.toThrow(
-      /Cannot delete MEMORY.md/
-    )
+    await expect(memoryDelete(CLAUDE_DESKTOP_ROOT_PATH, { space_id: SPACE_ID, name: 'MEMORY.md', dry_run: false })).rejects.toThrow(/Cannot delete MEMORY.md/)
   })
 
   it('throws on a missing file', async () => {
-    await expect(memoryDelete(CLAUDE_DESKTOP_ROOT_PATH, { space_id: SPACE_ID, name: 'nope.md', dry_run: false })).rejects.toThrow(
-      /Memory file not found/
-    )
+    await expect(memoryDelete(CLAUDE_DESKTOP_ROOT_PATH, { space_id: SPACE_ID, name: 'nope.md', dry_run: false })).rejects.toThrow(/Memory file not found/)
   })
 
   it('rethrows non-ENOENT errors (e.g. when target is a directory)', async () => {
@@ -109,9 +99,7 @@ describe('memoryDelete', () => {
     await fs.writeFile(path.join(blockedDir, 'locked.md'), 'x')
     await fs.chmod(blockedDir, 0o000)
     try {
-      await expect(memoryDelete(CLAUDE_DESKTOP_ROOT_PATH, { space_id: blockedSpace, name: 'locked.md', dry_run: true })).rejects.toThrow(
-        /EACCES|permission/i
-      )
+      await expect(memoryDelete(CLAUDE_DESKTOP_ROOT_PATH, { space_id: blockedSpace, name: 'locked.md', dry_run: true })).rejects.toThrow(/EACCES|permission/i)
     } finally {
       await fs.chmod(blockedDir, 0o755)
       await fs.rm(path.dirname(blockedDir), { recursive: true, force: true })

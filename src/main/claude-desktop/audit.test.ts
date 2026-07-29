@@ -156,19 +156,13 @@ describe('artifactPrune', () => {
   })
 
   it('is a no-op when below the keep count', async () => {
-    await fs.writeFile(
-      path.join(CLAUDE_DESKTOP_ROOT_PATH, 'artifacts.json'),
-      JSON.stringify([{ id: 'a', name: 'A', isStarred: false, updatedAt: 1 }])
-    )
+    await fs.writeFile(path.join(CLAUDE_DESKTOP_ROOT_PATH, 'artifacts.json'), JSON.stringify([{ id: 'a', name: 'A', isStarred: false, updatedAt: 1 }]))
     const result = await artifactPrune(CLAUDE_DESKTOP_ROOT_PATH, { keep: 5, dry_run: false })
     expect(result.deleted).toEqual([])
   })
 
   it('does not modify files in dry_run mode', async () => {
-    await fs.writeFile(
-      path.join(CLAUDE_DESKTOP_ROOT_PATH, 'artifacts.json'),
-      JSON.stringify([{ id: 'x', name: 'X', isStarred: false, updatedAt: 1 }])
-    )
+    await fs.writeFile(path.join(CLAUDE_DESKTOP_ROOT_PATH, 'artifacts.json'), JSON.stringify([{ id: 'x', name: 'X', isStarred: false, updatedAt: 1 }]))
     const result = await artifactPrune(CLAUDE_DESKTOP_ROOT_PATH, { keep: 0, dry_run: true })
     expect(result.deleted_count).toBe(1)
     const onDisk = JSON.parse(await fs.readFile(path.join(CLAUDE_DESKTOP_ROOT_PATH, 'artifacts.json'), 'utf-8'))
@@ -193,10 +187,7 @@ describe('artifactPrune', () => {
   it('records cache_file_deleted=false when the cache file is missing (unlink ENOENT is swallowed)', async () => {
     // No cache_<id>.json file on disk — unlink throws ENOENT, which the
     // catch swallows so the prune still completes.
-    await fs.writeFile(
-      path.join(CLAUDE_DESKTOP_ROOT_PATH, 'artifacts.json'),
-      JSON.stringify([{ id: 'no-cache', name: 'NC', isStarred: false, updatedAt: 1 }])
-    )
+    await fs.writeFile(path.join(CLAUDE_DESKTOP_ROOT_PATH, 'artifacts.json'), JSON.stringify([{ id: 'no-cache', name: 'NC', isStarred: false, updatedAt: 1 }]))
     await fs.mkdir(path.join(CLAUDE_DESKTOP_ROOT_PATH, 'artifacts'), { recursive: true })
     const result = await artifactPrune(CLAUDE_DESKTOP_ROOT_PATH, { keep: 0, dry_run: false })
     expect(result.deleted_count).toBe(1)
@@ -241,10 +232,7 @@ describe('artifactPrune', () => {
   })
 
   it('rethrows non-ENOENT unlink errors (EACCES when artifacts/ is chmod 0)', async () => {
-    await fs.writeFile(
-      path.join(CLAUDE_DESKTOP_ROOT_PATH, 'artifacts.json'),
-      JSON.stringify([{ id: 'blocked', name: 'B', isStarred: false, updatedAt: 1 }])
-    )
+    await fs.writeFile(path.join(CLAUDE_DESKTOP_ROOT_PATH, 'artifacts.json'), JSON.stringify([{ id: 'blocked', name: 'B', isStarred: false, updatedAt: 1 }]))
     const artifactsDir = path.join(CLAUDE_DESKTOP_ROOT_PATH, 'artifacts')
     await fs.mkdir(artifactsDir, { recursive: true })
     await fs.writeFile(path.join(artifactsDir, 'cache_blocked.json'), '{}')
@@ -419,9 +407,7 @@ describe('pluginsInventory', () => {
       JSON.stringify({
         version: 2,
         plugins: {
-          'foo@kw': [
-            { scope: 'user', installPath: '/x', version: '1.0.0', installedAt: '2026-01-01T00:00:00Z', lastUpdated: '2026-01-01T00:00:00Z' }
-          ]
+          'foo@kw': [{ scope: 'user', installPath: '/x', version: '1.0.0', installedAt: '2026-01-01T00:00:00Z', lastUpdated: '2026-01-01T00:00:00Z' }]
         }
       })
     )
@@ -451,10 +437,7 @@ describe('projectCacheStatus', () => {
     await fs.mkdir(recent, { recursive: true })
     await fs.mkdir(stale, { recursive: true })
     await fs.writeFile(path.join(recent, 'metadata.json'), JSON.stringify({ name: 'Recent', synced_at: new Date().toISOString() }))
-    await fs.writeFile(
-      path.join(stale, 'metadata.json'),
-      JSON.stringify({ name: 'Stale', synced_at: new Date(Date.now() - 30 * DAY_MS).toISOString() })
-    )
+    await fs.writeFile(path.join(stale, 'metadata.json'), JSON.stringify({ name: 'Stale', synced_at: new Date(Date.now() - 30 * DAY_MS).toISOString() }))
 
     const result = await projectCacheStatus(CLAUDE_DESKTOP_ROOT_PATH, { stale_days: 14 })
     expect(result.projects).toHaveLength(2)
@@ -587,10 +570,7 @@ describe('extra branch coverage for desktop audit', () => {
   })
 
   it('artifactPrune records last_updated=null when an artifact has no updatedAt', async () => {
-    await fs.writeFile(
-      path.join(CLAUDE_DESKTOP_ROOT_PATH, 'artifacts.json'),
-      JSON.stringify([{ id: 'no-ts', name: 'NT', isStarred: false }])
-    )
+    await fs.writeFile(path.join(CLAUDE_DESKTOP_ROOT_PATH, 'artifacts.json'), JSON.stringify([{ id: 'no-ts', name: 'NT', isStarred: false }]))
     await fs.mkdir(path.join(CLAUDE_DESKTOP_ROOT_PATH, 'artifacts'), { recursive: true })
     const result = await artifactPrune(CLAUDE_DESKTOP_ROOT_PATH, { keep: 0, dry_run: false })
     expect(result.deleted[0]?.last_updated).toBeNull()
@@ -722,10 +702,7 @@ describe('extra branch coverage for desktop audit', () => {
   it('projectCacheStatus skips non-directory entries in .project-cache/', async () => {
     const cacheDir = path.join(CLAUDE_DESKTOP_ROOT_PATH, '.project-cache')
     await fs.mkdir(path.join(cacheDir, 'real-uuid'), { recursive: true })
-    await fs.writeFile(
-      path.join(cacheDir, 'real-uuid', 'metadata.json'),
-      JSON.stringify({ name: 'Real', synced_at: new Date().toISOString() })
-    )
+    await fs.writeFile(path.join(cacheDir, 'real-uuid', 'metadata.json'), JSON.stringify({ name: 'Real', synced_at: new Date().toISOString() }))
     // A stray file at the top of .project-cache — must be skipped.
     await fs.writeFile(path.join(cacheDir, 'README.txt'), 'not a project')
     const result = await projectCacheStatus(CLAUDE_DESKTOP_ROOT_PATH, { stale_days: 14 })

@@ -360,11 +360,9 @@ describe('appendAuditEvent / withAuditLog', () => {
     await wrapped({ note: 'forces-rotation', padding: 'x'.repeat(300) })
     await new Promise((r) => setTimeout(r, 30))
 
-    expect(
-      errSpy.mock.calls.some(
-        ([msg]) => typeof msg === 'string' && msg.includes('rotation failed') && msg.includes('plain-string-rotation-failure')
-      )
-    ).toBe(true)
+    expect(errSpy.mock.calls.some(([msg]) => typeof msg === 'string' && msg.includes('rotation failed') && msg.includes('plain-string-rotation-failure'))).toBe(
+      true
+    )
     errSpy.mockRestore()
     vi.doUnmock('node:fs/promises')
   })
@@ -390,11 +388,9 @@ describe('appendAuditEvent / withAuditLog', () => {
     await expect(wrapped({ note: 'x' })).resolves.toBeDefined()
     await new Promise((r) => setTimeout(r, 30))
 
-    expect(
-      errSpy.mock.calls.some(
-        ([msg]) => typeof msg === 'string' && msg.includes('failed to write') && msg.includes('plain-string-mkdir-failure')
-      )
-    ).toBe(true)
+    expect(errSpy.mock.calls.some(([msg]) => typeof msg === 'string' && msg.includes('failed to write') && msg.includes('plain-string-mkdir-failure'))).toBe(
+      true
+    )
     errSpy.mockRestore()
     vi.doUnmock('node:fs/promises')
   })
@@ -410,12 +406,9 @@ describe('appendAuditEvent / withAuditLog', () => {
     const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
     const { withAuditLog } = await import('./audit-log.js')
-    const wrapped = withAuditLog(
-      auditCfg({ path: path.join(blockerFile, 'log.jsonl') }),
-      'test_destructive_tool',
-      'destructive',
-      async () => ({ content: [{ type: 'text', text: '{}' }] })
-    )
+    const wrapped = withAuditLog(auditCfg({ path: path.join(blockerFile, 'log.jsonl') }), 'test_destructive_tool', 'destructive', async () => ({
+      content: [{ type: 'text', text: '{}' }]
+    }))
     // The wrapped tool call must still resolve normally even though the audit
     // append fails underneath — that's the whole point of the swallow.
     await expect(wrapped({ note: 'x' })).resolves.toBeDefined()

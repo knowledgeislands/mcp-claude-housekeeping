@@ -523,10 +523,7 @@ export const registerClaudeDesktopTools = (server: McpServer, cfg: Config): void
           name: z.string().min(1).max(sessions.SESSION_NAME_MAX).describe('Desired session label (≤80 chars, emoji ok).'),
           session_id: z
             .string()
-            .regex(
-              /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
-              'session_id must be a lower-case UUID with no "local_" prefix.'
-            )
+            .regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/, 'session_id must be a lower-case UUID with no "local_" prefix.')
             .optional()
             .describe('Bare UUID of the target session; omit to auto-select the most-recently-active one.'),
           dry_run: z.boolean().default(true).describe('Default true (preview only). Pass false to actually rename.'),

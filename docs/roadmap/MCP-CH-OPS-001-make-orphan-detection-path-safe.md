@@ -9,6 +9,10 @@ blocked-by: []
 baseline-ref: null
 ---
 
+## Goal
+
+Achieve the stated outcome: Make orphan detection path-safe.
+
 ## Context
 
 Resolve the true project path from the `cwd` field in session `.jsonl` files rather than by decoding the ambiguous Claude project-directory slug.
@@ -33,12 +37,12 @@ Existing coverage in [src/main/claude-code/audit.test.ts](../../src/main/claude-
 
 ## Steps
 
-1. Confirm the on-disk shape first: inspect real session `.jsonl` records to establish where `cwd` appears and how consistently, before fixing any parsing contract.
-2. Add a bounded `cwd` resolver in `src/main/claude-code/audit.ts` that reads a capped number of leading lines/bytes from a project's session files, extracts `cwd` from the first parseable record that carries it, and returns `null` on absent, unreadable, or unparseable input.
-3. Validate the recovered value before trusting it — absolute, no `..` segment — and only then existence-check it; an invalid or missing value must degrade to unverifiable, never to orphan.
-4. Rework `discoverProjects()` to report a three-valued source status (verified-present / verified-missing / unverifiable) alongside its provenance, keeping the decoded slug as a best-effort display value only, and propagate that through `projectsList()` and `storageSummary()`.
-5. Restrict `pruneOrphanProjects()` to verified-missing projects, retaining the `has_memory` skip and the `dry_run` default, and report unverifiable projects as explicitly skipped with a reason.
-6. Extend fixtures to cover a source path containing `.` and `-`, a project with no readable `cwd`, and a project whose `cwd` is readable but genuinely gone; update tool output schemas, descriptions, and README wording to match the new status vocabulary.
+- [ ] Confirm the on-disk shape first: inspect real session `.jsonl` records to establish where `cwd` appears and how consistently, before fixing any parsing contract.
+- [ ] Add a bounded `cwd` resolver in `src/main/claude-code/audit.ts` that reads a capped number of leading lines/bytes from a project's session files, extracts `cwd` from the first parseable record that carries it, and returns `null` on absent, unreadable, or unparseable input.
+- [ ] Validate the recovered value before trusting it — absolute, no `..` segment — and only then existence-check it; an invalid or missing value must degrade to unverifiable, never to orphan.
+- [ ] Rework `discoverProjects()` to report a three-valued source status (verified-present / verified-missing / unverifiable) alongside its provenance, keeping the decoded slug as a best-effort display value only, and propagate that through `projectsList()` and `storageSummary()`.
+- [ ] Restrict `pruneOrphanProjects()` to verified-missing projects, retaining the `has_memory` skip and the `dry_run` default, and report unverifiable projects as explicitly skipped with a reason.
+- [ ] Extend fixtures to cover a source path containing `.` and `-`, a project with no readable `cwd`, and a project whose `cwd` is readable but genuinely gone; update tool output schemas, descriptions, and README wording to match the new status vocabulary.
 
 ## Files touched
 

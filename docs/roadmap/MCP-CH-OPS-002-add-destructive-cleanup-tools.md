@@ -9,6 +9,10 @@ blocked-by: []
 baseline-ref: null
 ---
 
+## Goal
+
+Achieve the stated outcome: Add destructive cleanup tools for Claude Desktop sessions and outputs.
+
 ## Context
 
 Add dry-run-first, access-gated prune tools for the existing Claude Desktop obsolete-session and obsolete-output audits.
@@ -31,11 +35,11 @@ Every convention the work needs is already in place. `DESTRUCTIVE_ONESHOT` in [s
 
 ## Steps
 
-1. Add prune functions beside their audits in `src/main/claude-desktop/audit.ts`, taking the workspace root plus `{ older_than_days, dry_run }`, and reusing the same selection predicates the audits use so preview and effect cannot diverge.
-2. Declare and enforce the deletion patterns explicitly: session pruning removes only a matched `local_*.json` and its matching `local_*` directory; output pruning removes only files directly inside `<session>/outputs/` and `<session>/uploads/` and never the session directory itself.
-3. Register `claude_desktop_sessions_prune` and `claude_desktop_outputs_prune` with `DESTRUCTIVE_ONESHOT`, a `dry_run` default of `true`, `.strict()` schemas, and `requireSingleWorkspace()` rather than cross-workspace aggregation.
-4. Add tmpdir-backed tests covering the dry-run/no-mutation case, agreement between the audit's list and the prune's deletions, survival of non-matching filenames, and the age-cutoff boundary.
-5. Update `EXPECTED_TOOLS` in `scripts/smoke.ts` and the Available Tools table and workflow prose in the README so the wire surface, the docs, and the code stay in step.
+- [ ] Add prune functions beside their audits in `src/main/claude-desktop/audit.ts`, taking the workspace root plus `{ older_than_days, dry_run }`, and reusing the same selection predicates the audits use so preview and effect cannot diverge.
+- [ ] Declare and enforce the deletion patterns explicitly: session pruning removes only a matched `local_*.json` and its matching `local_*` directory; output pruning removes only files directly inside `<session>/outputs/` and `<session>/uploads/` and never the session directory itself.
+- [ ] Register `claude_desktop_sessions_prune` and `claude_desktop_outputs_prune` with `DESTRUCTIVE_ONESHOT`, a `dry_run` default of `true`, `.strict()` schemas, and `requireSingleWorkspace()` rather than cross-workspace aggregation.
+- [ ] Add tmpdir-backed tests covering the dry-run/no-mutation case, agreement between the audit's list and the prune's deletions, survival of non-matching filenames, and the age-cutoff boundary.
+- [ ] Update `EXPECTED_TOOLS` in `scripts/smoke.ts` and the Available Tools table and workflow prose in the README so the wire surface, the docs, and the code stay in step.
 
 ## Files touched
 

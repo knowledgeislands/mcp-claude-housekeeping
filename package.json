@@ -28,7 +28,7 @@
     "vitest": "^4.1.10"
   },
   "engines": {
-    "node": ">=22.0.0"
+    "node": ">=22"
   },
   "exports": {
     ".": {
@@ -68,7 +68,7 @@
   ],
   "license": "MIT",
   "lint-staged": {
-    "*.{ts,tsx,js,jsx,json}": [
+    "*.{ts,tsx,js,jsx,json,jsonc}": [
       "bunx @biomejs/biome check --write --no-errors-on-unmatched"
     ],
     "*.md": [
@@ -85,6 +85,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "clean": "rm -rf {dist,node_modules}",
+    "ki:deps:update": "bun update --latest",
     "ki:generate:client": "mcporter emit-ts kit-mcp-claude-housekeeping --mode client --out src/generated/client.ts --types-out src/generated/types.d.ts && printf '// @ts-nocheck\\n' | cat - src/generated/client.ts > /tmp/gen-tmp.ts && mv /tmp/gen-tmp.ts src/generated/client.ts",
     "ki:server:mcp:dev": "NODE_ENV=development bun --watch src/mcp-server/index.ts",
     "ki:server:mcp:inspect": "NODE_ENV=development bunx @modelcontextprotocol/inspector bun src/mcp-server/index.ts",

@@ -3,7 +3,7 @@ id: MCP-CH-OPS-002
 title: Add Claude cleanup tools
 theme: operations
 horizon: next
-status: open
+status: draft
 blocks: []
 blocked-by: []
 baseline-ref: null

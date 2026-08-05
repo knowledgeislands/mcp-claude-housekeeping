@@ -1,4 +1,5 @@
 ["knowledgeislands/ki-agentic-harness:ki-repo"]
+repository = "https://github.com/knowledgeislands/mcp-claude-housekeeping"
 title = "mcp-claude-housekeeping"
 description = "MCP for auditing and pruning Claude Code session files and memory on the local filesystem."
 repo_code = "MCP-CH"

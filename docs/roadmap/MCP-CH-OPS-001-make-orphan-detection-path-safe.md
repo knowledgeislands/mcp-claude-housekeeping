@@ -3,7 +3,7 @@ id: MCP-CH-OPS-001
 title: Harden orphan detection
 theme: operations
 horizon: next
-status: open
+status: draft
 blocks: []
 blocked-by: []
 baseline-ref: null

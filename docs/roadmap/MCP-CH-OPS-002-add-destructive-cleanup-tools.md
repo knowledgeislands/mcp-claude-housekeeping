@@ -1,6 +1,6 @@
 ---
 id: MCP-CH-OPS-002
-title: Add destructive cleanup tools for Claude Desktop sessions and outputs
+title: Add Claude cleanup tools
 theme: operations
 horizon: next
 status: open

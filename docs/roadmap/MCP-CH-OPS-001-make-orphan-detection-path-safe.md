@@ -1,6 +1,6 @@
 ---
 id: MCP-CH-OPS-001
-title: Make orphan detection path-safe
+title: Harden orphan detection
 theme: operations
 horizon: next
 status: open

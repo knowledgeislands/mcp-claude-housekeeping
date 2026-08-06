@@ -20,58 +20,58 @@ Tools follow the convention `<app>_<resource>_<action>`. Each tool's access leve
 
 ### `claude_desktop_*` — read-only (`read` level)
 
-| Tool                                   | Purpose                                                                         |
-| -------------------------------------- | ------------------------------------------------------------------------------- |
-| `claude_desktop_storage_summary`       | Counts, total disk usage, JSON total, top 5 largest dirs, oldest/newest, flags. |
-| `claude_desktop_sessions_obsolete`     | Sessions older than N days; oldest 10 with combined size, flags.                |
-| `claude_desktop_artifacts_health`      | Per-artifact metadata + flags (high churn, stale, unstarred + idle).            |
-| `claude_desktop_outputs_obsolete`      | Non-empty `outputs/`/`uploads/` in sessions older than N days.                  |
-| `claude_desktop_backups_summary`       | `.claude.json.backup.*` count, size, dates with thresholds.                     |
-| `claude_desktop_memory_spaces_summary` | Per-space memory file counts + first 10 lines of `MEMORY.md`.                   |
-| `claude_desktop_plugins_inventory`     | Knowledge-work + rpm plugins with versions/dates.                               |
-| `claude_desktop_project_cache_status`  | `.project-cache/` entries with last-sync dates.                                 |
-| `claude_desktop_debug_info`            | `debug/` size, entry count, oldest entry age.                                   |
-| `claude_desktop_memory_list`           | List `.md` files + `MEMORY.md` content for one space.                           |
-| `claude_desktop_memory_read`           | Read one memory file.                                                           |
-| `claude_desktop_reports_list`          | List existing `cowork-audit-*.md` reports in `MCP_CLAUDE_HOUSEKEEPING_PATH`.    |
-| `claude_desktop_workspaces_list`       | List discovered `<account>/<workspace>` workspace ids.                          |
+| Tool | Purpose |
+| --- | --- |
+| `claude_desktop_storage_summary` | Counts, total disk usage, JSON total, top 5 largest dirs, oldest/newest, flags. |
+| `claude_desktop_sessions_obsolete` | Sessions older than N days; oldest 10 with combined size, flags. |
+| `claude_desktop_artifacts_health` | Per-artifact metadata + flags (high churn, stale, unstarred + idle). |
+| `claude_desktop_outputs_obsolete` | Non-empty `outputs/`/`uploads/` in sessions older than N days. |
+| `claude_desktop_backups_summary` | `.claude.json.backup.*` count, size, dates with thresholds. |
+| `claude_desktop_memory_spaces_summary` | Per-space memory file counts + first 10 lines of `MEMORY.md`. |
+| `claude_desktop_plugins_inventory` | Knowledge-work + rpm plugins with versions/dates. |
+| `claude_desktop_project_cache_status` | `.project-cache/` entries with last-sync dates. |
+| `claude_desktop_debug_info` | `debug/` size, entry count, oldest entry age. |
+| `claude_desktop_memory_list` | List `.md` files + `MEMORY.md` content for one space. |
+| `claude_desktop_memory_read` | Read one memory file. |
+| `claude_desktop_reports_list` | List existing `cowork-audit-*.md` reports in `MCP_CLAUDE_HOUSEKEEPING_PATH`. |
+| `claude_desktop_workspaces_list` | List discovered `<account>/<workspace>` workspace ids. |
 
 ### `claude_desktop_*` — destructive (`destructive` level)
 
-| Tool                                | Purpose                                                                               |
-| ----------------------------------- | ------------------------------------------------------------------------------------- |
-| `claude_desktop_artifacts_prune`    | Delete unstarred artifacts beyond top N (default 5) by `lastUpdated`.                 |
-| `claude_desktop_reports_clear`      | Delete every `cowork-audit-*.md` from `MCP_CLAUDE_HOUSEKEEPING_PATH`, with `dry_run`. |
-| `claude_desktop_report_write`       | Save `cowork-audit-YYYY-MM-DD.md` to `MCP_CLAUDE_HOUSEKEEPING_PATH`.                  |
-| `claude_desktop_memory_write`       | Create/overwrite a memory file in `spaces/<space_id>/memory/<name>.md`.               |
-| `claude_desktop_memory_delete`      | Retire a memory file (cannot delete `MEMORY.md`).                                     |
-| `claude_desktop_memory_index_write` | Replace `MEMORY.md` for a space.                                                      |
-| `claude_desktop_session_rename`     | Set the sidebar `title` on a session record (≤80 chars, emoji ok), with `dry_run`.†   |
+| Tool | Purpose |
+| --- | --- |
+| `claude_desktop_artifacts_prune` | Delete unstarred artifacts beyond top N (default 5) by `lastUpdated`. |
+| `claude_desktop_reports_clear` | Delete every `cowork-audit-*.md` from `MCP_CLAUDE_HOUSEKEEPING_PATH`, with `dry_run`. |
+| `claude_desktop_report_write` | Save `cowork-audit-YYYY-MM-DD.md` to `MCP_CLAUDE_HOUSEKEEPING_PATH`. |
+| `claude_desktop_memory_write` | Create/overwrite a memory file in `spaces/<space_id>/memory/<name>.md`. |
+| `claude_desktop_memory_delete` | Retire a memory file (cannot delete `MEMORY.md`). |
+| `claude_desktop_memory_index_write` | Replace `MEMORY.md` for a space. |
+| `claude_desktop_session_rename` | Set the sidebar `title` on a session record (≤80 chars, emoji ok), with `dry_run`.† |
 
 † Auto-picks the most-recently-active session when `session_id` is omitted — Cowork agents share one MCP server, so the server cannot infer the calling session from execution context. Pass `session_id` (bare UUID) to disambiguate when multiple sessions are active concurrently.
 
 ### `claude_code_*` — read-only (`read` level)
 
-| Tool                            | Purpose                                                                                           |
-| ------------------------------- | ------------------------------------------------------------------------------------------------- |
-| `claude_code_projects_list`     | Projects with session counts, bytes, decoded source path, orphan flag.                            |
-| `claude_code_storage_summary`   | Aggregate counts + flags; surfaces orphan-project totals.                                         |
-| `claude_code_sessions_obsolete` | Sessions older than N days (with sidecar dir bytes).                                              |
-| `claude_code_global_status`     | `history.jsonl`, `settings.cleanupPeriodDays`, `.last-cleanup`, top-level dirs, freshness signal. |
-| `claude_code_session_read`      | Preview head/tail of a session JSONL.                                                             |
-| `claude_code_memory_list`       | List memory files in `<project>/memory/`.                                                         |
-| `claude_code_memory_read`       | Read one memory file.                                                                             |
+| Tool | Purpose |
+| --- | --- |
+| `claude_code_projects_list` | Projects with session counts, bytes, decoded source path, orphan flag. |
+| `claude_code_storage_summary` | Aggregate counts + flags; surfaces orphan-project totals. |
+| `claude_code_sessions_obsolete` | Sessions older than N days (with sidecar dir bytes). |
+| `claude_code_global_status` | `history.jsonl`, `settings.cleanupPeriodDays`, `.last-cleanup`, top-level dirs, freshness signal. |
+| `claude_code_session_read` | Preview head/tail of a session JSONL. |
+| `claude_code_memory_list` | List memory files in `<project>/memory/`. |
+| `claude_code_memory_read` | Read one memory file. |
 
 ### `claude_code_*` — destructive (`destructive` level)
 
-| Tool                                | Purpose                                                                              |
-| ----------------------------------- | ------------------------------------------------------------------------------------ |
-| `claude_code_sessions_prune`        | Delete sessions older than N days (+ sidecar dirs), with `dry_run`.                  |
-| `claude_code_project_relocate`      | Rename a project subdir to match a new source path (fixes `/resume` after a rename). |
-| `claude_code_orphan_projects_prune` | Delete project subdirs whose decoded source path no longer exists.                   |
-| `claude_code_memory_write`          | Create/overwrite a memory file.                                                      |
-| `claude_code_memory_delete`         | Retire a memory file.                                                                |
-| `claude_code_memory_index_write`    | Replace `MEMORY.md`.                                                                 |
+| Tool | Purpose |
+| --- | --- |
+| `claude_code_sessions_prune` | Delete sessions older than N days (+ sidecar dirs), with `dry_run`. |
+| `claude_code_project_relocate` | Rename a project subdir to match a new source path (fixes `/resume` after a rename). |
+| `claude_code_orphan_projects_prune` | Delete project subdirs whose decoded source path no longer exists. |
+| `claude_code_memory_write` | Create/overwrite a memory file. |
+| `claude_code_memory_delete` | Retire a memory file. |
+| `claude_code_memory_index_write` | Replace `MEMORY.md`. |
 
 ### `vscode_*` — read-only (`read` level)
 
@@ -154,15 +154,15 @@ bun install
 
 ### Environment Variables
 
-| Name                                          | Required | Description                                                                                 |
-| --------------------------------------------- | -------- | ------------------------------------------------------------------------------------------- |
-| `MCP_CLAUDE_HOUSEKEEPING_PATH`                | yes      | Absolute path or `~/...` to the directory where audit reports are written.                  |
-| `MCP_CLAUDE_HOUSEKEEPING_ACCESS_LEVEL`        | no       | Maximum tool access level to register.†                                                     |
-| `MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG`           | no       | Audit-log scope.‡                                                                           |
-| `MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_PATH`      | no       | Path to the JSONL audit log. Default `<MCP_CLAUDE_HOUSEKEEPING_PATH>/audit/audit.jsonl`.    |
-| `MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_MAX_BYTES` | no       | Size-based rotation threshold in bytes.§                                                    |
-| `MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_KEEP`      | no       | Number of rotated audit-log files to retain. Default `5`.                                   |
-| `NODE_ENV`                                    | no       | Dev convention; controls which `.env` files [`loadConfig()`](./src/config/index.ts) loads.¶ |
+| Name | Required | Description |
+| --- | --- | --- |
+| `MCP_CLAUDE_HOUSEKEEPING_PATH` | yes | Absolute path or `~/...` to the directory where audit reports are written. |
+| `MCP_CLAUDE_HOUSEKEEPING_ACCESS_LEVEL` | no | Maximum tool access level to register.† |
+| `MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG` | no | Audit-log scope.‡ |
+| `MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_PATH` | no | Path to the JSONL audit log. Default `<MCP_CLAUDE_HOUSEKEEPING_PATH>/audit/audit.jsonl`. |
+| `MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_MAX_BYTES` | no | Size-based rotation threshold in bytes.§ |
+| `MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_KEEP` | no | Number of rotated audit-log files to retain. Default `5`. |
+| `NODE_ENV` | no | Dev convention; controls which `.env` files [`loadConfig()`](./src/config/index.ts) loads.¶ |
 
 † Maximum tool access level to register. One of: `read` (default — read-only tools only, least privilege), `write` (reserved — no such tools today), `destructive` (adds prune/relocate/delete). Levels nest. Each tool's level is derived from its MCP annotations (`readOnlyHint: true` → `read`; `destructiveHint: true` → `destructive`; missing annotations → `destructive` fail-safe); a tool registers when its derived level ≤ the configured level. The `dry_run: true` default on destructive tools controls _effect_; the gate controls _visibility_. Unknown values abort startup.
 

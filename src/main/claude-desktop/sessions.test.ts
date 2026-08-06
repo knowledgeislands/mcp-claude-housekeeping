@@ -19,7 +19,8 @@ const writeSession = async (uuid: string, body: Record<string, unknown>, mtime?:
 
 // Most tests exercise the actual rename (write path); default dry_run to false.
 // Dedicated tests below pass dry_run: true to exercise the preview path.
-const rename = (root: string, args: { session_id?: string; name: string; dry_run?: boolean }) => sessionRename(root, { dry_run: false, ...args })
+const rename = (root: string, args: { session_id?: string; name: string; dry_run?: boolean }) =>
+  sessionRename(root, { dry_run: false, ...args })
 
 beforeAll(async () => {
   await fs.mkdir(ROOT, { recursive: true })
@@ -157,7 +158,9 @@ describe('sessionRename', () => {
     // Make local_<uuid>.json a *directory* so readFile fails with EISDIR/EPERM
     // rather than ENOENT, exercising the rethrow branch.
     await fs.mkdir(path.join(ROOT, `local_${UUID_A}.json`), { recursive: true })
-    await expect(rename(ROOT, { session_id: UUID_A, name: 'x' })).rejects.toThrow(/EISDIR|EPERM|illegal operation|is a directory/i)
+    await expect(rename(ROOT, { session_id: UUID_A, name: 'x' })).rejects.toThrow(
+      /EISDIR|EPERM|illegal operation|is a directory/i
+    )
   })
 
   it('dry_run previews the rename without writing the record', async () => {
@@ -182,6 +185,8 @@ describe('sessionRename', () => {
     expect(result.dry_run).toBe(true)
     expect(result.renamed).toBe(false)
     // Invalid names are rejected before the dry_run short-circuit, too.
-    await expect(sessionRename(ROOT, { session_id: UUID_A, name: '', dry_run: true })).rejects.toThrow(/must not be empty/)
+    await expect(sessionRename(ROOT, { session_id: UUID_A, name: '', dry_run: true })).rejects.toThrow(
+      /must not be empty/
+    )
   })
 })

@@ -1,7 +1,15 @@
 import type { Dirent } from 'node:fs'
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
-import { assertRealPathWithinRoot, daysAgo, duBytes, isNodeError, pathExists, readJsonIfExists, resolveWithinRoot } from '../../utils/utils.js'
+import {
+  assertRealPathWithinRoot,
+  daysAgo,
+  duBytes,
+  isNodeError,
+  pathExists,
+  readJsonIfExists,
+  resolveWithinRoot
+} from '../../utils/utils.js'
 
 const DAY_MS = 1000 * 60 * 60 * 24
 
@@ -90,7 +98,10 @@ export const workspacesList = async (storageRoot: string) => {
 
 /* ==================== storage summary ==================== */
 
-export const storageSummary = async (storageRoot: string, args: { flag_size_gb: number; flag_session_count: number }) => {
+export const storageSummary = async (
+  storageRoot: string,
+  args: { flag_size_gb: number; flag_session_count: number }
+) => {
   const workspaces = await discoverWorkspaces(storageRoot)
   const totalSessions = workspaces.reduce((s, w) => s + w.session_files.length, 0)
   const chatBytesPerWorkspace = await Promise.all(workspaces.map((w) => duBytes(w.chat_sessions_dir)))
@@ -169,7 +180,10 @@ export const obsoleteSessions = async (
 
 /* ==================== session read ==================== */
 
-export const sessionRead = async (storageRoot: string, args: { workspace: string; session: string; max_lines: number; tail: boolean }) => {
+export const sessionRead = async (
+  storageRoot: string,
+  args: { workspace: string; session: string; max_lines: number; tail: boolean }
+) => {
   if (!isSessionFile(args.session)) {
     throw new Error(`Session name must end with .json or .jsonl`)
   }
@@ -234,7 +248,10 @@ export const workspaceDelete = async (storageRoot: string, args: { workspace: st
   }
 }
 
-export const sessionsPrune = async (storageRoot: string, args: { older_than_days: number; workspace?: string; dry_run: boolean }) => {
+export const sessionsPrune = async (
+  storageRoot: string,
+  args: { older_than_days: number; workspace?: string; dry_run: boolean }
+) => {
   const cutoff = Date.now() - args.older_than_days * DAY_MS
   const workspaces = await discoverWorkspaces(storageRoot)
   const target = args.workspace ? workspaces.filter((w) => w.id === args.workspace) : workspaces

@@ -1,7 +1,15 @@
 import type { Dirent } from 'node:fs'
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
-import { assertRealPathWithinRoot, daysAgo, duBytes, isNodeError, pathExists, readJsonIfExists, resolveWithinRoot } from '../../utils/utils.js'
+import {
+  assertRealPathWithinRoot,
+  daysAgo,
+  duBytes,
+  isNodeError,
+  pathExists,
+  readJsonIfExists,
+  resolveWithinRoot
+} from '../../utils/utils.js'
 
 const DAY_MS = 1000 * 60 * 60 * 24
 
@@ -110,7 +118,10 @@ export const projectsList = async (claudeRoot: string) => {
 
 /* ==================== storage summary ==================== */
 
-export const storageSummary = async (claudeRoot: string, args: { flag_size_gb: number; flag_session_count: number; flag_orphan_count: number }) => {
+export const storageSummary = async (
+  claudeRoot: string,
+  args: { flag_size_gb: number; flag_session_count: number; flag_orphan_count: number }
+) => {
   const projects = await discoverProjects(claudeRoot)
   const totalSessions = projects.reduce((sum, p) => sum + p.session_files.length, 0)
   const orphanCount = projects.filter((p) => !p.source_exists).length
@@ -147,7 +158,10 @@ const statMtime = async (file: string): Promise<number | null> => {
   /* v8 ignore stop */
 }
 
-export const obsoleteSessions = async (claudeRoot: string, args: { older_than_days: number; flag_count: number; flag_size_mb: number; project?: string }) => {
+export const obsoleteSessions = async (
+  claudeRoot: string,
+  args: { older_than_days: number; flag_count: number; flag_size_mb: number; project?: string }
+) => {
   const cutoff = Date.now() - args.older_than_days * DAY_MS
   const projects = await discoverProjects(claudeRoot)
   const target = args.project ? projects.filter((p) => p.id === args.project) : projects
@@ -256,10 +270,14 @@ export const globalStatus = async (claudeRoot: string) => {
   // If every dir's mtime is very recent and history/settings are absent,
   // the tree was likely just (re)initialized.
   /* v8 ignore next -- t.modified is only null on a mid-call race (see statMtime v8 ignore); the null branch is paired-defensive. */
-  const mtimes = topLevel.map((t) => (t.modified ? Date.parse(t.modified) : null)).filter((t): t is number => t !== null)
+  const mtimes = topLevel
+    .map((t) => (t.modified ? Date.parse(t.modified) : null))
+    .filter((t): t is number => t !== null)
   const oldestMtime = mtimes.length > 0 ? Math.min(...mtimes) : null
-  const oldestAgeHours = oldestMtime !== null ? Math.round(((Date.now() - oldestMtime) / (1000 * 60 * 60)) * 10) / 10 : null
-  const looksFreshlyInitialized = !historyInfo.exists && settings === null && oldestAgeHours !== null && oldestAgeHours < 24
+  const oldestAgeHours =
+    oldestMtime !== null ? Math.round(((Date.now() - oldestMtime) / (1000 * 60 * 60)) * 10) / 10 : null
+  const looksFreshlyInitialized =
+    !historyInfo.exists && settings === null && oldestAgeHours !== null && oldestAgeHours < 24
 
   return {
     claude_root: claudeRoot,
@@ -279,7 +297,10 @@ export const globalStatus = async (claudeRoot: string) => {
 
 /* ==================== session read (preview) ==================== */
 
-export const sessionRead = async (claudeRoot: string, args: { project: string; session: string; max_lines: number; tail: boolean }) => {
+export const sessionRead = async (
+  claudeRoot: string,
+  args: { project: string; session: string; max_lines: number; tail: boolean }
+) => {
   if (!/^[0-9a-f-]{36}\.jsonl$/i.test(args.session)) {
     throw new Error(`Session name must be "<uuid>.jsonl"`)
   }
@@ -301,7 +322,10 @@ export const sessionRead = async (claudeRoot: string, args: { project: string; s
 
 /* ==================== sessions prune ==================== */
 
-export const sessionsPrune = async (claudeRoot: string, args: { older_than_days: number; project?: string; dry_run: boolean }) => {
+export const sessionsPrune = async (
+  claudeRoot: string,
+  args: { older_than_days: number; project?: string; dry_run: boolean }
+) => {
   const cutoff = Date.now() - args.older_than_days * DAY_MS
   const projects = await discoverProjects(claudeRoot)
   const target = args.project ? projects.filter((p) => p.id === args.project) : projects
@@ -351,7 +375,10 @@ export const sessionsPrune = async (claudeRoot: string, args: { older_than_days:
  * Rejects if the destination dir already exists (would clobber existing
  * sessions) or if `new_path` doesn't currently exist on disk (likely typo).
  */
-export const relocateProject = async (claudeRoot: string, args: { project: string; new_path: string; dry_run: boolean }) => {
+export const relocateProject = async (
+  claudeRoot: string,
+  args: { project: string; new_path: string; dry_run: boolean }
+) => {
   const projectsDir = path.join(claudeRoot, 'projects')
   const fromDir = resolveWithinRoot(projectsDir, args.project)
   await assertRealPathWithinRoot(claudeRoot, fromDir)
@@ -361,7 +388,9 @@ export const relocateProject = async (claudeRoot: string, args: { project: strin
 
   const newPathAbs = path.resolve(args.new_path)
   if (!(await pathExists(newPathAbs))) {
-    throw new Error(`new_path does not exist on disk: "${args.new_path}" — refusing to relocate to a path that won't resolve`)
+    throw new Error(
+      `new_path does not exist on disk: "${args.new_path}" — refusing to relocate to a path that won't resolve`
+    )
   }
 
   const newId = encodeProjectPath(newPathAbs)
@@ -380,7 +409,9 @@ export const relocateProject = async (claudeRoot: string, args: { project: strin
   }
 
   if (await pathExists(toDir)) {
-    throw new Error(`Destination project dir already exists: "${newId}" — refusing to overwrite. Merge or remove it first.`)
+    throw new Error(
+      `Destination project dir already exists: "${newId}" — refusing to overwrite. Merge or remove it first.`
+    )
   }
 
   if (!args.dry_run) {
@@ -403,7 +434,10 @@ export const relocateProject = async (claudeRoot: string, args: { project: strin
  * Skips projects with `has_memory: true` unless `include_with_memory` is set
  * (memory is the most expensive thing to lose by accident).
  */
-export const pruneOrphanProjects = async (claudeRoot: string, args: { dry_run: boolean; include_with_memory: boolean }) => {
+export const pruneOrphanProjects = async (
+  claudeRoot: string,
+  args: { dry_run: boolean; include_with_memory: boolean }
+) => {
   const projects = await discoverProjects(claudeRoot)
   const orphans = projects.filter((p) => !p.source_exists)
   const targets = args.include_with_memory ? orphans : orphans.filter((p) => !p.has_memory)

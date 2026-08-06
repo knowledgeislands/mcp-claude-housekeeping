@@ -34,7 +34,9 @@ console.error(`  CLAUDE_DESKTOP_ROOT_PATH=${config.claudeDesktopRootPath}`)
 console.error(`  MCP_CLAUDE_HOUSEKEEPING_PATH=${config.housekeepingPath}`)
 console.error(`  CLAUDE_CODE_ROOT_PATH=${config.claudeCodeRootPath}`)
 console.error(`  VSCODE_WORKSPACE_STORAGE_ROOT_PATH=${config.vscodeWorkspaceStorageRootPath}`)
-console.error(`  MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG=${config.auditLogMode}${config.auditLogMode === 'off' ? '' : ` (path: ${config.auditLogPath})`}`)
+console.error(
+  `  MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG=${config.auditLogMode}${config.auditLogMode === 'off' ? '' : ` (path: ${config.auditLogPath})`}`
+)
 
 const server = new McpServer({
   name: 'mcp-claude-housekeeping',

@@ -133,12 +133,35 @@ export const loadConfig = (env: NodeJS.ProcessEnv = process.env): Config => {
     // Cowork sessions, Claude Code state, and VSCode chat sessions all live in
     // known locations under the current user's home directory; they are not
     // user-configurable.
-    claudeDesktopRootPath: path.join(os.homedir(), 'Library', 'Application Support', 'Claude', 'local-agent-mode-sessions'),
+    claudeDesktopRootPath: path.join(
+      os.homedir(),
+      'Library',
+      'Application Support',
+      'Claude',
+      'local-agent-mode-sessions'
+    ),
     claudeCodeRootPath: path.join(os.homedir(), '.claude'),
-    vscodeWorkspaceStorageRootPath: path.join(os.homedir(), 'Library', 'Application Support', 'Code', 'User', 'workspaceStorage'),
+    vscodeWorkspaceStorageRootPath: path.join(
+      os.homedir(),
+      'Library',
+      'Application Support',
+      'Code',
+      'User',
+      'workspaceStorage'
+    ),
     auditLogMode: parseAuditLogMode(env.MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG),
-    auditLogPath: path.resolve(expandHome(env.MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_PATH ?? path.join(housekeepingPath, 'audit', 'audit.jsonl'))),
-    auditLogMaxBytes: parseNonNegativeInt(env.MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_MAX_BYTES, 10 * 1024 * 1024, 'MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_MAX_BYTES'),
-    auditLogKeep: parseNonNegativeInt(env.MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_KEEP, 5, 'MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_KEEP')
+    auditLogPath: path.resolve(
+      expandHome(env.MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_PATH ?? path.join(housekeepingPath, 'audit', 'audit.jsonl'))
+    ),
+    auditLogMaxBytes: parseNonNegativeInt(
+      env.MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_MAX_BYTES,
+      10 * 1024 * 1024,
+      'MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_MAX_BYTES'
+    ),
+    auditLogKeep: parseNonNegativeInt(
+      env.MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_KEEP,
+      5,
+      'MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_KEEP'
+    )
   }
 }

@@ -24,7 +24,9 @@ describe('MCP_CLAUDE_HOUSEKEEPING_PATH', () => {
   })
 
   it('throws when MCP_CLAUDE_HOUSEKEEPING_PATH is unset', () => {
-    expect(() => loadConfig(baseEnv({ MCP_CLAUDE_HOUSEKEEPING_PATH: undefined }))).toThrow(/MCP_CLAUDE_HOUSEKEEPING_PATH environment variable must be set/)
+    expect(() => loadConfig(baseEnv({ MCP_CLAUDE_HOUSEKEEPING_PATH: undefined }))).toThrow(
+      /MCP_CLAUDE_HOUSEKEEPING_PATH environment variable must be set/
+    )
   })
 })
 
@@ -46,7 +48,9 @@ describe('MCP_CLAUDE_HOUSEKEEPING_ACCESS_LEVEL', () => {
   })
 
   it('throws on an unknown level', () => {
-    expect(() => loadConfig(baseEnv({ MCP_CLAUDE_HOUSEKEEPING_ACCESS_LEVEL: 'observer' }))).toThrow(/Invalid MCP_CLAUDE_HOUSEKEEPING_ACCESS_LEVEL="observer"/)
+    expect(() => loadConfig(baseEnv({ MCP_CLAUDE_HOUSEKEEPING_ACCESS_LEVEL: 'observer' }))).toThrow(
+      /Invalid MCP_CLAUDE_HOUSEKEEPING_ACCESS_LEVEL="observer"/
+    )
   })
 })
 
@@ -61,7 +65,9 @@ describe('MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG', () => {
   })
 
   it('throws on an unknown mode', () => {
-    expect(() => loadConfig(baseEnv({ MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG: 'sometimes' }))).toThrow(/Invalid MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG/)
+    expect(() => loadConfig(baseEnv({ MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG: 'sometimes' }))).toThrow(
+      /Invalid MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG/
+    )
   })
 })
 
@@ -83,7 +89,9 @@ describe('audit-log path + rotation knobs', () => {
   })
 
   it('parses explicit max bytes / keep', () => {
-    const cfg = loadConfig(baseEnv({ MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_MAX_BYTES: '200', MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_KEEP: '2' }))
+    const cfg = loadConfig(
+      baseEnv({ MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_MAX_BYTES: '200', MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_KEEP: '2' })
+    )
     expect(cfg.auditLogMaxBytes).toBe(200)
     expect(cfg.auditLogKeep).toBe(2)
   })
@@ -99,8 +107,12 @@ describe('derived roots', () => {
   it('derives the three target roots from the home directory', () => {
     const cfg = loadConfig(baseEnv())
     expect(cfg.claudeCodeRootPath).toBe(path.join(os.homedir(), '.claude'))
-    expect(cfg.claudeDesktopRootPath).toBe(path.join(os.homedir(), 'Library', 'Application Support', 'Claude', 'local-agent-mode-sessions'))
-    expect(cfg.vscodeWorkspaceStorageRootPath).toBe(path.join(os.homedir(), 'Library', 'Application Support', 'Code', 'User', 'workspaceStorage'))
+    expect(cfg.claudeDesktopRootPath).toBe(
+      path.join(os.homedir(), 'Library', 'Application Support', 'Claude', 'local-agent-mode-sessions')
+    )
+    expect(cfg.vscodeWorkspaceStorageRootPath).toBe(
+      path.join(os.homedir(), 'Library', 'Application Support', 'Code', 'User', 'workspaceStorage')
+    )
   })
 })
 

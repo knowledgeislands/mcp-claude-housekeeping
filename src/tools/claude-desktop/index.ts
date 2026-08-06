@@ -40,7 +40,11 @@ const requireSingleWorkspace = async (rootPath: string, workspaceFilter?: string
   return only
 }
 
-const aggregate = async <T>(rootPath: string, workspaceFilter: string | undefined, fn: (root: string) => Promise<T>) => {
+const aggregate = async <T>(
+  rootPath: string,
+  workspaceFilter: string | undefined,
+  fn: (root: string) => Promise<T>
+) => {
   const targets = await targetWorkspaces(rootPath, workspaceFilter)
   const workspaces = await Promise.all(
     targets.map(async (w) => {
@@ -51,7 +55,10 @@ const aggregate = async <T>(rootPath: string, workspaceFilter: string | undefine
   return { root_path: rootPath, workspace_count: workspaces.length, workspaces }
 }
 
-const workspaceArg = z.string().optional().describe('Filter to a single workspace by id ("<account>/<workspace>"); omit to run across all.')
+const workspaceArg = z
+  .string()
+  .optional()
+  .describe('Filter to a single workspace by id ("<account>/<workspace>"); omit to run across all.')
 
 // A memory space id becomes a path segment under spaces/. Reject anything that
 // could escape that dir: path separators, traversal (..), and a leading "-".
@@ -70,7 +77,10 @@ export const memoryFileNameArg = z
   .string()
   .min(1)
   .max(255)
-  .regex(/^[A-Za-z0-9._-]+\.md$/, 'Memory file name must be alphanumeric/._- and end with .md (no path separators or traversal).')
+  .regex(
+    /^[A-Za-z0-9._-]+\.md$/,
+    'Memory file name must be alphanumeric/._- and end with .md (no path separators or traversal).'
+  )
   .refine((s) => !s.startsWith('-') && !s.includes('..'), 'Memory file name must not start with "-" or contain "..".')
 
 export const registerClaudeDesktopTools = (server: McpServer, cfg: Config): void => {
@@ -89,8 +99,20 @@ export const registerClaudeDesktopTools = (server: McpServer, cfg: Config): void
       description: `Audit check 1. For each workspace, count local_* session dirs and JSON files, compute total disk usage and total session-JSON size, find the 5 largest session dirs, and the date of the oldest and newest session JSON. Flag if total size exceeds flag_size_gb (default 2 GB) or session count exceeds flag_session_count (default 1000).`,
       inputSchema: z
         .object({
-          flag_size_gb: z.number().int().min(0).max(1_000_000).default(2).describe('Threshold in GB for flagging total root size.'),
-          flag_session_count: z.number().int().min(0).max(10_000_000).default(1000).describe('Threshold for flagging session count.'),
+          flag_size_gb: z
+            .number()
+            .int()
+            .min(0)
+            .max(1_000_000)
+            .default(2)
+            .describe('Threshold in GB for flagging total root size.'),
+          flag_session_count: z
+            .number()
+            .int()
+            .min(0)
+            .max(10_000_000)
+            .default(1000)
+            .describe('Threshold for flagging session count.'),
           workspace: workspaceArg
         })
         .strict(),
@@ -520,10 +542,17 @@ export const registerClaudeDesktopTools = (server: McpServer, cfg: Config): void
       description: `Set the sidebar label (the \`title\` field of <workspace>/local_<session-id>.json) so the active Cowork session is recognisable in the list. Call once the session's purpose is clear — e.g. "kit-legal · inbound scan · 2026-05-20". Maximum 80 characters; emoji are allowed; control characters are rejected. If "session_id" is omitted, targets the most-recently-active session in the workspace (by lastActivityAt, falling back to file mtime) — Cowork agents share one MCP server process so the server cannot infer the calling session; the most-recent heuristic is correct when only one session is actively writing. Pass session_id explicitly to disambiguate. dry_run defaults to TRUE — it previews the selected session and the new label without writing; pass dry_run=false to actually rename. The "workspace" arg is required when more than one workspace is configured. The Cowork sidebar may not refresh until next reload.`,
       inputSchema: z
         .object({
-          name: z.string().min(1).max(sessions.SESSION_NAME_MAX).describe('Desired session label (≤80 chars, emoji ok).'),
+          name: z
+            .string()
+            .min(1)
+            .max(sessions.SESSION_NAME_MAX)
+            .describe('Desired session label (≤80 chars, emoji ok).'),
           session_id: z
             .string()
-            .regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/, 'session_id must be a lower-case UUID with no "local_" prefix.')
+            .regex(
+              /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+              'session_id must be a lower-case UUID with no "local_" prefix.'
+            )
             .optional()
             .describe('Bare UUID of the target session; omit to auto-select the most-recently-active one.'),
           dry_run: z.boolean().default(true).describe('Default true (preview only). Pass false to actually rename.'),

@@ -78,7 +78,11 @@ describe('listObsolete', () => {
     await fs.mkdir(path.join(CLAUDE_DESKTOP_ROOT_PATH, 'local_new'))
     await setMtime(oldFile, new Date(Date.now() - 60 * DAY_MS))
 
-    const result = await listObsolete(CLAUDE_DESKTOP_ROOT_PATH, { older_than_days: 30, flag_count: 999, flag_size_mb: 999 })
+    const result = await listObsolete(CLAUDE_DESKTOP_ROOT_PATH, {
+      older_than_days: 30,
+      flag_count: 999,
+      flag_size_mb: 999
+    })
     expect(result.obsolete_count).toBe(1)
     expect(result.top_10_oldest[0]?.name).toBe('local_old')
     expect(result.flags).toEqual([])
@@ -116,7 +120,11 @@ describe('artifactHealth', () => {
       ])
     )
 
-    const result = await artifactHealth(CLAUDE_DESKTOP_ROOT_PATH, { flag_versions: 20, flag_stale_days: 30, flag_unstarred_idle_days: 14 })
+    const result = await artifactHealth(CLAUDE_DESKTOP_ROOT_PATH, {
+      flag_versions: 20,
+      flag_stale_days: 30,
+      flag_unstarred_idle_days: 14
+    })
     expect(result.total).toBe(2)
     expect(result.starred).toBe(1)
     const stale = result.items.find((i) => i.id === 'stale')
@@ -126,7 +134,11 @@ describe('artifactHealth', () => {
   })
 
   it('returns empty when artifacts.json is missing', async () => {
-    const result = await artifactHealth(CLAUDE_DESKTOP_ROOT_PATH, { flag_versions: 20, flag_stale_days: 30, flag_unstarred_idle_days: 14 })
+    const result = await artifactHealth(CLAUDE_DESKTOP_ROOT_PATH, {
+      flag_versions: 20,
+      flag_stale_days: 30,
+      flag_unstarred_idle_days: 14
+    })
     expect(result.total).toBe(0)
   })
 })
@@ -156,13 +168,19 @@ describe('artifactPrune', () => {
   })
 
   it('is a no-op when below the keep count', async () => {
-    await fs.writeFile(path.join(CLAUDE_DESKTOP_ROOT_PATH, 'artifacts.json'), JSON.stringify([{ id: 'a', name: 'A', isStarred: false, updatedAt: 1 }]))
+    await fs.writeFile(
+      path.join(CLAUDE_DESKTOP_ROOT_PATH, 'artifacts.json'),
+      JSON.stringify([{ id: 'a', name: 'A', isStarred: false, updatedAt: 1 }])
+    )
     const result = await artifactPrune(CLAUDE_DESKTOP_ROOT_PATH, { keep: 5, dry_run: false })
     expect(result.deleted).toEqual([])
   })
 
   it('does not modify files in dry_run mode', async () => {
-    await fs.writeFile(path.join(CLAUDE_DESKTOP_ROOT_PATH, 'artifacts.json'), JSON.stringify([{ id: 'x', name: 'X', isStarred: false, updatedAt: 1 }]))
+    await fs.writeFile(
+      path.join(CLAUDE_DESKTOP_ROOT_PATH, 'artifacts.json'),
+      JSON.stringify([{ id: 'x', name: 'X', isStarred: false, updatedAt: 1 }])
+    )
     const result = await artifactPrune(CLAUDE_DESKTOP_ROOT_PATH, { keep: 0, dry_run: true })
     expect(result.deleted_count).toBe(1)
     const onDisk = JSON.parse(await fs.readFile(path.join(CLAUDE_DESKTOP_ROOT_PATH, 'artifacts.json'), 'utf-8'))
@@ -187,7 +205,10 @@ describe('artifactPrune', () => {
   it('records cache_file_deleted=false when the cache file is missing (unlink ENOENT is swallowed)', async () => {
     // No cache_<id>.json file on disk — unlink throws ENOENT, which the
     // catch swallows so the prune still completes.
-    await fs.writeFile(path.join(CLAUDE_DESKTOP_ROOT_PATH, 'artifacts.json'), JSON.stringify([{ id: 'no-cache', name: 'NC', isStarred: false, updatedAt: 1 }]))
+    await fs.writeFile(
+      path.join(CLAUDE_DESKTOP_ROOT_PATH, 'artifacts.json'),
+      JSON.stringify([{ id: 'no-cache', name: 'NC', isStarred: false, updatedAt: 1 }])
+    )
     await fs.mkdir(path.join(CLAUDE_DESKTOP_ROOT_PATH, 'artifacts'), { recursive: true })
     const result = await artifactPrune(CLAUDE_DESKTOP_ROOT_PATH, { keep: 0, dry_run: false })
     expect(result.deleted_count).toBe(1)
@@ -232,13 +253,18 @@ describe('artifactPrune', () => {
   })
 
   it('rethrows non-ENOENT unlink errors (EACCES when artifacts/ is chmod 0)', async () => {
-    await fs.writeFile(path.join(CLAUDE_DESKTOP_ROOT_PATH, 'artifacts.json'), JSON.stringify([{ id: 'blocked', name: 'B', isStarred: false, updatedAt: 1 }]))
+    await fs.writeFile(
+      path.join(CLAUDE_DESKTOP_ROOT_PATH, 'artifacts.json'),
+      JSON.stringify([{ id: 'blocked', name: 'B', isStarred: false, updatedAt: 1 }])
+    )
     const artifactsDir = path.join(CLAUDE_DESKTOP_ROOT_PATH, 'artifacts')
     await fs.mkdir(artifactsDir, { recursive: true })
     await fs.writeFile(path.join(artifactsDir, 'cache_blocked.json'), '{}')
     await fs.chmod(artifactsDir, 0o500) // r-x but no write — unlink fails EACCES
     try {
-      await expect(artifactPrune(CLAUDE_DESKTOP_ROOT_PATH, { keep: 0, dry_run: false })).rejects.toThrow(/EACCES|permission/i)
+      await expect(artifactPrune(CLAUDE_DESKTOP_ROOT_PATH, { keep: 0, dry_run: false })).rejects.toThrow(
+        /EACCES|permission/i
+      )
     } finally {
       await fs.chmod(artifactsDir, 0o755)
     }
@@ -282,7 +308,9 @@ describe('obsoleteOutputs', () => {
     await fs.writeFile(path.join(CLAUDE_DESKTOP_ROOT_PATH, 'local_blocked.json'), '{}')
     await fs.chmod(outputsDir, 0o000)
     try {
-      await expect(obsoleteOutputs(CLAUDE_DESKTOP_ROOT_PATH, { older_than_days: 14 })).rejects.toThrow(/EACCES|permission/i)
+      await expect(obsoleteOutputs(CLAUDE_DESKTOP_ROOT_PATH, { older_than_days: 14 })).rejects.toThrow(
+        /EACCES|permission/i
+      )
     } finally {
       await fs.chmod(outputsDir, 0o755)
     }
@@ -407,7 +435,15 @@ describe('pluginsInventory', () => {
       JSON.stringify({
         version: 2,
         plugins: {
-          'foo@kw': [{ scope: 'user', installPath: '/x', version: '1.0.0', installedAt: '2026-01-01T00:00:00Z', lastUpdated: '2026-01-01T00:00:00Z' }]
+          'foo@kw': [
+            {
+              scope: 'user',
+              installPath: '/x',
+              version: '1.0.0',
+              installedAt: '2026-01-01T00:00:00Z',
+              lastUpdated: '2026-01-01T00:00:00Z'
+            }
+          ]
         }
       })
     )
@@ -436,8 +472,14 @@ describe('projectCacheStatus', () => {
     const stale = path.join(CLAUDE_DESKTOP_ROOT_PATH, '.project-cache', 'stale')
     await fs.mkdir(recent, { recursive: true })
     await fs.mkdir(stale, { recursive: true })
-    await fs.writeFile(path.join(recent, 'metadata.json'), JSON.stringify({ name: 'Recent', synced_at: new Date().toISOString() }))
-    await fs.writeFile(path.join(stale, 'metadata.json'), JSON.stringify({ name: 'Stale', synced_at: new Date(Date.now() - 30 * DAY_MS).toISOString() }))
+    await fs.writeFile(
+      path.join(recent, 'metadata.json'),
+      JSON.stringify({ name: 'Recent', synced_at: new Date().toISOString() })
+    )
+    await fs.writeFile(
+      path.join(stale, 'metadata.json'),
+      JSON.stringify({ name: 'Stale', synced_at: new Date(Date.now() - 30 * DAY_MS).toISOString() })
+    )
 
     const result = await projectCacheStatus(CLAUDE_DESKTOP_ROOT_PATH, { stale_days: 14 })
     expect(result.projects).toHaveLength(2)
@@ -503,7 +545,11 @@ describe('extra branch coverage for desktop audit', () => {
     await fs.mkdir(path.join(CLAUDE_DESKTOP_ROOT_PATH, 'local_newer'))
     await setMtime(a, new Date(Date.now() - 90 * DAY_MS))
     await setMtime(b, new Date(Date.now() - 45 * DAY_MS))
-    const result = await listObsolete(CLAUDE_DESKTOP_ROOT_PATH, { older_than_days: 30, flag_count: 999, flag_size_mb: 999 })
+    const result = await listObsolete(CLAUDE_DESKTOP_ROOT_PATH, {
+      older_than_days: 30,
+      flag_count: 999,
+      flag_size_mb: 999
+    })
     expect(result.obsolete_count).toBe(2)
     expect(result.top_10_oldest[0]?.name).toBe('local_older')
     expect(result.top_10_oldest[1]?.name).toBe('local_newer')
@@ -514,7 +560,11 @@ describe('extra branch coverage for desktop audit', () => {
     await fs.writeFile(a, 'x'.repeat(2048))
     await fs.mkdir(path.join(CLAUDE_DESKTOP_ROOT_PATH, 'local_big'))
     await setMtime(a, new Date(Date.now() - 60 * DAY_MS))
-    const result = await listObsolete(CLAUDE_DESKTOP_ROOT_PATH, { older_than_days: 30, flag_count: 999, flag_size_mb: 0 })
+    const result = await listObsolete(CLAUDE_DESKTOP_ROOT_PATH, {
+      older_than_days: 30,
+      flag_count: 999,
+      flag_size_mb: 0
+    })
     expect(result.flags).toContain('obsolete_size_exceeds_0mb')
   })
 
@@ -544,7 +594,11 @@ describe('extra branch coverage for desktop audit', () => {
       path.join(CLAUDE_DESKTOP_ROOT_PATH, 'artifacts.json'),
       JSON.stringify([{ id: 'created-only', name: 'CO', isStarred: false, createdAt: Date.now() - 100 * oneDay }])
     )
-    const result = await artifactHealth(CLAUDE_DESKTOP_ROOT_PATH, { flag_versions: 100, flag_stale_days: 30, flag_unstarred_idle_days: 30 })
+    const result = await artifactHealth(CLAUDE_DESKTOP_ROOT_PATH, {
+      flag_versions: 100,
+      flag_stale_days: 30,
+      flag_unstarred_idle_days: 30
+    })
     const co = result.items.find((i) => i.id === 'created-only')
     expect(co?.age_days).toBeGreaterThanOrEqual(99)
     expect(co?.flags).toContain('stale>30d')
@@ -570,7 +624,10 @@ describe('extra branch coverage for desktop audit', () => {
   })
 
   it('artifactPrune records last_updated=null when an artifact has no updatedAt', async () => {
-    await fs.writeFile(path.join(CLAUDE_DESKTOP_ROOT_PATH, 'artifacts.json'), JSON.stringify([{ id: 'no-ts', name: 'NT', isStarred: false }]))
+    await fs.writeFile(
+      path.join(CLAUDE_DESKTOP_ROOT_PATH, 'artifacts.json'),
+      JSON.stringify([{ id: 'no-ts', name: 'NT', isStarred: false }])
+    )
     await fs.mkdir(path.join(CLAUDE_DESKTOP_ROOT_PATH, 'artifacts'), { recursive: true })
     const result = await artifactPrune(CLAUDE_DESKTOP_ROOT_PATH, { keep: 0, dry_run: false })
     expect(result.deleted[0]?.last_updated).toBeNull()
@@ -676,7 +733,10 @@ describe('extra branch coverage for desktop audit', () => {
   it('pluginsInventory handles installed_plugins.json without a plugins field', async () => {
     await fs.mkdir(path.join(CLAUDE_DESKTOP_ROOT_PATH, 'cowork_plugins'), { recursive: true })
     // installed_plugins.json without a `plugins` field — knowledgeWork loop is skipped.
-    await fs.writeFile(path.join(CLAUDE_DESKTOP_ROOT_PATH, 'cowork_plugins', 'installed_plugins.json'), JSON.stringify({ version: 2 }))
+    await fs.writeFile(
+      path.join(CLAUDE_DESKTOP_ROOT_PATH, 'cowork_plugins', 'installed_plugins.json'),
+      JSON.stringify({ version: 2 })
+    )
     const result = await pluginsInventory(CLAUDE_DESKTOP_ROOT_PATH)
     expect(result.knowledge_work).toEqual([])
   })
@@ -702,7 +762,10 @@ describe('extra branch coverage for desktop audit', () => {
   it('projectCacheStatus skips non-directory entries in .project-cache/', async () => {
     const cacheDir = path.join(CLAUDE_DESKTOP_ROOT_PATH, '.project-cache')
     await fs.mkdir(path.join(cacheDir, 'real-uuid'), { recursive: true })
-    await fs.writeFile(path.join(cacheDir, 'real-uuid', 'metadata.json'), JSON.stringify({ name: 'Real', synced_at: new Date().toISOString() }))
+    await fs.writeFile(
+      path.join(cacheDir, 'real-uuid', 'metadata.json'),
+      JSON.stringify({ name: 'Real', synced_at: new Date().toISOString() })
+    )
     // A stray file at the top of .project-cache — must be skipped.
     await fs.writeFile(path.join(cacheDir, 'README.txt'), 'not a project')
     const result = await projectCacheStatus(CLAUDE_DESKTOP_ROOT_PATH, { stale_days: 14 })
@@ -735,7 +798,10 @@ describe('extra branch coverage for desktop audit', () => {
   it('projectCacheStatus reports name=null when metadata.json has no name field', async () => {
     const cacheDir = path.join(CLAUDE_DESKTOP_ROOT_PATH, '.project-cache')
     await fs.mkdir(path.join(cacheDir, 'no-name'), { recursive: true })
-    await fs.writeFile(path.join(cacheDir, 'no-name', 'metadata.json'), JSON.stringify({ synced_at: new Date().toISOString() }))
+    await fs.writeFile(
+      path.join(cacheDir, 'no-name', 'metadata.json'),
+      JSON.stringify({ synced_at: new Date().toISOString() })
+    )
     const result = await projectCacheStatus(CLAUDE_DESKTOP_ROOT_PATH, { stale_days: 14 })
     const nn = result.projects.find((p) => p.uuid === 'no-name')
     expect(nn?.name).toBeNull()
@@ -795,7 +861,9 @@ describe('extra branch coverage for desktop audit', () => {
     await fs.mkdir(backupsDir, { recursive: true })
     await fs.chmod(backupsDir, 0o000)
     try {
-      await expect(backupSummary(CLAUDE_DESKTOP_ROOT_PATH, { flag_count: 10, flag_size_mb: 5 })).rejects.toThrow(/EACCES|permission/i)
+      await expect(backupSummary(CLAUDE_DESKTOP_ROOT_PATH, { flag_count: 10, flag_size_mb: 5 })).rejects.toThrow(
+        /EACCES|permission/i
+      )
     } finally {
       await fs.chmod(backupsDir, 0o755)
     }

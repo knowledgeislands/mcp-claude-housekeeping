@@ -106,7 +106,9 @@ describe('appendAuditEvent / withAuditLog', () => {
     const destructiveHandler = vi.fn(async (_args: unknown) => ({ content: [{ type: 'text', text: '{}' }] }))
     const readHandler = vi.fn(async (_args: unknown) => ({ content: [{ type: 'text', text: '{}' }] }))
     // Both return the original handler verbatim — no wrapping, no file I/O.
-    expect(withAuditLog(auditCfg({ mode: 'off' }), 'test_destructive_tool', 'destructive', destructiveHandler)).toBe(destructiveHandler)
+    expect(withAuditLog(auditCfg({ mode: 'off' }), 'test_destructive_tool', 'destructive', destructiveHandler)).toBe(
+      destructiveHandler
+    )
     expect(withAuditLog(auditCfg({ mode: 'off' }), 'test_readonly_tool', 'read', readHandler)).toBe(readHandler)
     await destructiveHandler({})
     await flushAsync()
@@ -136,9 +138,14 @@ describe('appendAuditEvent / withAuditLog', () => {
     // Tiny cap (200 bytes) so one append crosses it, and keep=2 so we exercise
     // both the shift (.1 → .2) and the drop (.2 oldest goes away).
     const { withAuditLog } = await import('./audit-log.js')
-    const wrapped = withAuditLog(auditCfg({ maxBytes: 200, keep: 2 }), 'test_destructive_tool', 'destructive', async () => ({
-      content: [{ type: 'text', text: '{}' }]
-    }))
+    const wrapped = withAuditLog(
+      auditCfg({ maxBytes: 200, keep: 2 }),
+      'test_destructive_tool',
+      'destructive',
+      async () => ({
+        content: [{ type: 'text', text: '{}' }]
+      })
+    )
 
     // Each call produces a ~250-byte event line, so every append rotates.
     await wrapped({ note: 'first', padding: 'x'.repeat(100) })
@@ -162,9 +169,14 @@ describe('appendAuditEvent / withAuditLog', () => {
 
   it('does not rotate when maxBytes=0 (rotation disabled)', async () => {
     const { withAuditLog } = await import('./audit-log.js')
-    const wrapped = withAuditLog(auditCfg({ maxBytes: 0, keep: 2 }), 'test_destructive_tool', 'destructive', async () => ({
-      content: [{ type: 'text', text: '{}' }]
-    }))
+    const wrapped = withAuditLog(
+      auditCfg({ maxBytes: 0, keep: 2 }),
+      'test_destructive_tool',
+      'destructive',
+      async () => ({
+        content: [{ type: 'text', text: '{}' }]
+      })
+    )
     await wrapped({ note: 'a', padding: 'x'.repeat(500) })
     await wrapped({ note: 'b', padding: 'y'.repeat(500) })
     await flushAsync()
@@ -178,9 +190,14 @@ describe('appendAuditEvent / withAuditLog', () => {
 
   it('truncates without preserving history when keep=0', async () => {
     const { withAuditLog } = await import('./audit-log.js')
-    const wrapped = withAuditLog(auditCfg({ maxBytes: 200, keep: 0 }), 'test_destructive_tool', 'destructive', async () => ({
-      content: [{ type: 'text', text: '{}' }]
-    }))
+    const wrapped = withAuditLog(
+      auditCfg({ maxBytes: 200, keep: 0 }),
+      'test_destructive_tool',
+      'destructive',
+      async () => ({
+        content: [{ type: 'text', text: '{}' }]
+      })
+    )
     await wrapped({ note: 'first', padding: 'x'.repeat(100) })
     await wrapped({ note: 'second', padding: 'y'.repeat(100) })
     await flushAsync()
@@ -249,9 +266,14 @@ describe('appendAuditEvent / withAuditLog', () => {
     const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
     const { withAuditLog } = await import('./audit-log.js')
-    const wrapped = withAuditLog(auditCfg({ maxBytes: 200, keep: 2 }), 'test_destructive_tool', 'destructive', async () => ({
-      content: [{ type: 'text', text: '{}' }]
-    }))
+    const wrapped = withAuditLog(
+      auditCfg({ maxBytes: 200, keep: 2 }),
+      'test_destructive_tool',
+      'destructive',
+      async () => ({
+        content: [{ type: 'text', text: '{}' }]
+      })
+    )
     await wrapped({ note: 'forces-rotation', padding: 'x'.repeat(300) })
     await new Promise((r) => setTimeout(r, 30))
 
@@ -354,15 +376,23 @@ describe('appendAuditEvent / withAuditLog', () => {
     const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
     const { withAuditLog } = await import('./audit-log.js')
-    const wrapped = withAuditLog(auditCfg({ maxBytes: 200, keep: 2 }), 'test_destructive_tool', 'destructive', async () => ({
-      content: [{ type: 'text', text: '{}' }]
-    }))
+    const wrapped = withAuditLog(
+      auditCfg({ maxBytes: 200, keep: 2 }),
+      'test_destructive_tool',
+      'destructive',
+      async () => ({
+        content: [{ type: 'text', text: '{}' }]
+      })
+    )
     await wrapped({ note: 'forces-rotation', padding: 'x'.repeat(300) })
     await new Promise((r) => setTimeout(r, 30))
 
-    expect(errSpy.mock.calls.some(([msg]) => typeof msg === 'string' && msg.includes('rotation failed') && msg.includes('plain-string-rotation-failure'))).toBe(
-      true
-    )
+    expect(
+      errSpy.mock.calls.some(
+        ([msg]) =>
+          typeof msg === 'string' && msg.includes('rotation failed') && msg.includes('plain-string-rotation-failure')
+      )
+    ).toBe(true)
     errSpy.mockRestore()
     vi.doUnmock('node:fs/promises')
   })
@@ -388,9 +418,12 @@ describe('appendAuditEvent / withAuditLog', () => {
     await expect(wrapped({ note: 'x' })).resolves.toBeDefined()
     await new Promise((r) => setTimeout(r, 30))
 
-    expect(errSpy.mock.calls.some(([msg]) => typeof msg === 'string' && msg.includes('failed to write') && msg.includes('plain-string-mkdir-failure'))).toBe(
-      true
-    )
+    expect(
+      errSpy.mock.calls.some(
+        ([msg]) =>
+          typeof msg === 'string' && msg.includes('failed to write') && msg.includes('plain-string-mkdir-failure')
+      )
+    ).toBe(true)
     errSpy.mockRestore()
     vi.doUnmock('node:fs/promises')
   })
@@ -406,9 +439,14 @@ describe('appendAuditEvent / withAuditLog', () => {
     const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
     const { withAuditLog } = await import('./audit-log.js')
-    const wrapped = withAuditLog(auditCfg({ path: path.join(blockerFile, 'log.jsonl') }), 'test_destructive_tool', 'destructive', async () => ({
-      content: [{ type: 'text', text: '{}' }]
-    }))
+    const wrapped = withAuditLog(
+      auditCfg({ path: path.join(blockerFile, 'log.jsonl') }),
+      'test_destructive_tool',
+      'destructive',
+      async () => ({
+        content: [{ type: 'text', text: '{}' }]
+      })
+    )
     // The wrapped tool call must still resolve normally even though the audit
     // append fails underneath — that's the whole point of the swallow.
     await expect(wrapped({ note: 'x' })).resolves.toBeDefined()

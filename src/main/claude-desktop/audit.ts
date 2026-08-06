@@ -1,13 +1,24 @@
 import type { Dirent } from 'node:fs'
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
-import { assertRealPathWithinRoot, daysAgo, duBytes, isNodeError, pathExists, readJsonIfExists, resolveWithinRoot } from '../../utils/utils.js'
+import {
+  assertRealPathWithinRoot,
+  daysAgo,
+  duBytes,
+  isNodeError,
+  pathExists,
+  readJsonIfExists,
+  resolveWithinRoot
+} from '../../utils/utils.js'
 
 const DAY_MS = 1000 * 60 * 60 * 24
 
 /* ==================== Check 1: storage summary ==================== */
 
-export const storageSummary = async (workspaceRoot: string, args: { flag_size_gb: number; flag_session_count: number }) => {
+export const storageSummary = async (
+  workspaceRoot: string,
+  args: { flag_size_gb: number; flag_session_count: number }
+) => {
   const entries = await fs.readdir(workspaceRoot, { withFileTypes: true })
   const sessionDirs = entries.filter((e) => e.isDirectory() && e.name.startsWith('local_'))
   const sessionJsonNames = entries.filter((e) => e.isFile() && /^local_.*\.json$/.test(e.name)).map((e) => e.name)
@@ -25,7 +36,9 @@ export const storageSummary = async (workspaceRoot: string, args: { flag_size_gb
     if (!newest || m > newest.mtime) newest = { name, mtime: m }
   }
 
-  const sessionEntries = await Promise.all(sessionDirs.map(async (e) => ({ name: e.name, bytes: await duBytes(path.join(workspaceRoot, e.name)) })))
+  const sessionEntries = await Promise.all(
+    sessionDirs.map(async (e) => ({ name: e.name, bytes: await duBytes(path.join(workspaceRoot, e.name)) }))
+  )
   sessionEntries.sort((a, b) => b.bytes - a.bytes)
   const top5 = sessionEntries.slice(0, 5)
 
@@ -48,7 +61,10 @@ export const storageSummary = async (workspaceRoot: string, args: { flag_size_gb
 
 /* ==================== Check 2: obsolete sessions ==================== */
 
-export const listObsolete = async (workspaceRoot: string, args: { older_than_days: number; flag_count: number; flag_size_mb: number }) => {
+export const listObsolete = async (
+  workspaceRoot: string,
+  args: { older_than_days: number; flag_count: number; flag_size_mb: number }
+) => {
   const cutoff = Date.now() - args.older_than_days * DAY_MS
   const entries = await fs.readdir(workspaceRoot, { withFileTypes: true })
   const sessionJsons = entries.filter((e) => e.isFile() && /^local_.*\.json$/.test(e.name)).map((e) => e.name)
@@ -58,7 +74,9 @@ export const listObsolete = async (workspaceRoot: string, args: { older_than_day
     const stat = await fs.stat(path.join(workspaceRoot, name))
     if (stat.mtime.getTime() < cutoff) {
       const dirName = name.replace(/\.json$/, '')
-      const dirBytes = (await pathExists(path.join(workspaceRoot, dirName))) ? await duBytes(path.join(workspaceRoot, dirName)) : 0
+      const dirBytes = (await pathExists(path.join(workspaceRoot, dirName)))
+        ? await duBytes(path.join(workspaceRoot, dirName))
+        : 0
       obsolete.push({
         name: dirName,
         mtime: stat.mtime.getTime(),
@@ -105,7 +123,10 @@ interface ArtifactRecord {
   mcpTools?: string[]
 }
 
-export const artifactHealth = async (workspaceRoot: string, args: { flag_versions: number; flag_stale_days: number; flag_unstarred_idle_days: number }) => {
+export const artifactHealth = async (
+  workspaceRoot: string,
+  args: { flag_versions: number; flag_stale_days: number; flag_unstarred_idle_days: number }
+) => {
   const artifactsPath = path.join(workspaceRoot, 'artifacts.json')
   const artifacts = (await readJsonIfExists<ArtifactRecord[]>(artifactsPath)) ?? []
 
@@ -116,7 +137,8 @@ export const artifactHealth = async (workspaceRoot: string, args: { flag_version
     const flags: string[] = []
     if (versionCount > args.flag_versions) flags.push(`high_churn_versions>${args.flag_versions}`)
     if (ageDays !== null && ageDays > args.flag_stale_days) flags.push(`stale>${args.flag_stale_days}d`)
-    if (!a.isStarred && ageDays !== null && ageDays > args.flag_unstarred_idle_days) flags.push(`unstarred_idle>${args.flag_unstarred_idle_days}d`)
+    if (!a.isStarred && ageDays !== null && ageDays > args.flag_unstarred_idle_days)
+      flags.push(`unstarred_idle>${args.flag_unstarred_idle_days}d`)
     return {
       id: a.id,
       name: a.name,
@@ -174,7 +196,13 @@ export const artifactPrune = async (workspaceRoot: string, args: { keep: number;
   unstarred.sort((a, b) => (b.updatedAt ?? b.createdAt ?? 0) - (a.updatedAt ?? a.createdAt ?? 0))
   const toDelete = unstarred.slice(args.keep)
 
-  const deleted: { id: string; name: string; last_updated: string | null; version_count: number; cache_file_deleted: boolean }[] = []
+  const deleted: {
+    id: string
+    name: string
+    last_updated: string | null
+    version_count: number
+    cache_file_deleted: boolean
+  }[] = []
 
   if (toDelete.length === 0) {
     return {
@@ -423,7 +451,13 @@ export const pluginsInventory = async (workspaceRoot: string) => {
   const installedFile = await readJsonIfExists<InstalledPluginsFile>(installedPath)
   const rpmFile = await readJsonIfExists<RpmManifest>(rpmManifestPath)
 
-  const knowledgeWork: { plugin: string; version: string; installed_at: string; last_updated: string; install_age_days: number }[] = []
+  const knowledgeWork: {
+    plugin: string
+    version: string
+    installed_at: string
+    last_updated: string
+    install_age_days: number
+  }[] = []
   if (installedFile?.plugins) {
     for (const [pluginKey, entries] of Object.entries(installedFile.plugins)) {
       for (const e of entries) {
@@ -489,7 +523,13 @@ export const projectCacheStatus = async (workspaceRoot: string, args: { stale_da
     throw err
   }
 
-  const projects: { uuid: string; name: string | null; synced_at: string | null; sync_age_days: number | null; flags: string[] }[] = []
+  const projects: {
+    uuid: string
+    name: string | null
+    synced_at: string | null
+    sync_age_days: number | null
+    flags: string[]
+  }[] = []
   for (const e of entries) {
     if (!e.isDirectory()) continue
     const meta = (await readJsonIfExists<ProjectCacheMetadata>(path.join(cacheDir, e.name, 'metadata.json'))) ?? {}
@@ -529,7 +569,8 @@ export const debugInfo = async (workspaceRoot: string, args: { flag_size_mb: num
   const flagSizeBytes = args.flag_size_mb * 1024 * 1024
   const flags: string[] = []
   if (bytes > flagSizeBytes) flags.push(`debug_size_exceeds_${args.flag_size_mb}mb`)
-  if (oldestAgeDays !== null && oldestAgeDays > args.flag_age_days) flags.push(`debug_age_exceeds_${args.flag_age_days}d`)
+  if (oldestAgeDays !== null && oldestAgeDays > args.flag_age_days)
+    flags.push(`debug_age_exceeds_${args.flag_age_days}d`)
 
   return {
     exists: true,

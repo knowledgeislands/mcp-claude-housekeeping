@@ -71,7 +71,10 @@ export const memoryWrite = async (workspaceRoot: string, args: { space_id: strin
   }
 }
 
-export const memoryDelete = async (workspaceRoot: string, args: { space_id: string; name: string; dry_run: boolean }) => {
+export const memoryDelete = async (
+  workspaceRoot: string,
+  args: { space_id: string; name: string; dry_run: boolean }
+) => {
   if (args.name === 'MEMORY.md') {
     throw new Error('Cannot delete MEMORY.md via memory_delete; use memory_index_write to replace its contents.')
   }

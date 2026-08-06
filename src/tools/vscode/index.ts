@@ -21,7 +21,9 @@ const sessionArg = z
 const vsWorkspacesListOutput = z.object({
   workspace_storage: z.string(),
   workspace_count: z.number(),
-  workspaces: z.array(z.object({ id: z.string(), workspace_uri: z.string().nullable(), session_count: z.number(), bytes: z.number() }))
+  workspaces: z.array(
+    z.object({ id: z.string(), workspace_uri: z.string().nullable(), session_count: z.number(), bytes: z.number() })
+  )
 })
 const vsStorageSummaryOutput = z.object({
   workspace_storage: z.string(),
@@ -35,7 +37,15 @@ const vsObsoleteSessionsOutput = z.object({
   older_than_days: z.number(),
   obsolete_count: z.number(),
   total_bytes: z.number(),
-  top_10_oldest: z.array(z.object({ workspace: z.string(), session: z.string(), last_activity: z.string(), age_days: z.number(), bytes: z.number() })),
+  top_10_oldest: z.array(
+    z.object({
+      workspace: z.string(),
+      session: z.string(),
+      last_activity: z.string(),
+      age_days: z.number(),
+      bytes: z.number()
+    })
+  ),
   flags: z.array(z.string())
 })
 const vsSessionReadOutput = z.object({

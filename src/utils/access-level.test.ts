@@ -17,7 +17,11 @@ const makeStub = () => {
 
 const gateAt = (accessLevel: AccessLevel) => {
   const { calls, stub } = makeStub()
-  const gated = makeAccessGatedRegister(stub as unknown as Parameters<typeof makeAccessGatedRegister>[0], accessLevel, AUDIT_OFF)
+  const gated = makeAccessGatedRegister(
+    stub as unknown as Parameters<typeof makeAccessGatedRegister>[0],
+    accessLevel,
+    AUDIT_OFF
+  )
   gated('a_read_tool', { description: 'd', annotations: READ_ONLY } as never, (() => ({})) as never)
   gated('an_additive_tool', { description: 'd', annotations: WRITE } as never, (() => ({})) as never)
   gated('a_destructive_tool', { description: 'd', annotations: DESTRUCTIVE } as never, (() => ({})) as never)
@@ -66,7 +70,11 @@ describe('makeAccessGatedRegister', () => {
 
   it('treats an unannotated tool as destructive (fail-safe — skipped under default gate=read)', () => {
     const { calls, stub } = makeStub()
-    const gated = makeAccessGatedRegister(stub as unknown as Parameters<typeof makeAccessGatedRegister>[0], 'read', AUDIT_OFF)
+    const gated = makeAccessGatedRegister(
+      stub as unknown as Parameters<typeof makeAccessGatedRegister>[0],
+      'read',
+      AUDIT_OFF
+    )
     gated('unannotated_tool', { description: 'd' } as never, (() => ({})) as never)
     expect(calls).toEqual([])
   })

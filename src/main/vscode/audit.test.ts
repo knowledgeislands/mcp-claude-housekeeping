@@ -2,7 +2,15 @@ import * as fs from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
-import { discoverWorkspaces, obsoleteSessions, sessionRead, sessionsPrune, storageSummary, workspaceDelete, workspacesList } from './audit.js'
+import {
+  discoverWorkspaces,
+  obsoleteSessions,
+  sessionRead,
+  sessionsPrune,
+  storageSummary,
+  workspaceDelete,
+  workspacesList
+} from './audit.js'
 
 // Tests must NEVER touch the real VSCode workspaceStorage. Shadow the config
 // import with a per-suite tmpdir.
@@ -14,7 +22,13 @@ const setMtime = async (p: string, when: Date) => {
   await fs.utimes(p, when, when)
 }
 
-const writeChatSession = async (workspace: string, filename: string, content: string, mtime: Date, workspaceUri?: string) => {
+const writeChatSession = async (
+  workspace: string,
+  filename: string,
+  content: string,
+  mtime: Date,
+  workspaceUri?: string
+) => {
   const wsDir = path.join(VSCODE_WORKSPACE_STORAGE_ROOT_PATH, workspace)
   const chatDir = path.join(wsDir, 'chatSessions')
   await fs.mkdir(chatDir, { recursive: true })
@@ -80,7 +94,10 @@ describe('discoverWorkspaces (vscode)', () => {
     const chatDir = path.join(wsDir, 'chatSessions')
     await fs.mkdir(chatDir, { recursive: true })
     await fs.writeFile(path.join(chatDir, 'a.jsonl'), '{}\n')
-    await fs.writeFile(path.join(wsDir, 'workspace.json'), JSON.stringify({ folder: 'file:///Users/foo/single-folder' }))
+    await fs.writeFile(
+      path.join(wsDir, 'workspace.json'),
+      JSON.stringify({ folder: 'file:///Users/foo/single-folder' })
+    )
     const r = await discoverWorkspaces(VSCODE_WORKSPACE_STORAGE_ROOT_PATH)
     expect(r[0]?.workspace_uri).toBe('file:///Users/foo/single-folder')
   })
@@ -157,14 +174,22 @@ describe('obsoleteSessions (vscode) — flag branches', () => {
   it('flags obsolete_count_exceeds when count is over threshold', async () => {
     const oldDate = new Date(Date.now() - 90 * DAY_MS)
     await writeChatSession('hex-1', 'a.jsonl', '{}\n', oldDate)
-    const r = await obsoleteSessions(VSCODE_WORKSPACE_STORAGE_ROOT_PATH, { older_than_days: 60, flag_count: 0, flag_size_mb: 999 })
+    const r = await obsoleteSessions(VSCODE_WORKSPACE_STORAGE_ROOT_PATH, {
+      older_than_days: 60,
+      flag_count: 0,
+      flag_size_mb: 999
+    })
     expect(r.flags).toContain('obsolete_count_exceeds_0')
   })
 
   it('flags obsolete_size_exceeds when bytes are over threshold', async () => {
     const oldDate = new Date(Date.now() - 90 * DAY_MS)
     await writeChatSession('hex-1', 'a.jsonl', 'x'.repeat(2048), oldDate)
-    const r = await obsoleteSessions(VSCODE_WORKSPACE_STORAGE_ROOT_PATH, { older_than_days: 60, flag_count: 999, flag_size_mb: 0 })
+    const r = await obsoleteSessions(VSCODE_WORKSPACE_STORAGE_ROOT_PATH, {
+      older_than_days: 60,
+      flag_count: 999,
+      flag_size_mb: 0
+    })
     expect(r.flags).toContain('obsolete_size_exceeds_0mb')
   })
 })
@@ -175,7 +200,11 @@ describe('obsoleteSessions (vscode) sort callback', () => {
     const newer = new Date(Date.now() - 65 * DAY_MS)
     await writeChatSession('hex-1', 'older.jsonl', '{}\n', older)
     await writeChatSession('hex-1', 'newer.jsonl', '{}\n', newer)
-    const r = await obsoleteSessions(VSCODE_WORKSPACE_STORAGE_ROOT_PATH, { older_than_days: 60, flag_count: 999, flag_size_mb: 999 })
+    const r = await obsoleteSessions(VSCODE_WORKSPACE_STORAGE_ROOT_PATH, {
+      older_than_days: 60,
+      flag_count: 999,
+      flag_size_mb: 999
+    })
     expect(r.top_10_oldest[0]?.session).toBe('older.jsonl')
     expect(r.top_10_oldest[1]?.session).toBe('newer.jsonl')
   })
@@ -187,7 +216,11 @@ describe('obsoleteSessions (vscode)', () => {
     const recent = new Date()
     await writeChatSession('hex-1', 'old.jsonl', '{}\n', oldDate)
     await writeChatSession('hex-1', 'new.jsonl', '{}\n', recent)
-    const r = await obsoleteSessions(VSCODE_WORKSPACE_STORAGE_ROOT_PATH, { older_than_days: 30, flag_count: 100, flag_size_mb: 100 })
+    const r = await obsoleteSessions(VSCODE_WORKSPACE_STORAGE_ROOT_PATH, {
+      older_than_days: 30,
+      flag_count: 100,
+      flag_size_mb: 100
+    })
     expect(r.obsolete_count).toBe(1)
     expect(r.top_10_oldest[0]?.session).toBe('old.jsonl')
   })
@@ -210,14 +243,24 @@ describe('sessionRead (vscode)', () => {
   it('reads last N lines of a jsonl file', async () => {
     const content = ['{"i":0}', '{"i":1}', '{"i":2}', '{"i":3}'].join('\n')
     await writeChatSession('hex-1', 'a.jsonl', content, new Date())
-    const r = await sessionRead(VSCODE_WORKSPACE_STORAGE_ROOT_PATH, { workspace: 'hex-1', session: 'a.jsonl', max_lines: 2, tail: true })
+    const r = await sessionRead(VSCODE_WORKSPACE_STORAGE_ROOT_PATH, {
+      workspace: 'hex-1',
+      session: 'a.jsonl',
+      max_lines: 2,
+      tail: true
+    })
     expect(r.format).toBe('jsonl')
     expect(r.lines).toEqual(['{"i":2}', '{"i":3}'])
   })
 
   it('pretty-prints a single .json document', async () => {
     await writeChatSession('hex-1', 'a.json', JSON.stringify({ a: 1, b: 2 }), new Date())
-    const r = await sessionRead(VSCODE_WORKSPACE_STORAGE_ROOT_PATH, { workspace: 'hex-1', session: 'a.json', max_lines: 100, tail: false })
+    const r = await sessionRead(VSCODE_WORKSPACE_STORAGE_ROOT_PATH, {
+      workspace: 'hex-1',
+      session: 'a.json',
+      max_lines: 100,
+      tail: false
+    })
     expect(r.format).toBe('json')
     expect(r.lines.join('\n')).toContain('"a": 1')
   })
@@ -225,7 +268,12 @@ describe('sessionRead (vscode)', () => {
   it('honours tail=true for a single .json document (returns the last N lines of the pretty-printed output)', async () => {
     // Pretty-printed will be 4 lines: '{', '  "a": 1,', '  "b": 2', '}'
     await writeChatSession('hex-1', 'a.json', JSON.stringify({ a: 1, b: 2 }), new Date())
-    const r = await sessionRead(VSCODE_WORKSPACE_STORAGE_ROOT_PATH, { workspace: 'hex-1', session: 'a.json', max_lines: 2, tail: true })
+    const r = await sessionRead(VSCODE_WORKSPACE_STORAGE_ROOT_PATH, {
+      workspace: 'hex-1',
+      session: 'a.json',
+      max_lines: 2,
+      tail: true
+    })
     expect(r.format).toBe('json')
     expect(r.lines).toEqual(['  "b": 2', '}'])
   })
@@ -233,15 +281,25 @@ describe('sessionRead (vscode)', () => {
   it('honours tail=false for a .jsonl session (returns the first N lines)', async () => {
     const content = ['{"i":0}', '{"i":1}', '{"i":2}', '{"i":3}'].join('\n')
     await writeChatSession('hex-1', 'a.jsonl', content, new Date())
-    const r = await sessionRead(VSCODE_WORKSPACE_STORAGE_ROOT_PATH, { workspace: 'hex-1', session: 'a.jsonl', max_lines: 2, tail: false })
+    const r = await sessionRead(VSCODE_WORKSPACE_STORAGE_ROOT_PATH, {
+      workspace: 'hex-1',
+      session: 'a.jsonl',
+      max_lines: 2,
+      tail: false
+    })
     expect(r.format).toBe('jsonl')
     expect(r.lines).toEqual(['{"i":0}', '{"i":1}'])
   })
 
   it('rejects bad extension', async () => {
-    await expect(sessionRead(VSCODE_WORKSPACE_STORAGE_ROOT_PATH, { workspace: 'hex-1', session: 'a.txt', max_lines: 5, tail: true })).rejects.toThrow(
-      /must end with/
-    )
+    await expect(
+      sessionRead(VSCODE_WORKSPACE_STORAGE_ROOT_PATH, {
+        workspace: 'hex-1',
+        session: 'a.txt',
+        max_lines: 5,
+        tail: true
+      })
+    ).rejects.toThrow(/must end with/)
   })
 })
 
@@ -260,7 +318,9 @@ describe('sessionsPrune (vscode)', () => {
     await writeChatSession('hex-1', 'old.jsonl', '{}\n', oldDate)
     const r = await sessionsPrune(VSCODE_WORKSPACE_STORAGE_ROOT_PATH, { older_than_days: 60, dry_run: false })
     expect(r.deleted_count).toBe(1)
-    await expect(fs.access(path.join(VSCODE_WORKSPACE_STORAGE_ROOT_PATH, 'hex-1', 'chatSessions', 'old.jsonl'))).rejects.toThrow()
+    await expect(
+      fs.access(path.join(VSCODE_WORKSPACE_STORAGE_ROOT_PATH, 'hex-1', 'chatSessions', 'old.jsonl'))
+    ).rejects.toThrow()
   })
 
   it('leaves recent sessions alone', async () => {
@@ -273,7 +333,11 @@ describe('sessionsPrune (vscode)', () => {
     const oldDate = new Date(Date.now() - 90 * DAY_MS)
     await writeChatSession('hex-keep', 'a.jsonl', '{}\n', oldDate)
     await writeChatSession('hex-target', 'b.jsonl', '{}\n', oldDate)
-    const r = await sessionsPrune(VSCODE_WORKSPACE_STORAGE_ROOT_PATH, { older_than_days: 60, workspace: 'hex-target', dry_run: false })
+    const r = await sessionsPrune(VSCODE_WORKSPACE_STORAGE_ROOT_PATH, {
+      older_than_days: 60,
+      workspace: 'hex-target',
+      dry_run: false
+    })
     expect(r.deleted_count).toBe(1)
     expect(r.deleted[0]?.workspace).toBe('hex-target')
     // Other workspace's session is still on disk.
@@ -300,17 +364,25 @@ describe('workspaceDelete', () => {
   })
 
   it('throws when the workspace does not exist', async () => {
-    await expect(workspaceDelete(VSCODE_WORKSPACE_STORAGE_ROOT_PATH, { workspace: 'nope', dry_run: false })).rejects.toThrow(/not found/)
+    await expect(
+      workspaceDelete(VSCODE_WORKSPACE_STORAGE_ROOT_PATH, { workspace: 'nope', dry_run: false })
+    ).rejects.toThrow(/not found/)
   })
 
   it('rejects path-traversal attempts in the workspace id', async () => {
     // `..` segments resolve outside the root and are rejected with a Path-escape error.
-    await expect(workspaceDelete(VSCODE_WORKSPACE_STORAGE_ROOT_PATH, { workspace: '../escape', dry_run: false })).rejects.toThrow(/Path escapes root/)
-    await expect(workspaceDelete(VSCODE_WORKSPACE_STORAGE_ROOT_PATH, { workspace: '../../etc', dry_run: true })).rejects.toThrow(/Path escapes root/)
+    await expect(
+      workspaceDelete(VSCODE_WORKSPACE_STORAGE_ROOT_PATH, { workspace: '../escape', dry_run: false })
+    ).rejects.toThrow(/Path escapes root/)
+    await expect(
+      workspaceDelete(VSCODE_WORKSPACE_STORAGE_ROOT_PATH, { workspace: '../../etc', dry_run: true })
+    ).rejects.toThrow(/Path escapes root/)
     // Absolute-style input is neutralized (leading "/" stripped → treated as relative-to-root),
     // so it lands inside the root and falls through to the not-found branch. Still safe — it
     // cannot delete files outside the storage root.
-    await expect(workspaceDelete(VSCODE_WORKSPACE_STORAGE_ROOT_PATH, { workspace: '/etc/passwd', dry_run: true })).rejects.toThrow(/not found/)
+    await expect(
+      workspaceDelete(VSCODE_WORKSPACE_STORAGE_ROOT_PATH, { workspace: '/etc/passwd', dry_run: true })
+    ).rejects.toThrow(/not found/)
   })
 })
 

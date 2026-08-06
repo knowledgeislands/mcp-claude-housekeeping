@@ -23,7 +23,10 @@ export const memoryFileNameArg = z
   .string()
   .min(1)
   .max(255)
-  .regex(/^[A-Za-z0-9._-]+\.md$/, 'Memory file name must be alphanumeric/._- and end with .md (no path separators or traversal).')
+  .regex(
+    /^[A-Za-z0-9._-]+\.md$/,
+    'Memory file name must be alphanumeric/._- and end with .md (no path separators or traversal).'
+  )
   .refine((s) => !s.startsWith('-') && !s.includes('..'), 'Memory file name must not start with "-" or contain "..".')
 
 const ccProjectsListOutput = z.object({
@@ -54,12 +57,25 @@ const ccObsoleteSessionsOutput = z.object({
   older_than_days: z.number(),
   obsolete_count: z.number(),
   total_bytes: z.number(),
-  top_10_oldest: z.array(z.object({ project: z.string(), session: z.string(), last_activity: z.string(), age_days: z.number(), bytes: z.number() })),
+  top_10_oldest: z.array(
+    z.object({
+      project: z.string(),
+      session: z.string(),
+      last_activity: z.string(),
+      age_days: z.number(),
+      bytes: z.number()
+    })
+  ),
   flags: z.array(z.string())
 })
 const ccGlobalStatusOutput = z.object({
   claude_root: z.string(),
-  history: z.object({ exists: z.boolean(), bytes: z.number(), modified: z.string().nullable(), lines: z.number().optional() }),
+  history: z.object({
+    exists: z.boolean(),
+    bytes: z.number(),
+    modified: z.string().nullable(),
+    lines: z.number().optional()
+  }),
   settings: z.object({ exists: z.boolean(), cleanup_period_days: z.number().nullable() }),
   last_cleanup: z.string().nullable(),
   top_level_dirs: z.array(z.object({ name: z.string(), bytes: z.number(), modified: z.string().nullable() })),
@@ -89,7 +105,15 @@ const ccSessionsPruneOutput = z.object({
   dry_run: z.boolean(),
   deleted_count: z.number(),
   total_bytes_freed: z.number(),
-  deleted: z.array(z.object({ project: z.string(), session: z.string(), age_days: z.number(), bytes: z.number(), sidecar_deleted: z.boolean() }))
+  deleted: z.array(
+    z.object({
+      project: z.string(),
+      session: z.string(),
+      age_days: z.number(),
+      bytes: z.number(),
+      sidecar_deleted: z.boolean()
+    })
+  )
 })
 const ccProjectRelocateOutput = z.object({
   project: z.string(),
@@ -105,7 +129,9 @@ const ccOrphanProjectsPruneOutput = z.object({
   orphan_count: z.number(),
   deleted_count: z.number(),
   total_bytes_freed: z.number(),
-  deleted: z.array(z.object({ id: z.string(), decoded_path: z.string(), session_count: z.number(), bytes: z.number() })),
+  deleted: z.array(
+    z.object({ id: z.string(), decoded_path: z.string(), session_count: z.number(), bytes: z.number() })
+  ),
   skipped: z.array(z.object({ id: z.string(), decoded_path: z.string(), reason: z.string() }))
 })
 const ccMemoryWriteOutput = z.object({

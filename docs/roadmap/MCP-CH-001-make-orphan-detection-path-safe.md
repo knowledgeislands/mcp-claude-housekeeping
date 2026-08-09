@@ -1,5 +1,5 @@
 ---
-id: MCP-CH-OPS-001
+id: MCP-CH-001
 title: Harden orphan detection
 theme: operations
 horizon: next
@@ -64,7 +64,7 @@ Existing coverage in [src/main/claude-code/audit.test.ts](../../src/main/claude-
 
 ## Dependencies / blocks
 
-Nothing blocks this item and it blocks nothing; both frontmatter arrays are empty and that reflects the code. The work is confined to the Claude Code group, whereas [MCP-CH-OPS-002](MCP-CH-OPS-002-add-destructive-cleanup-tools.md) adds tools to the Claude Desktop group; they share no call path beyond the generic helpers in `src/utils/`, so neither has to land first.
+Nothing blocks this item and it blocks nothing; both frontmatter arrays are empty and that reflects the code. The work is confined to the Claude Code group, whereas [MCP-CH-002](MCP-CH-002-add-destructive-cleanup-tools.md) adds tools to the Claude Desktop group; they share no call path beyond the generic helpers in `src/utils/`, so neither has to land first.
 
 There is a judgment-level relationship worth stating without inventing a mechanical one: this item hardens an existing destructive tool against a false-positive delete, and OPS-002 adds new destructive tools. Doing this one first keeps the fleet's safety posture ahead of its destructive surface, but that is a sequencing preference, not a dependency.
 

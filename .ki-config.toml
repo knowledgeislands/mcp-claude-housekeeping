@@ -6,7 +6,7 @@ repository = "https://github.com/knowledgeislands/mcp-claude-housekeeping"
 title = "mcp-claude-housekeeping"
 description = "MCP for auditing and pruning Claude Code session files and memory on the local filesystem."
 repo_code = "MCP-CH"
-supported_runtimes = ["claude-code", "chatgpt-codex"]
+supported_runtimes = ["claude-code", "claude-desktop", "chatgpt-codex"]
 visibility = "public"
 
 [skills.ki-authoring]

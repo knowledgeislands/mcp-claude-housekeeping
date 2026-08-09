@@ -1,5 +1,6 @@
 ---
-id: MCP-CH-002
+id: MCP-CH-OPS-002
+area: OPS
 title: Add Claude cleanup tools
 theme: operations
 horizon: next
@@ -61,7 +62,7 @@ Every convention the work needs is already in place. `DESTRUCTIVE_ONESHOT` in [s
 
 ## Dependencies / blocks
 
-Nothing blocks this item and it blocks nothing; both frontmatter arrays are empty and that matches the code. The work sits entirely in the Claude Desktop group, while [MCP-CH-001](MCP-CH-001-make-orphan-detection-path-safe.md) changes the Claude Code group's orphan detection, and the two touch no shared implementation.
+Nothing blocks this item and it blocks nothing; both frontmatter arrays are empty and that matches the code. The work sits entirely in the Claude Desktop group, while [MCP-CH-OPS-001](MCP-CH-OPS-001-make-orphan-detection-path-safe.md) changes the Claude Code group's orphan detection, and the two touch no shared implementation.
 
 The one genuine coupling is conventional rather than mechanical: if OPS-001 introduces a new safety idiom for destructive tools, the tools added here should adopt it. That argues for taking OPS-001 first, but it does not block this item.
 

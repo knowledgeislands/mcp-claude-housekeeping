@@ -69,6 +69,24 @@ Nothing blocks this item and it blocks nothing; both frontmatter arrays are empt
 
 There is a judgment-level relationship worth stating without inventing a mechanical one: this item hardens an existing destructive tool against a false-positive delete, and OPS-002 adds new destructive tools. Doing this one first keeps the fleet's safety posture ahead of its destructive surface, but that is a sequencing preference, not a dependency.
 
+## Documentation impact
+
+### Decision Records
+
+None.
+
+### Specifications
+
+None.
+
+### Guides
+
+Update the README if the delivered path-safety behaviour changes operator expectations.
+
+### Roadmap
+
+No additional roadmap impact.
+
 ## Discussion
 
 ### The collision is the whole problem

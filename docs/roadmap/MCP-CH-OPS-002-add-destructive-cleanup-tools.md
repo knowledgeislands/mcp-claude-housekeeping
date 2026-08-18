@@ -66,6 +66,24 @@ Nothing blocks this item and it blocks nothing; both frontmatter arrays are empt
 
 The one genuine coupling is conventional rather than mechanical: if OPS-001 introduces a new safety idiom for destructive tools, the tools added here should adopt it. That argues for taking OPS-001 first, but it does not block this item.
 
+## Documentation impact
+
+### Decision Records
+
+None.
+
+### Specifications
+
+None.
+
+### Guides
+
+Document destructive cleanup tools, safety defaults, and dry-run behaviour in the README.
+
+### Roadmap
+
+No additional roadmap impact.
+
 ## Discussion
 
 ### Preview and effect must share one predicate

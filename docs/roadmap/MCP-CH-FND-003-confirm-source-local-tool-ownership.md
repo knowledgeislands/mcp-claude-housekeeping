@@ -4,7 +4,7 @@ area: FND
 title: Schema Claude Desktop outputs
 theme: foundation-tooling
 horizon: now
-status: draft
+status: ready
 blocks: []
 blocked_by: []
 baseline_ref: null

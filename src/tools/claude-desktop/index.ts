@@ -83,6 +83,237 @@ export const memoryFileNameArg = z
   )
   .refine((s) => !s.startsWith('-') && !s.includes('..'), 'Memory file name must not start with "-" or contain "..".')
 
+const countOutput = z.number().int().nonnegative()
+const fileSizeOutput = z.object({ name: z.string(), bytes: countOutput }).strict()
+const datedFileSizeOutput = fileSizeOutput.extend({ modified: z.string() }).strict()
+const workspaceResultOutput = <T extends z.ZodRawShape>(shape: T) =>
+  z
+    .object({
+      root_path: z.string(),
+      workspace_count: countOutput,
+      workspaces: z.array(z.object({ workspace: z.string(), ...shape }).strict())
+    })
+    .strict()
+
+const storageSummaryOutput = workspaceResultOutput({
+  session_count: countOutput,
+  session_json_count: countOutput,
+  total_bytes: countOutput,
+  json_total_bytes: countOutput,
+  oldest_session_json: z.object({ name: z.string(), date: z.string() }).strict().nullable(),
+  newest_session_json: z.object({ name: z.string(), date: z.string() }).strict().nullable(),
+  top_5_largest_session_dirs: z.array(fileSizeOutput),
+  flags: z.array(z.string())
+})
+const obsoleteSessionsOutput = workspaceResultOutput({
+  cutoff_date: z.string(),
+  older_than_days: countOutput,
+  obsolete_count: countOutput,
+  total_bytes: countOutput,
+  top_10_oldest: z.array(
+    z
+      .object({
+        name: z.string(),
+        last_activity: z.string(),
+        age_days: countOutput,
+        bytes: countOutput
+      })
+      .strict()
+  ),
+  flags: z.array(z.string())
+})
+const artifactHealthOutput = workspaceResultOutput({
+  total: countOutput,
+  starred: countOutput,
+  items: z.array(
+    z
+      .object({
+        id: z.string(),
+        name: z.string(),
+        starred: z.boolean(),
+        version_count: countOutput,
+        last_updated: z.string().nullable(),
+        age_days: countOutput.nullable(),
+        mcp_tools: z.array(z.string()),
+        flags: z.array(z.string())
+      })
+      .strict()
+  )
+})
+const obsoleteOutputsOutput = workspaceResultOutput({
+  older_than_days: countOutput,
+  sessions_with_artifacts: countOutput,
+  obsolete_count: countOutput,
+  findings: z.array(
+    z
+      .object({
+        session: z.string(),
+        session_age_days: countOutput.nullable(),
+        obsolete: z.boolean(),
+        outputs: z.array(fileSizeOutput),
+        uploads: z.array(fileSizeOutput)
+      })
+      .strict()
+  )
+})
+const backupSummaryOutput = workspaceResultOutput({
+  count: countOutput,
+  total_bytes: countOutput,
+  items: z.array(z.object({ path: z.string(), bytes: countOutput, modified: z.string() }).strict()),
+  flags: z.array(z.string())
+})
+const memorySpacesSummaryOutput = workspaceResultOutput({
+  spaces_dir_exists: z.boolean(),
+  spaces: z.array(
+    z
+      .object({
+        space_id: z.string(),
+        memory_dir_exists: z.boolean(),
+        memory_file_count: countOutput,
+        memory_files: z.array(z.string()),
+        index_hook: z.string().nullable(),
+        other_entries: z.array(z.string()),
+        flags: z.array(z.string())
+      })
+      .strict()
+  )
+})
+const pluginsInventoryOutput = workspaceResultOutput({
+  knowledge_work: z.array(
+    z
+      .object({
+        plugin: z.string(),
+        version: z.string(),
+        installed_at: z.string(),
+        last_updated: z.string(),
+        install_age_days: countOutput
+      })
+      .strict()
+  ),
+  rpm: z.array(
+    z
+      .object({
+        id: z.string(),
+        name: z.string(),
+        updated_at: z.string(),
+        marketplace: z.string().optional(),
+        installed_by: z.string().optional()
+      })
+      .strict()
+  ),
+  flags: z.array(z.string())
+})
+const projectCacheStatusOutput = workspaceResultOutput({
+  cache_dir_exists: z.boolean(),
+  projects: z.array(
+    z
+      .object({
+        uuid: z.string(),
+        name: z.string().nullable(),
+        synced_at: z.string().nullable(),
+        sync_age_days: countOutput.nullable(),
+        flags: z.array(z.string())
+      })
+      .strict()
+  )
+})
+const debugInfoOutput = workspaceResultOutput({
+  exists: z.boolean(),
+  bytes: countOutput,
+  entry_count: countOutput,
+  oldest_entry_age_days: countOutput.nullable(),
+  flags: z.array(z.string())
+})
+const workspacesListOutput = z
+  .object({
+    root_path: z.string(),
+    workspace_count: countOutput,
+    workspaces: z.array(z.object({ id: z.string(), root: z.string() }).strict())
+  })
+  .strict()
+const memoryListOutput = z
+  .object({
+    workspace: z.string(),
+    space_id: z.string(),
+    file_count: countOutput,
+    files: z.array(datedFileSizeOutput),
+    index: z.string().nullable()
+  })
+  .strict()
+const memoryReadOutput = z
+  .object({ workspace: z.string(), space_id: z.string(), name: z.string(), content: z.string() })
+  .strict()
+const reportsListOutput = z
+  .object({
+    housekeeping_dir: z.string(),
+    exists: z.boolean(),
+    reports: z.array(datedFileSizeOutput)
+  })
+  .strict()
+const prunedArtifactOutput = z
+  .object({
+    id: z.string(),
+    name: z.string(),
+    last_updated: z.string().nullable(),
+    version_count: countOutput,
+    cache_file_deleted: z.boolean()
+  })
+  .strict()
+const artifactPruneOutput = z.union([
+  z
+    .object({
+      workspace: z.string(),
+      kept: countOutput,
+      deleted: z.array(prunedArtifactOutput).length(0),
+      dry_run: z.boolean(),
+      note: z.string()
+    })
+    .strict(),
+  z
+    .object({
+      workspace: z.string(),
+      kept: countOutput,
+      deleted_count: countOutput,
+      deleted: z.array(prunedArtifactOutput),
+      dry_run: z.boolean()
+    })
+    .strict()
+])
+const reportsClearOutput = z
+  .object({
+    housekeeping_dir: z.string(),
+    deleted: z.array(z.string()),
+    dry_run: z.boolean(),
+    note: z.string().optional()
+  })
+  .strict()
+const reportWriteOutput = z.object({ path: z.string(), bytes: countOutput, filename: z.string() }).strict()
+const memoryWriteOutput = z
+  .object({ workspace: z.string(), space_id: z.string(), name: z.string(), bytes: countOutput })
+  .strict()
+const memoryDeleteOutput = z
+  .object({
+    workspace: z.string(),
+    space_id: z.string(),
+    name: z.string(),
+    dry_run: z.boolean(),
+    deleted: z.boolean(),
+    bytes: countOutput
+  })
+  .strict()
+const memoryIndexWriteOutput = z.object({ workspace: z.string(), space_id: z.string(), bytes: countOutput }).strict()
+const sessionRenameOutput = z
+  .object({
+    workspace: z.string(),
+    session_id: z.string(),
+    previous_title: z.string().nullable(),
+    new_title: z.string(),
+    auto_selected: z.boolean(),
+    dry_run: z.boolean(),
+    renamed: z.boolean()
+  })
+  .strict()
+
 export const registerClaudeDesktopTools = (server: McpServer, cfg: Config): void => {
   const register = server.registerTool
   const rootPath = cfg.claudeDesktopRootPath
@@ -116,6 +347,7 @@ export const registerClaudeDesktopTools = (server: McpServer, cfg: Config): void
           workspace: workspaceArg
         })
         .strict(),
+      outputSchema: storageSummaryOutput,
       annotations: READ_ONLY
     },
     async ({ workspace, ...args }) => {
@@ -140,6 +372,7 @@ export const registerClaudeDesktopTools = (server: McpServer, cfg: Config): void
           workspace: workspaceArg
         })
         .strict(),
+      outputSchema: obsoleteSessionsOutput,
       annotations: READ_ONLY
     },
     async ({ workspace, ...args }) => {
@@ -164,6 +397,7 @@ export const registerClaudeDesktopTools = (server: McpServer, cfg: Config): void
           workspace: workspaceArg
         })
         .strict(),
+      outputSchema: artifactHealthOutput,
       annotations: READ_ONLY
     },
     async ({ workspace, ...args }) => {
@@ -186,6 +420,7 @@ export const registerClaudeDesktopTools = (server: McpServer, cfg: Config): void
           workspace: workspaceArg
         })
         .strict(),
+      outputSchema: obsoleteOutputsOutput,
       annotations: READ_ONLY
     },
     async ({ workspace, ...args }) => {
@@ -209,6 +444,7 @@ export const registerClaudeDesktopTools = (server: McpServer, cfg: Config): void
           workspace: workspaceArg
         })
         .strict(),
+      outputSchema: backupSummaryOutput,
       annotations: READ_ONLY
     },
     async ({ workspace, ...args }) => {
@@ -231,6 +467,7 @@ export const registerClaudeDesktopTools = (server: McpServer, cfg: Config): void
           workspace: workspaceArg
         })
         .strict(),
+      outputSchema: memorySpacesSummaryOutput,
       annotations: READ_ONLY
     },
     async ({ workspace, ...args }) => {
@@ -248,6 +485,7 @@ export const registerClaudeDesktopTools = (server: McpServer, cfg: Config): void
       title: 'Claude Desktop Auditor: plugin inventory',
       description: `Audit check 8. List installed knowledge-work plugins from each workspace's cowork_plugins/installed_plugins.json (with version, installedAt, lastUpdated, age) and rpm/manifest.json plugins (with name, updatedAt). Flags any knowledge-work install whose age is significantly older than the median (>30d above median).`,
       inputSchema: z.object({ workspace: workspaceArg }).strict(),
+      outputSchema: pluginsInventoryOutput,
       annotations: READ_ONLY
     },
     async ({ workspace }) => {
@@ -270,6 +508,7 @@ export const registerClaudeDesktopTools = (server: McpServer, cfg: Config): void
           workspace: workspaceArg
         })
         .strict(),
+      outputSchema: projectCacheStatusOutput,
       annotations: READ_ONLY
     },
     async ({ workspace, ...args }) => {
@@ -293,6 +532,7 @@ export const registerClaudeDesktopTools = (server: McpServer, cfg: Config): void
           workspace: workspaceArg
         })
         .strict(),
+      outputSchema: debugInfoOutput,
       annotations: READ_ONLY
     },
     async ({ workspace, ...args }) => {
@@ -310,6 +550,7 @@ export const registerClaudeDesktopTools = (server: McpServer, cfg: Config): void
       title: 'Claude Desktop Auditor: list discovered workspaces',
       description: `List the workspace ids ("<account>/<workspace>") and absolute roots discovered under rootPath. Use the ids when targeting a specific workspace via the optional "workspace" arg on other tools.`,
       inputSchema: z.object({}).strict(),
+      outputSchema: workspacesListOutput,
       annotations: READ_ONLY
     },
     async () => {
@@ -333,6 +574,7 @@ export const registerClaudeDesktopTools = (server: McpServer, cfg: Config): void
           workspace: workspaceArg
         })
         .strict(),
+      outputSchema: memoryListOutput,
       annotations: READ_ONLY
     },
     async ({ workspace, ...args }) => {
@@ -357,6 +599,7 @@ export const registerClaudeDesktopTools = (server: McpServer, cfg: Config): void
           workspace: workspaceArg
         })
         .strict(),
+      outputSchema: memoryReadOutput,
       annotations: READ_ONLY
     },
     async ({ workspace, ...args }) => {
@@ -375,6 +618,7 @@ export const registerClaudeDesktopTools = (server: McpServer, cfg: Config): void
       title: 'Claude Desktop Auditor: list existing audit reports',
       description: `List cowork-audit-*.md files currently in MCP_CLAUDE_HOUSEKEEPING_PATH with size and modified date, sorted newest first. Useful for confirming yesterday's report exists before cleaning, or showing a history.`,
       inputSchema: z.object({}).strict(),
+      outputSchema: reportsListOutput,
       annotations: READ_ONLY
     },
     async () => {
@@ -402,6 +646,7 @@ export const registerClaudeDesktopTools = (server: McpServer, cfg: Config): void
           workspace: workspaceArg
         })
         .strict(),
+      outputSchema: artifactPruneOutput,
       annotations: DESTRUCTIVE_ONESHOT
     },
     async ({ workspace, ...args }) => {
@@ -424,6 +669,7 @@ export const registerClaudeDesktopTools = (server: McpServer, cfg: Config): void
           dry_run: z.boolean().default(true).describe('Default true (preview only). Pass false to actually delete.')
         })
         .strict(),
+      outputSchema: reportsClearOutput,
       annotations: DESTRUCTIVE
     },
     async (args) => {
@@ -450,6 +696,7 @@ export const registerClaudeDesktopTools = (server: McpServer, cfg: Config): void
             .describe('YYYY-MM-DD; defaults to today (UTC).')
         })
         .strict(),
+      outputSchema: reportWriteOutput,
       annotations: DESTRUCTIVE
     },
     async (args) => {
@@ -474,6 +721,7 @@ export const registerClaudeDesktopTools = (server: McpServer, cfg: Config): void
           workspace: workspaceArg
         })
         .strict(),
+      outputSchema: memoryWriteOutput,
       annotations: DESTRUCTIVE
     },
     async ({ workspace, ...args }) => {
@@ -499,6 +747,7 @@ export const registerClaudeDesktopTools = (server: McpServer, cfg: Config): void
           workspace: workspaceArg
         })
         .strict(),
+      outputSchema: memoryDeleteOutput,
       annotations: DESTRUCTIVE_ONESHOT
     },
     async ({ workspace, ...args }) => {
@@ -523,6 +772,7 @@ export const registerClaudeDesktopTools = (server: McpServer, cfg: Config): void
           workspace: workspaceArg
         })
         .strict(),
+      outputSchema: memoryIndexWriteOutput,
       annotations: DESTRUCTIVE
     },
     async ({ workspace, ...args }) => {
@@ -559,6 +809,7 @@ export const registerClaudeDesktopTools = (server: McpServer, cfg: Config): void
           workspace: workspaceArg
         })
         .strict(),
+      outputSchema: sessionRenameOutput,
       annotations: DESTRUCTIVE
     },
     async ({ workspace, ...args }) => {

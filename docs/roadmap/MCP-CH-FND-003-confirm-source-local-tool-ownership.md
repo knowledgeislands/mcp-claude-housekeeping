@@ -4,7 +4,7 @@ area: FND
 title: Schema Claude Desktop outputs
 theme: foundation-tooling
 horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: 949474965f3500bfefd237443203a08bf875b85d
@@ -92,6 +92,10 @@ The schemas describe observed return shapes without introducing a generic record
 ### Mini recap
 
 Claude Desktop now exposes the same explicit result-contract discipline as the sibling Claude Code and VS Code modules. The genuine `TOOL-1` warning is resolved; only unrelated authoring-template drift remains.
+
+## Done
+
+Accepted on 2026-08-21 after all 20 result contracts, registration tests, full coverage, build, and repository-audit evidence recorded above was approved. The pre-existing `.rumdl.toml` template drift remains separate cleanup.
 
 ## Discussion
 

@@ -1,8 +1,8 @@
 // @ts-nocheck
-// Generated on 2026-07-19T00:07:27.719Z by @knowledgeislands/mcp-claude-housekeeping@1.0.0
-// Server: kit-mcp-claude-housekeeping
+// Generated on 2026-07-19T00:07:27.719Z by @knowledgeislands/mcp-housekeeping-claude@1.0.0
+// Server: kit-mcp-housekeeping-claude
 // Source: /Users/krisbrown/.mcporter/mcporter.json
-// Transport: STDIO /Users/krisbrown/.local/share/mise/installs/node/lts/bin/node /Users/krisbrown/workspaces/kis/knowledgeislands/mcp-claude-housekeeping/dist/mcp-server/index.js
+// Transport: STDIO /Users/krisbrown/.local/share/mise/installs/node/lts/bin/node /Users/krisbrown/workspaces/kis/knowledgeislands/mcp-housekeeping-claude/dist/mcp-server/index.js
 
 import { createRuntime, createServerProxy, wrapCallResult } from 'mcporter';
 import type { KitMcpClaudeHousekeepingTools } from './types';
@@ -22,7 +22,7 @@ export async function createKitMcpClaudeHousekeepingClient(options: CreateClient
     rootDir: options.rootDir,
   }));
   const ownsRuntime = !options.runtime;
-  const proxy = createServerProxy(runtime, "kit-mcp-claude-housekeeping");
+  const proxy = createServerProxy(runtime, "kit-mcp-housekeeping-claude");
   const client: KitMcpClaudeHousekeepingClient = {
     async claude_desktop_storage_summary(params: Parameters<KitMcpClaudeHousekeepingTools["claude_desktop_storage_summary"]>[0]) {
       const tool = proxy.claudeDesktopStorageSummary as (args: Parameters<KitMcpClaudeHousekeepingTools["claude_desktop_storage_summary"]>[0]) => Promise<unknown>;
@@ -170,7 +170,7 @@ export async function createKitMcpClaudeHousekeepingClient(options: CreateClient
 
     async close() {
       if (ownsRuntime) {
-        await runtime.close("kit-mcp-claude-housekeeping").catch(() => {});
+        await runtime.close("kit-mcp-housekeeping-claude").catch(() => {});
       }
     },
   };

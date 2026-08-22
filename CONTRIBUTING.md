@@ -7,8 +7,8 @@ Thanks for your interest. This file covers the dev loop, conventions, and what t
 You'll need [Bun](https://bun.sh) 1.3+ for the dev loop, and Node.js 22+ to run the compiled `dist/` output the published package ships.
 
 ```bash
-git clone https://github.com/knowledgeislands/mcp-claude-housekeeping.git
-cd mcp-claude-housekeeping
+git clone https://github.com/knowledgeislands/mcp-housekeeping-claude.git
+cd mcp-housekeeping-claude
 bun install
 ```
 

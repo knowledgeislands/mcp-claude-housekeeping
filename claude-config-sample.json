@@ -1,10 +1,10 @@
 {
   "mcpServers": {
-    "mcp-claude-housekeeping": {
+    "mcp-housekeeping-claude": {
       "command": "node",
-      "args": ["/path/to/mcp-claude-housekeeping/dist/mcp-server/index.js"],
+      "args": ["/path/to/mcp-housekeeping-claude/dist/mcp-server/index.js"],
       "env": {
-        "MCP_CLAUDE_HOUSEKEEPING_PATH": "/Users/you/Documents/Claude/Projects/Claude Housekeeping"
+        "MCP_HOUSEKEEPING_CLAUDE_PATH": "/Users/you/Documents/Claude/Projects/Claude Housekeeping"
       }
     }
   }

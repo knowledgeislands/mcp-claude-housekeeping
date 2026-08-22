@@ -1,13 +1,13 @@
 {
-  "name": "@knowledgeislands/mcp-claude-housekeeping",
+  "name": "@knowledgeislands/mcp-housekeeping-claude",
   "description": "MCP for auditing and pruning Claude Code session files and memory on the local filesystem.",
   "version": "0.9.0",
   "author": "kris@kris.me.uk",
   "bin": {
-    "mcp-claude-housekeeping": "dist/mcp-server/index.js"
+    "mcp-housekeeping-claude": "dist/mcp-server/index.js"
   },
   "bugs": {
-    "url": "https://github.com/knowledgeislands/mcp-claude-housekeeping/issues"
+    "url": "https://github.com/knowledgeislands/mcp-housekeeping-claude/issues"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",
@@ -55,7 +55,7 @@
   "files": [
     "dist"
   ],
-  "homepage": "https://github.com/knowledgeislands/mcp-claude-housekeeping#readme",
+  "homepage": "https://github.com/knowledgeislands/mcp-housekeeping-claude#readme",
   "keywords": [
     "anthropic",
     "audit",
@@ -78,13 +78,13 @@
   "packageManager": "bun@1.3.14",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/knowledgeislands/mcp-claude-housekeeping.git"
+    "url": "git+https://github.com/knowledgeislands/mcp-housekeeping-claude.git"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "clean": "rm -rf {dist,node_modules}",
     "ki:deps:update": "bun update --latest",
-    "ki:generate:client": "mcporter emit-ts kit-mcp-claude-housekeeping --mode client --out src/generated/client.ts --types-out src/generated/types.d.ts && printf '// @ts-nocheck\\n' | cat - src/generated/client.ts > /tmp/gen-tmp.ts && mv /tmp/gen-tmp.ts src/generated/client.ts",
+    "ki:generate:client": "mcporter emit-ts kit-mcp-housekeeping-claude --mode client --out src/generated/client.ts --types-out src/generated/types.d.ts && printf '// @ts-nocheck\\n' | cat - src/generated/client.ts > /tmp/gen-tmp.ts && mv /tmp/gen-tmp.ts src/generated/client.ts",
     "ki:server:mcp:dev": "NODE_ENV=development bun --watch src/mcp-server/index.ts",
     "ki:server:mcp:inspect": "NODE_ENV=development bunx @modelcontextprotocol/inspector bun src/mcp-server/index.ts",
     "ki:server:mcp:start": "bun run build && node dist/mcp-server/index.js",

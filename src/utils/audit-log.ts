@@ -1,12 +1,12 @@
 /**
  * Append-only JSONL audit log for tool invocations.
  *
- * Scope is controlled by MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG: `off` (no logging),
+ * Scope is controlled by MCP_HOUSEKEEPING_CLAUDE_AUDIT_LOG: `off` (no logging),
  * `writes` (default — `write` and `destructive` levels only, i.e. anything not
  * annotated `readOnlyHint: true`), or `all` (every tool, including read).
  * Level is derived from each tool's MCP annotations by `makeAccessGatedRegister`.
- * Path is configurable via MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_PATH; defaults to
- * `<MCP_CLAUDE_HOUSEKEEPING_PATH>/audit/audit.jsonl`. Mode, path, size cap and
+ * Path is configurable via MCP_HOUSEKEEPING_CLAUDE_AUDIT_LOG_PATH; defaults to
+ * `<MCP_HOUSEKEEPING_CLAUDE_PATH>/audit/audit.jsonl`. Mode, path, size cap and
  * keep count all arrive as the `AuditConfig` slice of the loaded Config.
  *
  * The log rotates on size: after each append, if the file exceeds
@@ -40,7 +40,7 @@ export interface AuditEvent {
   args: unknown
 }
 
-const SERVER_NAME = 'mcp-claude-housekeeping'
+const SERVER_NAME = 'mcp-housekeeping-claude'
 const MAX_ARG_CHARS = 4096
 
 /**

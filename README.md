@@ -1,13 +1,13 @@
-# mcp-claude-housekeeping
+# mcp-housekeeping-claude
 
-[![CI](https://github.com/knowledgeislands/mcp-claude-housekeeping/actions/workflows/ci.yml/badge.svg)](https://github.com/knowledgeislands/mcp-claude-housekeeping/actions/workflows/ci.yml) [![npm version](https://img.shields.io/npm/v/@knowledgeislands/mcp-claude-housekeeping.svg)](https://www.npmjs.com/package/@knowledgeislands/mcp-claude-housekeeping) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+[![CI](https://github.com/knowledgeislands/mcp-housekeeping-claude/actions/workflows/ci.yml/badge.svg)](https://github.com/knowledgeislands/mcp-housekeeping-claude/actions/workflows/ci.yml) [![npm version](https://img.shields.io/npm/v/@knowledgeislands/mcp-housekeeping-claude.svg)](https://www.npmjs.com/package/@knowledgeislands/mcp-housekeeping-claude) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
 An MCP (Model Context Protocol) server for housekeeping the three filesystem areas where Claude apps accumulate state on macOS: **Claude Desktop / Cowork sessions**, **Claude Code** (`~/.claude/`), and **VSCode chat sessions**. Each audit step is a dedicated tool; the agent orchestrates the checks and writes a markdown report.
 
 ## Features
 
 - **Codified audits across three storage areas** — 39 tools spanning Cowork local-agent-mode-sessions (the daily `cowork-filesystem-audit`), `~/.claude/` Claude Code state, and VSCode `workspaceStorage/<id>/chatSessions/`.
-- **Access-level gated tools** — every tool maps to one of `read`, `write`, or `destructive`. Set `MCP_CLAUDE_HOUSEKEEPING_ACCESS_LEVEL` to the maximum level you want exposed; defaults to `read` only. Levels nest. The level is derived from each tool's MCP annotations (`readOnlyHint` / `destructiveHint`), not its name. (Housekeeping ships only `read` and `destructive` tools today — no `write` tier.)
+- **Access-level gated tools** — every tool maps to one of `read`, `write`, or `destructive`. Set `MCP_HOUSEKEEPING_CLAUDE_ACCESS_LEVEL` to the maximum level you want exposed; defaults to `read` only. Levels nest. The level is derived from each tool's MCP annotations (`readOnlyHint` / `destructiveHint`), not its name. (Housekeeping ships only `read` and `destructive` tools today — no `write` tier.)
 - **Workspace auto-discovery** (Cowork only) — walks `~/Library/Application Support/Claude/local-agent-mode-sessions/<account>/<workspace>/` and aggregates results across every discovered workspace.
 - **Path-safe** — every path is validated against its configured root; memory operations are also confined to their `memory/` subdir.
 - **No network, no auth** — pure local filesystem over MCP stdio.
@@ -33,7 +33,7 @@ Tools follow the convention `<app>_<resource>_<action>`. Each tool's access leve
 | `claude_desktop_debug_info` | `debug/` size, entry count, oldest entry age. |
 | `claude_desktop_memory_list` | List `.md` files + `MEMORY.md` content for one space. |
 | `claude_desktop_memory_read` | Read one memory file. |
-| `claude_desktop_reports_list` | List existing `cowork-audit-*.md` reports in `MCP_CLAUDE_HOUSEKEEPING_PATH`. |
+| `claude_desktop_reports_list` | List existing `cowork-audit-*.md` reports in `MCP_HOUSEKEEPING_CLAUDE_PATH`. |
 | `claude_desktop_workspaces_list` | List discovered `<account>/<workspace>` workspace ids. |
 
 ### `claude_desktop_*` — destructive (`destructive` level)
@@ -41,8 +41,8 @@ Tools follow the convention `<app>_<resource>_<action>`. Each tool's access leve
 | Tool | Purpose |
 | --- | --- |
 | `claude_desktop_artifacts_prune` | Delete unstarred artifacts beyond top N (default 5) by `lastUpdated`. |
-| `claude_desktop_reports_clear` | Delete every `cowork-audit-*.md` from `MCP_CLAUDE_HOUSEKEEPING_PATH`, with `dry_run`. |
-| `claude_desktop_report_write` | Save `cowork-audit-YYYY-MM-DD.md` to `MCP_CLAUDE_HOUSEKEEPING_PATH`. |
+| `claude_desktop_reports_clear` | Delete every `cowork-audit-*.md` from `MCP_HOUSEKEEPING_CLAUDE_PATH`, with `dry_run`. |
+| `claude_desktop_report_write` | Save `cowork-audit-YYYY-MM-DD.md` to `MCP_HOUSEKEEPING_CLAUDE_PATH`. |
 | `claude_desktop_memory_write` | Create/overwrite a memory file in `spaces/<space_id>/memory/<name>.md`. |
 | `claude_desktop_memory_delete` | Retire a memory file (cannot delete `MEMORY.md`). |
 | `claude_desktop_memory_index_write` | Replace `MEMORY.md` for a space. |
@@ -105,7 +105,7 @@ A typical `cowork-filesystem-audit` run uses the tools in this order:
 
 1. **Install dependencies**: `bun install`.
 2. **Build**: `bun run build`.
-3. **Configure Claude Desktop** with `dist/mcp-server/index.js` and `MCP_CLAUDE_HOUSEKEEPING_PATH` (see [Configuration](#configuration)). The sessions root, Claude Code state, and VSCode chat storage are all read from their standard macOS locations under your home dir — no configuration needed.
+3. **Configure Claude Desktop** with `dist/mcp-server/index.js` and `MCP_HOUSEKEEPING_CLAUDE_PATH` (see [Configuration](#configuration)). The sessions root, Claude Code state, and VSCode chat storage are all read from their standard macOS locations under your home dir — no configuration needed.
 4. **Restart Claude Desktop** — the `claude_desktop_*`, `claude_code_*`, and `vscode_*` tools should appear.
 
 ## Example Conversations
@@ -116,7 +116,7 @@ Concrete asks you might make of Claude with this server connected.
 
 > "Run the daily cowork filesystem audit and write today's report."
 
-Claude clears yesterday's report via `claude_desktop_reports_clear`, runs every read-only check in parallel (storage summary, obsolete sessions, artifact health, backups, memory spaces, plugins, cache, debug info), then writes `cowork-audit-YYYY-MM-DD.md` to `MCP_CLAUDE_HOUSEKEEPING_PATH` via `claude_desktop_report_write`. See the full ordering under [Daily Audit — Tool Choreography](#daily-audit--tool-choreography).
+Claude clears yesterday's report via `claude_desktop_reports_clear`, runs every read-only check in parallel (storage summary, obsolete sessions, artifact health, backups, memory spaces, plugins, cache, debug info), then writes `cowork-audit-YYYY-MM-DD.md` to `MCP_HOUSEKEEPING_CLAUDE_PATH` via `claude_desktop_report_write`. See the full ordering under [Daily Audit — Tool Choreography](#daily-audit--tool-choreography).
 
 **Audit before cleaning:**
 
@@ -134,7 +134,7 @@ Claude uses `claude_desktop_memory_spaces_summary` to find the candidate, then `
 
 > "Free some disk — drop unstarred artifacts beyond the top 5 most recently updated."
 
-Claude calls `claude_desktop_artifacts_prune` (destructive; requires `MCP_CLAUDE_HOUSEKEEPING_ACCESS_LEVEL=destructive`). Starred artifacts are always preserved and the top N most recent are kept regardless of star status.
+Claude calls `claude_desktop_artifacts_prune` (destructive; requires `MCP_HOUSEKEEPING_CLAUDE_ACCESS_LEVEL=destructive`). Starred artifacts are always preserved and the top N most recent are kept regardless of star status.
 
 ## Installation
 
@@ -156,12 +156,12 @@ bun install
 
 | Name | Required | Description |
 | --- | --- | --- |
-| `MCP_CLAUDE_HOUSEKEEPING_PATH` | yes | Absolute path or `~/...` to the directory where audit reports are written. |
-| `MCP_CLAUDE_HOUSEKEEPING_ACCESS_LEVEL` | no | Maximum tool access level to register.† |
-| `MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG` | no | Audit-log scope.‡ |
-| `MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_PATH` | no | Path to the JSONL audit log. Default `<MCP_CLAUDE_HOUSEKEEPING_PATH>/audit/audit.jsonl`. |
-| `MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_MAX_BYTES` | no | Size-based rotation threshold in bytes.§ |
-| `MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_KEEP` | no | Number of rotated audit-log files to retain. Default `5`. |
+| `MCP_HOUSEKEEPING_CLAUDE_PATH` | yes | Absolute path or `~/...` to the directory where audit reports are written. |
+| `MCP_HOUSEKEEPING_CLAUDE_ACCESS_LEVEL` | no | Maximum tool access level to register.† |
+| `MCP_HOUSEKEEPING_CLAUDE_AUDIT_LOG` | no | Audit-log scope.‡ |
+| `MCP_HOUSEKEEPING_CLAUDE_AUDIT_LOG_PATH` | no | Path to the JSONL audit log. Default `<MCP_HOUSEKEEPING_CLAUDE_PATH>/audit/audit.jsonl`. |
+| `MCP_HOUSEKEEPING_CLAUDE_AUDIT_LOG_MAX_BYTES` | no | Size-based rotation threshold in bytes.§ |
+| `MCP_HOUSEKEEPING_CLAUDE_AUDIT_LOG_KEEP` | no | Number of rotated audit-log files to retain. Default `5`. |
 | `NODE_ENV` | no | Dev convention; controls which `.env` files [`loadConfig()`](./src/config/index.ts) loads.¶ |
 
 † Maximum tool access level to register. One of: `read` (default — read-only tools only, least privilege), `write` (reserved — no such tools today), `destructive` (adds prune/relocate/delete). Levels nest. Each tool's level is derived from its MCP annotations (`readOnlyHint: true` → `read`; `destructiveHint: true` → `destructive`; missing annotations → `destructive` fail-safe); a tool registers when its derived level ≤ the configured level. The `dry_run: true` default on destructive tools controls _effect_; the gate controls _visibility_. Unknown values abort startup.
@@ -181,11 +181,11 @@ Run `bun run build` first so `dist/mcp-server/index.js` exists, then add to your
 ```json
 {
   "mcpServers": {
-    "mcp-claude-housekeeping": {
+    "mcp-housekeeping-claude": {
       "command": "node",
-      "args": ["/path/to/mcp-claude-housekeeping/dist/mcp-server/index.js"],
+      "args": ["/path/to/mcp-housekeeping-claude/dist/mcp-server/index.js"],
       "env": {
-        "MCP_CLAUDE_HOUSEKEEPING_PATH": "/Users/you/Documents/Claude/Projects/Claude Housekeeping"
+        "MCP_HOUSEKEEPING_CLAUDE_PATH": "/Users/you/Documents/Claude/Projects/Claude Housekeeping"
       }
     }
   }
@@ -196,7 +196,7 @@ A starter is in [`claude-config-sample.json`](./claude-config-sample.json).
 
 ### Running From Source (Dev)
 
-Copy [`.env.example`](./.env.example) to `.env.development` and fill in `MCP_CLAUDE_HOUSEKEEPING_PATH`. The `ki:server:mcp:dev` and `ki:server:mcp:inspect` scripts run with `NODE_ENV=development`. [`loadConfig()`](./src/config/index.ts) hydrates `process.env` from the package root, highest precedence first — `.env.local`, then `.env.${NODE_ENV}` (so `.env.development` here), then `.env` — and Bun auto-loads the same set. A var already in the environment always wins, so under Claude Desktop `MCP_CLAUDE_HOUSEKEEPING_PATH` comes from the config `env` block regardless of any file.
+Copy [`.env.example`](./.env.example) to `.env.development` and fill in `MCP_HOUSEKEEPING_CLAUDE_PATH`. The `ki:server:mcp:dev` and `ki:server:mcp:inspect` scripts run with `NODE_ENV=development`. [`loadConfig()`](./src/config/index.ts) hydrates `process.env` from the package root, highest precedence first — `.env.local`, then `.env.${NODE_ENV}` (so `.env.development` here), then `.env` — and Bun auto-loads the same set. A var already in the environment always wins, so under Claude Desktop `MCP_HOUSEKEEPING_CLAUDE_PATH` comes from the config `env` block regardless of any file.
 
 ```bash
 cp .env.example .env.development
@@ -207,7 +207,7 @@ bun run ki:server:mcp:dev
 You can also pass the vars inline if you'd rather skip `.env.development`:
 
 ```bash
-MCP_CLAUDE_HOUSEKEEPING_PATH=~/Documents/Claude/Projects/Claude\ Housekeeping \
+MCP_HOUSEKEEPING_CLAUDE_PATH=~/Documents/Claude/Projects/Claude\ Housekeeping \
   bun run ki:server:mcp:dev
 ```
 
@@ -233,7 +233,7 @@ ki repo audit --skill ki-authoring --repo .  # rumdl check for authored Markdown
 ## Security Model
 
 - All paths are validated against the discovered workspace root (or, for memory tools, against `<workspace>/spaces/<space_id>/memory/`). Inputs resolving outside their root are rejected with `Path escapes root: "<input>"`.
-- Every destructive tool (any annotated `DESTRUCTIVE` or `DESTRUCTIVE_ONESHOT`) carries `destructiveHint: true` so MCP clients can prompt before invoking them; the access-level gate at startup uses the same annotations (`readOnlyHint` / `destructiveHint`) to decide whether to register the tool at all under the configured `MCP_CLAUDE_HOUSEKEEPING_ACCESS_LEVEL`.
+- Every destructive tool (any annotated `DESTRUCTIVE` or `DESTRUCTIVE_ONESHOT`) carries `destructiveHint: true` so MCP clients can prompt before invoking them; the access-level gate at startup uses the same annotations (`readOnlyHint` / `destructiveHint`) to decide whether to register the tool at all under the configured `MCP_HOUSEKEEPING_CLAUDE_ACCESS_LEVEL`.
 - The server has no network access and performs no authentication. Trust is delegated entirely to the local OS user running it.
 
 ## Directory Structure
@@ -263,7 +263,7 @@ ki repo audit --skill ki-authoring --repo .  # rumdl check for authored Markdown
 
 ## Troubleshooting
 
-**`MCP_CLAUDE_HOUSEKEEPING_PATH environment variable must be set`**
+**`MCP_HOUSEKEEPING_CLAUDE_PATH environment variable must be set`**
 
 Set it in the Claude Desktop config `env` block, or as a shell variable for `ki:server:mcp:dev`. This is the only required env var; all target roots are hardcoded to their standard macOS locations.
 

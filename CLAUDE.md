@@ -8,7 +8,7 @@ This project uses Bun (≥ 1.3) for install and dev scripts, but the compiled `d
 
 - `bun run test` (NOT `bun test` — the latter invokes Bun's own runner instead of vitest).
 - Bun auto-loads `.env.${NODE_ENV}` from the CWD; Node needs the explicit `process.loadEnvFile()` call inside `loadConfig()` in [src/config/index.ts](./src/config/index.ts). The try/catch swallows the `TypeError` Bun raises (no `process.loadEnvFile`), so the same code works under both.
-- `NODE_ENV` is set to `development` only by `ki:server:mcp:dev` and `ki:server:mcp:inspect`. Claude Desktop doesn't set it, so `.env.*` is ignored in production — `MCP_CLAUDE_HOUSEKEEPING_PATH` must come from the Claude Desktop config `env` block.
+- `NODE_ENV` is set to `development` only by `ki:server:mcp:dev` and `ki:server:mcp:inspect`. Claude Desktop doesn't set it, so `.env.*` is ignored in production — `MCP_HOUSEKEEPING_CLAUDE_PATH` must come from the Claude Desktop config `env` block.
 
 Run `bun run` with no args for the full script list.
 
@@ -39,7 +39,7 @@ Tool names follow `<app>_<resource>_<action>` (snake_case). `<app>` ∈ {`claude
 - explicit `readOnlyHint: false` AND `destructiveHint: false` → `write` (non-destructive mutation; reserved — no such tools today)
 - anything else (unannotated / partially annotated) → `destructive` (fail-safe)
 
-A tool registers when its derived level is at or below `MCP_CLAUDE_HOUSEKEEPING_ACCESS_LEVEL` (default: `read`). Levels nest: `read` registers only readers; `write` adds non-destructive mutations; `destructive` adds prune/relocate/delete. New tools MUST set `annotations` to one of the presets in [src/utils/annotations.ts](./src/utils/annotations.ts): `READ_ONLY`, `DESTRUCTIVE`, or `DESTRUCTIVE_ONESHOT`. Do not bypass the proxy. The gate controls _visibility_; the `dry_run: true` default on destructive tools controls _effect_ — both layers are required.
+A tool registers when its derived level is at or below `MCP_HOUSEKEEPING_CLAUDE_ACCESS_LEVEL` (default: `read`). Levels nest: `read` registers only readers; `write` adds non-destructive mutations; `destructive` adds prune/relocate/delete. New tools MUST set `annotations` to one of the presets in [src/utils/annotations.ts](./src/utils/annotations.ts): `READ_ONLY`, `DESTRUCTIVE`, or `DESTRUCTIVE_ONESHOT`. Do not bypass the proxy. The gate controls _visibility_; the `dry_run: true` default on destructive tools controls _effect_ — both layers are required.
 
 ### Workspace discovery (Cowork only)
 

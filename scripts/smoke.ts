@@ -5,7 +5,7 @@
 // in-process registration call pattern; this covers the actual protocol round-trip).
 //
 // Run via `bun run test:smoke` (builds dist/ first). Runs in CI without real
-// secrets: the server only needs MCP_CLAUDE_HOUSEKEEPING_PATH to point at an
+// secrets: the server only needs MCP_HOUSEKEEPING_CLAUDE_PATH to point at an
 // existing dir, so we hand it the OS temp dir and crank the access level up to
 // `destructive` so every gated tool shows up.
 
@@ -76,12 +76,12 @@ const main = async (): Promise<void> => {
     // config validation passes without touching real Claude data.
     env: {
       ...(process.env as Record<string, string>),
-      MCP_CLAUDE_HOUSEKEEPING_ACCESS_LEVEL: 'destructive',
-      MCP_CLAUDE_HOUSEKEEPING_PATH: tmpdir(),
-      MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG: 'off'
+      MCP_HOUSEKEEPING_CLAUDE_ACCESS_LEVEL: 'destructive',
+      MCP_HOUSEKEEPING_CLAUDE_PATH: tmpdir(),
+      MCP_HOUSEKEEPING_CLAUDE_AUDIT_LOG: 'off'
     }
   })
-  const client = new Client({ name: 'mcp-claude-housekeeping-smoke', version: '0.0.0' }, { capabilities: {} })
+  const client = new Client({ name: 'mcp-housekeeping-claude-smoke', version: '0.0.0' }, { capabilities: {} })
 
   await client.connect(transport)
 

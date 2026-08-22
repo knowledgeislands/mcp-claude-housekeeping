@@ -1,7 +1,7 @@
-// Generated on 2026-07-19T00:07:27.719Z by @knowledgeislands/mcp-claude-housekeeping@1.0.0
-// Server: kit-mcp-claude-housekeeping
+// Generated on 2026-07-19T00:07:27.719Z by @knowledgeislands/mcp-housekeeping-claude@1.0.0
+// Server: kit-mcp-housekeeping-claude
 // Source: /Users/krisbrown/.mcporter/mcporter.json
-// Transport: STDIO /Users/krisbrown/.local/share/mise/installs/node/lts/bin/node /Users/krisbrown/workspaces/kis/knowledgeislands/mcp-claude-housekeeping/dist/mcp-server/index.js
+// Transport: STDIO /Users/krisbrown/.local/share/mise/installs/node/lts/bin/node /Users/krisbrown/workspaces/kis/knowledgeislands/mcp-housekeeping-claude/dist/mcp-server/index.js
 
 import type { CallResult } from 'mcporter';
 
@@ -128,7 +128,7 @@ export interface KitMcpClaudeHousekeepingTools {
   claude_desktop_memory_read(space_id: string, name: string, workspace?: string): Promise<CallResult>;
 
   /**
-   * List cowork-audit-*.md files currently in MCP_CLAUDE_HOUSEKEEPING_PATH with size and modified date,
+   * List cowork-audit-*.md files currently in MCP_HOUSEKEEPING_CLAUDE_PATH with size and modified date,
    * sorted newest first. Useful for confirming yesterday's report exists before cleaning, or showing a
    * history.
    */

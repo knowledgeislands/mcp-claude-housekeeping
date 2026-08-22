@@ -38,7 +38,7 @@ describe('appendAuditEvent / withAuditLog', () => {
     await flushAsync()
     const raw = await fs.readFile(logPath, 'utf-8')
     const event = JSON.parse(raw.trim())
-    expect(event.server).toBe('mcp-claude-housekeeping')
+    expect(event.server).toBe('mcp-housekeeping-claude')
     expect(event.tool).toBe('test_destructive_tool')
     expect(event.level).toBe('destructive')
     expect(event.ok).toBe(true)

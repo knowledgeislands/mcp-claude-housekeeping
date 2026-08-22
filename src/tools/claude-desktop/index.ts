@@ -616,7 +616,7 @@ export const registerClaudeDesktopTools = (server: McpServer, cfg: Config): void
     'claude_desktop_reports_list',
     {
       title: 'Claude Desktop Auditor: list existing audit reports',
-      description: `List cowork-audit-*.md files currently in MCP_CLAUDE_HOUSEKEEPING_PATH with size and modified date, sorted newest first. Useful for confirming yesterday's report exists before cleaning, or showing a history.`,
+      description: `List cowork-audit-*.md files currently in MCP_HOUSEKEEPING_CLAUDE_PATH with size and modified date, sorted newest first. Useful for confirming yesterday's report exists before cleaning, or showing a history.`,
       inputSchema: z.object({}).strict(),
       outputSchema: reportsListOutput,
       annotations: READ_ONLY
@@ -663,7 +663,7 @@ export const registerClaudeDesktopTools = (server: McpServer, cfg: Config): void
     'claude_desktop_reports_clear',
     {
       title: 'Claude Desktop Cleaner: delete prior audit reports',
-      description: `Step 0 of the daily audit. Delete every cowork-audit-*.md file in MCP_CLAUDE_HOUSEKEEPING_PATH so only today's report is retained. dry_run defaults to TRUE — it lists the files that would be deleted without removing them; pass dry_run=false to actually delete. Returns the list of (deleted or matched) filenames.`,
+      description: `Step 0 of the daily audit. Delete every cowork-audit-*.md file in MCP_HOUSEKEEPING_CLAUDE_PATH so only today's report is retained. dry_run defaults to TRUE — it lists the files that would be deleted without removing them; pass dry_run=false to actually delete. Returns the list of (deleted or matched) filenames.`,
       inputSchema: z
         .object({
           dry_run: z.boolean().default(true).describe('Default true (preview only). Pass false to actually delete.')
@@ -685,7 +685,7 @@ export const registerClaudeDesktopTools = (server: McpServer, cfg: Config): void
     'claude_desktop_report_write',
     {
       title: "Claude Desktop Cleaner: write today's audit report",
-      description: `Save the completed audit markdown to MCP_CLAUDE_HOUSEKEEPING_PATH/cowork-audit-YYYY-MM-DD.md. The date defaults to today (UTC). Creates the housekeeping directory if it does not exist. Returns the absolute path written.`,
+      description: `Save the completed audit markdown to MCP_HOUSEKEEPING_CLAUDE_PATH/cowork-audit-YYYY-MM-DD.md. The date defaults to today (UTC). Creates the housekeeping directory if it does not exist. Returns the absolute path written.`,
       inputSchema: z
         .object({
           content: z.string().describe('Full markdown content of the audit report.'),

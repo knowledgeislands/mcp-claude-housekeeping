@@ -72,7 +72,7 @@ export const ACCESS_LEVEL_RANK: Record<AccessLevel, number> = { read: 1, write: 
 export type AuditLogMode = 'off' | 'writes' | 'all'
 
 export interface Config {
-  /** Where audit reports are saved (MCP_CLAUDE_HOUSEKEEPING_PATH; required). */
+  /** Where audit reports are saved (MCP_HOUSEKEEPING_CLAUDE_PATH; required). */
   housekeepingPath: string
   accessLevel: AccessLevel
   /** Cowork local-agent-mode-sessions root (derived from home; not user-configurable). */
@@ -91,14 +91,14 @@ const parseAccessLevel = (raw: string | undefined): AccessLevel => {
   const v = raw?.trim()
   if (v === undefined || v === '') return 'read'
   if ((ACCESS_LEVELS as readonly string[]).includes(v)) return v as AccessLevel
-  throw new Error(`Invalid MCP_CLAUDE_HOUSEKEEPING_ACCESS_LEVEL="${raw}". Allowed: ${ACCESS_LEVELS.join(', ')}`)
+  throw new Error(`Invalid MCP_HOUSEKEEPING_CLAUDE_ACCESS_LEVEL="${raw}". Allowed: ${ACCESS_LEVELS.join(', ')}`)
 }
 
 const parseAuditLogMode = (raw: string | undefined): AuditLogMode => {
   const v = raw?.trim().toLowerCase()
   if (v === undefined || v === '') return 'writes'
   if (v === 'off' || v === 'writes' || v === 'all') return v
-  throw new Error(`Invalid MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG="${raw}" — expected one of: off, writes, all.`)
+  throw new Error(`Invalid MCP_HOUSEKEEPING_CLAUDE_AUDIT_LOG="${raw}" — expected one of: off, writes, all.`)
 }
 
 /**
@@ -119,17 +119,17 @@ const parseNonNegativeInt = (raw: string | undefined, fallback: number, varName:
 /**
  * Load configuration from `env` (defaults to `process.env`, after attempting to
  * hydrate it from the package's `.env*` files). Throws if
- * MCP_CLAUDE_HOUSEKEEPING_PATH is missing or a typed var is invalid.
+ * MCP_HOUSEKEEPING_CLAUDE_PATH is missing or a typed var is invalid.
  */
 export const loadConfig = (env: NodeJS.ProcessEnv = process.env): Config => {
   hydrateEnvFromFiles()
 
-  assert(env.MCP_CLAUDE_HOUSEKEEPING_PATH, 'MCP_CLAUDE_HOUSEKEEPING_PATH environment variable must be set')
-  const housekeepingPath = path.resolve(expandHome(env.MCP_CLAUDE_HOUSEKEEPING_PATH))
+  assert(env.MCP_HOUSEKEEPING_CLAUDE_PATH, 'MCP_HOUSEKEEPING_CLAUDE_PATH environment variable must be set')
+  const housekeepingPath = path.resolve(expandHome(env.MCP_HOUSEKEEPING_CLAUDE_PATH))
 
   return {
     housekeepingPath,
-    accessLevel: parseAccessLevel(env.MCP_CLAUDE_HOUSEKEEPING_ACCESS_LEVEL),
+    accessLevel: parseAccessLevel(env.MCP_HOUSEKEEPING_CLAUDE_ACCESS_LEVEL),
     // Cowork sessions, Claude Code state, and VSCode chat sessions all live in
     // known locations under the current user's home directory; they are not
     // user-configurable.
@@ -149,19 +149,19 @@ export const loadConfig = (env: NodeJS.ProcessEnv = process.env): Config => {
       'User',
       'workspaceStorage'
     ),
-    auditLogMode: parseAuditLogMode(env.MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG),
+    auditLogMode: parseAuditLogMode(env.MCP_HOUSEKEEPING_CLAUDE_AUDIT_LOG),
     auditLogPath: path.resolve(
-      expandHome(env.MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_PATH ?? path.join(housekeepingPath, 'audit', 'audit.jsonl'))
+      expandHome(env.MCP_HOUSEKEEPING_CLAUDE_AUDIT_LOG_PATH ?? path.join(housekeepingPath, 'audit', 'audit.jsonl'))
     ),
     auditLogMaxBytes: parseNonNegativeInt(
-      env.MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_MAX_BYTES,
+      env.MCP_HOUSEKEEPING_CLAUDE_AUDIT_LOG_MAX_BYTES,
       10 * 1024 * 1024,
-      'MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_MAX_BYTES'
+      'MCP_HOUSEKEEPING_CLAUDE_AUDIT_LOG_MAX_BYTES'
     ),
     auditLogKeep: parseNonNegativeInt(
-      env.MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_KEEP,
+      env.MCP_HOUSEKEEPING_CLAUDE_AUDIT_LOG_KEEP,
       5,
-      'MCP_CLAUDE_HOUSEKEEPING_AUDIT_LOG_KEEP'
+      'MCP_HOUSEKEEPING_CLAUDE_AUDIT_LOG_KEEP'
     )
   }
 }

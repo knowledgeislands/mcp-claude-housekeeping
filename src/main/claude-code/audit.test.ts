@@ -3,6 +3,8 @@ import * as os from 'node:os'
 import * as path from 'node:path'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import {
+  acquisitionCheckpoint,
+  acquisitionSessionRead,
   decodeProjectDir,
   discoverProjects,
   encodeProjectPath,
@@ -322,6 +324,56 @@ describe('sessionRead', () => {
       tail: false
     })
     expect(r.lines).toEqual(['{"i":0}', '{"i":1}'])
+  })
+})
+
+describe('session acquisition', () => {
+  const repository = CLAUDE_CODE_ROOT_PATH
+  const sessionId = '33333333-3333-3333-3333-333333333333'
+
+  it('returns a content-minimised checkpoint only for the exact physical repository', async () => {
+    const physicalRepository = await fs.realpath(repository)
+    const project = encodeProjectPath(physicalRepository)
+    await writeSession(project, sessionId, new Date('2026-08-20T12:00:00.000Z'), '{"retain":true}')
+    await writeSession('-other-project', '44444444-4444-4444-4444-444444444444', new Date(), '{"ignore":true}')
+
+    const checkpoint = await acquisitionCheckpoint(CLAUDE_CODE_ROOT_PATH, repository, '2026-08-21T00:00:00.000Z')
+
+    expect(checkpoint).toMatchObject({
+      schema: 1,
+      provider: 'claude-code',
+      repository: physicalRepository,
+      generatedAt: '2026-08-21T00:00:00.000Z',
+      sessions: [{ id: sessionId, status: 'available', archived: false, descendantIds: [] }]
+    })
+    expect(JSON.stringify(checkpoint)).not.toContain('retain')
+  })
+
+  it('reads the complete JSONL source only for the matching repository project', async () => {
+    const physicalRepository = await fs.realpath(repository)
+    const project = encodeProjectPath(physicalRepository)
+    const content = '{"turn":1}\n{"turn":2}\n'
+    await writeSession(project, sessionId, new Date(), content)
+
+    const result = await acquisitionSessionRead(CLAUDE_CODE_ROOT_PATH, repository, sessionId)
+
+    expect(result).toMatchObject({
+      schema: 1,
+      provider: 'claude-code',
+      repository: physicalRepository,
+      session: { id: sessionId, contentType: 'application/x-ndjson', content: `${content}\n` }
+    })
+  })
+
+  it('returns an empty checkpoint when the exact repository has no Claude project directory', async () => {
+    const emptyRepository = path.join(CLAUDE_CODE_ROOT_PATH, 'empty-repository')
+    await fs.mkdir(emptyRepository, { recursive: true })
+    try {
+      const checkpoint = await acquisitionCheckpoint(CLAUDE_CODE_ROOT_PATH, emptyRepository)
+      expect(checkpoint.sessions).toEqual([])
+    } finally {
+      await fs.rm(emptyRepository, { recursive: true, force: true })
+    }
   })
 })
 

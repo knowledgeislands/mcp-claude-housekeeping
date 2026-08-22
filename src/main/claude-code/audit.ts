@@ -56,6 +56,145 @@ export interface ClaudeCodeProject {
 
 const isUuidJsonl = (name: string): boolean => /^[0-9a-f-]{36}\.jsonl$/i.test(name)
 
+const isUuid = (value: string): boolean => /^[0-9a-f-]{36}$/i.test(value)
+
+export type AcquisitionSession = {
+  id: string
+  sourceLocator: string
+  createdAt: null
+  updatedAt: string
+  byteSize: number
+  status: 'available'
+  archived: false
+  descendantIds: string[]
+}
+
+export type AcquisitionCheckpoint = {
+  schema: 1
+  provider: 'claude-code'
+  repository: string
+  generatedAt: string
+  adapter: {
+    root: string
+  }
+  sessions: AcquisitionSession[]
+}
+
+export type AcquisitionSessionRead = {
+  schema: 1
+  provider: 'claude-code'
+  repository: string
+  session: {
+    id: string
+    sourceLocator: string
+    contentType: 'application/x-ndjson'
+    content: string
+    updatedAt: string
+  }
+}
+
+type RepositoryProject = {
+  repository: string
+  project: string
+  directory: string
+}
+
+const sourceLocator = (project: string, sessionId: string): string =>
+  `claude-code://projects/${encodeURIComponent(project)}/sessions/${encodeURIComponent(sessionId)}`
+
+const repositoryProject = async (claudeRoot: string, repository: string): Promise<RepositoryProject> => {
+  const physicalRepository = await fs.realpath(repository)
+  const project = encodeProjectPath(physicalRepository)
+  return {
+    repository: physicalRepository,
+    project,
+    directory: path.join(claudeRoot, 'projects', project)
+  }
+}
+
+/**
+ * Produce the provider-neutral, content-minimised acquisition checkpoint for
+ * exactly one physical repository. A missing Claude project directory is a
+ * valid empty result, not a request to inspect a similarly named project.
+ */
+export const acquisitionCheckpoint = async (
+  claudeRoot: string,
+  repository: string,
+  generatedAt = new Date().toISOString()
+): Promise<AcquisitionCheckpoint> => {
+  const target = await repositoryProject(claudeRoot, repository)
+  let entries: Dirent[]
+  try {
+    entries = await fs.readdir(target.directory, { withFileTypes: true })
+  } catch (error) {
+    if (isNodeError(error) && error.code === 'ENOENT') {
+      return {
+        schema: 1,
+        provider: 'claude-code',
+        repository: target.repository,
+        generatedAt,
+        adapter: { root: claudeRoot },
+        sessions: []
+      }
+    }
+    throw error
+  }
+  await assertRealPathWithinRoot(claudeRoot, target.directory)
+  const files = entries
+    .filter((entry) => entry.isFile() && isUuidJsonl(entry.name))
+    .sort((left, right) => left.name.localeCompare(right.name))
+  const sessions = await Promise.all(
+    files.map(async (file): Promise<AcquisitionSession> => {
+      const sessionId = file.name.replace(/\.jsonl$/i, '')
+      const fullPath = resolveWithinRoot(target.directory, file.name)
+      await assertRealPathWithinRoot(claudeRoot, fullPath)
+      const stat = await fs.stat(fullPath)
+      return {
+        id: sessionId,
+        sourceLocator: sourceLocator(target.project, sessionId),
+        createdAt: null,
+        updatedAt: stat.mtime.toISOString(),
+        byteSize: stat.size,
+        status: 'available',
+        archived: false,
+        descendantIds: []
+      }
+    })
+  )
+  return {
+    schema: 1,
+    provider: 'claude-code',
+    repository: target.repository,
+    generatedAt,
+    adapter: { root: claudeRoot },
+    sessions
+  }
+}
+
+export const acquisitionSessionRead = async (
+  claudeRoot: string,
+  repository: string,
+  sessionId: string
+): Promise<AcquisitionSessionRead> => {
+  if (!isUuid(sessionId)) throw new Error('Session ID must be a UUID without a file extension')
+  const target = await repositoryProject(claudeRoot, repository)
+  const file = resolveWithinRoot(target.directory, `${sessionId}.jsonl`)
+  await assertRealPathWithinRoot(claudeRoot, file)
+  const [stat, content] = await Promise.all([fs.stat(file), fs.readFile(file, 'utf-8')])
+  return {
+    schema: 1,
+    provider: 'claude-code',
+    repository: target.repository,
+    session: {
+      id: sessionId,
+      sourceLocator: sourceLocator(target.project, sessionId),
+      contentType: 'application/x-ndjson',
+      content,
+      updatedAt: stat.mtime.toISOString()
+    }
+  }
+}
+
 /**
  * List every project under `<claudeRoot>/projects/` with session-file counts
  * and best-effort source-path resolution.

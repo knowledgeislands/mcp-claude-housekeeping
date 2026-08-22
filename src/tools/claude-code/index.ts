@@ -15,6 +15,14 @@ const projectArg = z
   .regex(/^[A-Za-z0-9._-]+$/, 'Project name must be alphanumeric/._- (no path separators or traversal).')
   .describe('Project directory name under ~/.claude/projects/ (the encoded path).')
 const optionalProjectArg = projectArg.optional()
+const repositoryArg = z
+  .string()
+  .min(1)
+  .describe('Absolute path to the repository whose physical working directory scopes the sessions.')
+const sessionIdArg = z
+  .string()
+  .regex(/^[0-9a-f-]{36}$/i, 'Session ID must be a UUID without a file extension.')
+  .describe('Claude Code session identifier returned by claude_code_sessions_list.')
 
 // A memory file name becomes a path segment under <project>/memory/. It must end
 // in .md and, like projectArg, reject path separators, traversal (..), and a
@@ -150,6 +158,37 @@ const ccMemoryIndexWriteOutput = z.object({
   project: z.string(),
   bytes: z.number()
 })
+const ccAcquisitionCheckpointOutput = z.object({
+  schema: z.literal(1),
+  provider: z.literal('claude-code'),
+  repository: z.string(),
+  generatedAt: z.string(),
+  adapter: z.object({ root: z.string() }),
+  sessions: z.array(
+    z.object({
+      id: z.string(),
+      sourceLocator: z.string(),
+      createdAt: z.null(),
+      updatedAt: z.string(),
+      byteSize: z.number(),
+      status: z.literal('available'),
+      archived: z.literal(false),
+      descendantIds: z.array(z.string())
+    })
+  )
+})
+const ccAcquisitionReadOutput = z.object({
+  schema: z.literal(1),
+  provider: z.literal('claude-code'),
+  repository: z.string(),
+  session: z.object({
+    id: z.string(),
+    sourceLocator: z.string(),
+    contentType: z.literal('application/x-ndjson'),
+    content: z.string(),
+    updatedAt: z.string()
+  })
+})
 
 export const registerClaudeCodeTools = (server: McpServer, cfg: Config): void => {
   const register = server.registerTool
@@ -158,6 +197,74 @@ export const registerClaudeCodeTools = (server: McpServer, cfg: Config): void =>
   /* ================================================================ */
   /*  claude_code_* — read-only (annotations: READ_ONLY)               */
   /* ================================================================ */
+
+  register(
+    'claude_code_sessions_discover',
+    {
+      title: 'Claude Code sessions: discover repository source',
+      description:
+        'Confirm the Claude Code adapter can inspect the selected physical repository and return source capabilities plus a content-minimised session count.',
+      inputSchema: z.object({ repository: repositoryArg }).strict(),
+      outputSchema: z.object({
+        provider: z.literal('claude-code'),
+        repository: z.string(),
+        sessionCount: z.number(),
+        operations: z.array(z.string())
+      }),
+      annotations: READ_ONLY
+    },
+    async ({ repository }) => {
+      try {
+        const checkpoint = await audit.acquisitionCheckpoint(claudeCodeRootPath, repository)
+        return jsonResult({
+          provider: 'claude-code',
+          repository: checkpoint.repository,
+          sessionCount: checkpoint.sessions.length,
+          operations: ['discover', 'list', 'read', 'checkpoint']
+        })
+      } catch (error) {
+        return errorResult('discovering Claude Code sessions', error)
+      }
+    }
+  )
+
+  register(
+    'claude_code_sessions_list',
+    {
+      title: 'Claude Code sessions: list repository checkpoint',
+      description:
+        'List content-minimised provenance for sessions whose encoded project directory exactly matches the selected physical repository.',
+      inputSchema: z.object({ repository: repositoryArg }).strict(),
+      outputSchema: ccAcquisitionCheckpointOutput,
+      annotations: READ_ONLY
+    },
+    async ({ repository }) => {
+      try {
+        return jsonResult(await audit.acquisitionCheckpoint(claudeCodeRootPath, repository))
+      } catch (error) {
+        return errorResult('listing Claude Code sessions', error)
+      }
+    }
+  )
+
+  register(
+    'claude_code_sessions_checkpoint',
+    {
+      title: 'Claude Code sessions: create acquisition checkpoint',
+      description:
+        'Return a content-minimised, provenance-preserving Claude Code checkpoint for incremental KI acquisition. This does not write KI state or change any source session.',
+      inputSchema: z.object({ repository: repositoryArg }).strict(),
+      outputSchema: ccAcquisitionCheckpointOutput,
+      annotations: READ_ONLY
+    },
+    async ({ repository }) => {
+      try {
+        return jsonResult(await audit.acquisitionCheckpoint(claudeCodeRootPath, repository))
+      } catch (error) {
+        return errorResult('checkpointing Claude Code sessions', error)
+      }
+    }
+  )
 
   register(
     'claude_code_projects_list',
@@ -247,24 +354,30 @@ export const registerClaudeCodeTools = (server: McpServer, cfg: Config): void =>
   register(
     'claude_code_session_read',
     {
-      title: 'Claude Code Auditor: read session JSONL (preview)',
-      description: `Return the first or last N lines of a session JSONL at ~/.claude/projects/<project>/<session>. Use tail=true to peek the most recent turns. Cap with max_lines to keep responses small — full files can be megabytes.`,
-      inputSchema: z
-        .object({
-          project: projectArg,
-          session: z
-            .string()
-            .min(1)
-            .regex(/^[0-9a-f-]{36}\.jsonl$/i, 'Session name must be a UUID with .jsonl extension'),
-          max_lines: z.number().int().min(1).max(2000).default(50),
-          tail: z.boolean().default(true).describe('If true, return the last N lines; if false, the first N.')
-        })
-        .strict(),
-      outputSchema: ccSessionReadOutput,
+      title: 'Claude Code sessions: read source session',
+      description:
+        'Read one session. With repository and session_id, return faithful repository-scoped JSONL for KI acquisition. The legacy project/session form returns a bounded preview.',
+      inputSchema: z.union([
+        z.object({ repository: repositoryArg, session_id: sessionIdArg }).strict(),
+        z
+          .object({
+            project: projectArg,
+            session: z
+              .string()
+              .min(1)
+              .regex(/^[0-9a-f-]{36}\.jsonl$/i, 'Session name must be a UUID with .jsonl extension'),
+            max_lines: z.number().int().min(1).max(2000).default(50),
+            tail: z.boolean().default(true).describe('If true, return the last N lines; if false, the first N.')
+          })
+          .strict()
+      ]),
+      outputSchema: z.union([ccAcquisitionReadOutput, ccSessionReadOutput]),
       annotations: READ_ONLY
     },
     async (args) => {
       try {
+        if ('repository' in args)
+          return jsonResult(await audit.acquisitionSessionRead(claudeCodeRootPath, args.repository, args.session_id))
         return jsonResult(await audit.sessionRead(claudeCodeRootPath, args))
       } catch (err) {
         return errorResult('reading Claude Code session', err)

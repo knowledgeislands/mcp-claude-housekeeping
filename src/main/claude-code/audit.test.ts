@@ -334,6 +334,8 @@ describe('session acquisition', () => {
   it('returns a content-minimised checkpoint only for the exact physical repository', async () => {
     const physicalRepository = await fs.realpath(repository)
     const project = encodeProjectPath(physicalRepository)
+    const earlierSessionId = '11111111-1111-1111-1111-111111111111'
+    await writeSession(project, earlierSessionId, new Date('2026-08-20T11:00:00.000Z'), '{"earlier":true}')
     await writeSession(project, sessionId, new Date('2026-08-20T12:00:00.000Z'), '{"retain":true}')
     await writeSession('-other-project', '44444444-4444-4444-4444-444444444444', new Date(), '{"ignore":true}')
 
@@ -344,9 +346,30 @@ describe('session acquisition', () => {
       provider: 'claude-code',
       repository: physicalRepository,
       generatedAt: '2026-08-21T00:00:00.000Z',
-      sessions: [{ id: sessionId, status: 'available', archived: false, descendantIds: [] }]
+      sessions: [
+        { id: earlierSessionId, status: 'available', archived: false, descendantIds: [] },
+        { id: sessionId, status: 'available', archived: false, descendantIds: [] }
+      ]
     })
     expect(JSON.stringify(checkpoint)).not.toContain('retain')
+    expect(checkpoint.sessions.map(({ id }) => id)).toEqual([earlierSessionId, sessionId])
+  })
+
+  it('rejects non-directory project storage', async () => {
+    const physicalRepository = await fs.realpath(repository)
+    const projectPath = path.join(CLAUDE_CODE_ROOT_PATH, 'projects', encodeProjectPath(physicalRepository))
+    await fs.mkdir(path.dirname(projectPath), { recursive: true })
+    await fs.writeFile(projectPath, 'not a directory')
+
+    await expect(acquisitionCheckpoint(CLAUDE_CODE_ROOT_PATH, repository)).rejects.toMatchObject({
+      code: 'ENOTDIR'
+    })
+  })
+
+  it('rejects a non-UUID session ID', async () => {
+    await expect(acquisitionSessionRead(CLAUDE_CODE_ROOT_PATH, repository, 'not-a-session')).rejects.toThrow(
+      'Session ID must be a UUID without a file extension'
+    )
   })
 
   it('reads the complete JSONL source only for the matching repository project', async () => {
